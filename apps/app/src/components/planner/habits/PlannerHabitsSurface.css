@@ -1409,6 +1409,12 @@
 .planner-habit-mobile-sheet-layer {
   --planner-habit-top-chrome-offset: clamp(92px, 11dvh, 124px);
   --planner-habit-bottom-nav-offset: clamp(86px, 10dvh, 106px);
+  --planner-accent: var(--accent-theme-primary, #8edcff);
+  --planner-accent-2: var(--accent-theme-secondary, #b896ff);
+  --planner-heading: var(--text-heading, #fff);
+  --planner-emphasis: var(--text-emphasis, var(--planner-heading));
+  --planner-panel: color-mix(in srgb, #08111f 74%, var(--planner-accent) 8%);
+  --planner-border: color-mix(in srgb, var(--planner-accent) 32%, rgba(255, 255, 255, 0.16));
   position: fixed;
   inset:
     calc(var(--planner-habit-top-chrome-offset) + env(safe-area-inset-top, 0px))
@@ -1436,6 +1442,25 @@
     radial-gradient(circle at 18% 8%, color-mix(in srgb, var(--planner-accent) 16%, transparent), transparent 36%),
     rgba(2, 6, 14, 0.64);
   backdrop-filter: blur(16px) saturate(130%);
+}
+
+.planner-habit-mobile-sheet-layer.is-centered-composer {
+  inset: 0 !important;
+  width: 100dvw;
+  height: 100dvh;
+  max-height: 100dvh;
+  z-index: 2147483646;
+  align-items: center;
+  padding:
+    max(14px, env(safe-area-inset-top, 0px))
+    max(12px, env(safe-area-inset-right, 0px))
+    max(14px, env(safe-area-inset-bottom, 0px))
+    max(12px, env(safe-area-inset-left, 0px));
+}
+
+.planner-habit-mobile-sheet-layer.is-centered-composer .planner-habit-mobile-sheet-backdrop {
+  background: rgba(2, 6, 16, 0.44);
+  backdrop-filter: none;
 }
 
 .planner-habit-mobile-sheet,
@@ -1472,8 +1497,18 @@
   scroll-padding-top: 16px;
 }
 
+.planner-mobile-sheet-layer.is-fullscreen-detail .planner-habit-mobile-detail-sheet {
+  padding:
+    max(14px, env(safe-area-inset-top, 0px))
+    14px
+    max(18px, env(safe-area-inset-bottom, 0px));
+}
+
 .planner-habit-mobile-sheet.is-composer {
+  width: min(620px, calc(100dvw - 24px));
+  max-height: min(86dvh, 720px);
   padding-bottom: 14px;
+  border-radius: 28px;
 }
 
 .planner-habit-mobile-sheet-handle {
@@ -1609,16 +1644,67 @@
 }
 
 .planner-habit-mobile-detail-sheet .planner-habit-detail-head {
-  position: static;
-  z-index: 3;
-  grid-template-columns: 46px minmax(0, 1fr) auto;
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  grid-template-columns: 46px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 12px;
   margin: 0;
-  padding: 0;
-  border-radius: 18px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--planner-habit-color, var(--planner-accent)) 24%, rgba(255, 255, 255, 0.1));
+  border-radius: 20px;
   background:
-    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--planner-habit-color, var(--planner-accent)) 18%, transparent), transparent 58%),
-    color-mix(in srgb, #08111f 86%, var(--planner-habit-color, var(--planner-accent)) 8%);
-  backdrop-filter: blur(18px) saturate(140%);
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--planner-habit-color, var(--planner-accent)) 14%, transparent), transparent 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgba(255, 255, 255, 0.032);
+  backdrop-filter: blur(18px) saturate(138%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.075);
+}
+
+.planner-habit-mobile-detail-sheet .planner-habit-detail-head > span {
+  width: 46px;
+  height: 46px;
+  border-radius: 17px;
+  border-color: color-mix(in srgb, var(--planner-habit-color, var(--planner-accent)) 56%, rgba(255, 255, 255, 0.18));
+  background:
+    radial-gradient(circle at 28% 24%, rgba(255, 255, 255, 0.62) 0 9%, transparent 11%),
+    linear-gradient(135deg, color-mix(in srgb, var(--planner-habit-color, var(--planner-accent)) 72%, #fff), var(--planner-accent-2));
+  box-shadow:
+    0 16px 34px color-mix(in srgb, var(--planner-habit-color, var(--planner-accent)) 16%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.planner-habit-mobile-detail-sheet .planner-habit-title-input,
+.planner-habit-mobile-detail-sheet .planner-habit-detail-head strong {
+  height: 30px;
+  color: color-mix(in srgb, var(--planner-habit-heading) 20%, rgba(255, 255, 255, 0.96) 80%);
+  font-family: var(--display-font, inherit);
+  font-size: clamp(1.05rem, 1.5vw, 1.32rem);
+  line-height: 1;
+}
+
+.planner-habit-mobile-detail-sheet .planner-habit-detail-head em {
+  margin-top: 3px;
+  color: rgba(224, 234, 247, 0.58);
+  font-size: 0.72rem;
+  font-weight: 780;
+}
+
+.planner-habit-mobile-detail-sheet .planner-habit-sheet-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 30% 0%, color-mix(in srgb, var(--planner-habit-color, var(--planner-accent)) 18%, transparent), transparent 64%),
+    rgba(255, 255, 255, 0.06);
+}
+
+.planner-habit-mobile-detail-sheet .planner-habit-sheet-close::before,
+.planner-habit-mobile-detail-sheet .planner-habit-sheet-close::after {
+  top: 17px;
+  left: 10px;
+  width: 14px;
 }
 
 .planner-habit-mobile-detail-sheet .planner-habit-detail-grid {

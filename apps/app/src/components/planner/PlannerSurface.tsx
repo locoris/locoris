@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import type { AppRuntimeLayoutSnapshot } from "../../lib/runtime";
 import type {
@@ -1147,6 +1148,9 @@ export default function PlannerSurface({
     );
   };
 
+  const renderMobileOverlay = (content: ReactNode) =>
+    typeof document === "undefined" ? content : createPortal(content, document.body);
+
   return (
     <section
       className={`planner-surface ${isMobile ? "is-mobile" : "is-desktop"} ${
@@ -1381,9 +1385,9 @@ export default function PlannerSurface({
         </button>
       ) : null}
 
-      {isMobile && isTaskView && isComposerOpen ? (
+      {isMobile && isTaskView && isComposerOpen ? renderMobileOverlay(
         <div
-          className="planner-mobile-sheet-layer"
+          className="planner-mobile-sheet-layer is-centered-composer"
           role="dialog"
           aria-modal="true"
           style={{ "--planner-keyboard-inset": `${keyboardInset}px` } as CSSProperties}
@@ -1398,9 +1402,9 @@ export default function PlannerSurface({
         </div>
       ) : null}
 
-      {isMobile && isTaskView && selectedTask && !isCalendarOpen ? (
+      {isMobile && isTaskView && selectedTask && !isCalendarOpen ? renderMobileOverlay(
         <div
-          className="planner-mobile-sheet-layer"
+          className="planner-mobile-sheet-layer is-fullscreen-detail"
           role="dialog"
           aria-modal="true"
           style={{ "--planner-keyboard-inset": `${keyboardInset}px` } as CSSProperties}
@@ -1430,9 +1434,9 @@ export default function PlannerSurface({
         </div>
       ) : null}
 
-      {isMobile && isHabitView && selectedHabitSummary && !isCalendarOpen ? (
+      {isMobile && isHabitView && selectedHabitSummary && !isCalendarOpen ? renderMobileOverlay(
         <div
-          className="planner-mobile-sheet-layer"
+          className="planner-mobile-sheet-layer is-fullscreen-detail"
           role="dialog"
           aria-modal="true"
           style={{ "--planner-keyboard-inset": `${keyboardInset}px` } as CSSProperties}

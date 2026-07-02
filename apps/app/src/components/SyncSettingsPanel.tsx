@@ -587,6 +587,7 @@ export default function SyncSettingsPanel({
   const [hostedNameDraft, setHostedNameDraft] = useState("");
   const [hostedEmailDraft, setHostedEmailDraft] = useState("");
   const [hostedPasswordDraft, setHostedPasswordDraft] = useState("");
+  const [hostedDraftError, setHostedDraftError] = useState<string | null>(null);
   const [encryptionPassphraseDraft, setEncryptionPassphraseDraft] = useState("");
   const [encryptionPassphraseConfirmDraft, setEncryptionPassphraseConfirmDraft] = useState("");
   const [encryptionNextPassphraseDraft, setEncryptionNextPassphraseDraft] = useState("");
@@ -1117,6 +1118,7 @@ export default function SyncSettingsPanel({
     setHostedNameDraft("");
     setHostedEmailDraft("");
     setHostedPasswordDraft("");
+    setHostedDraftError(null);
     setEncryptionPassphraseDraft("");
     setEncryptionPassphraseConfirmDraft("");
     setEncryptionNextPassphraseDraft("");
@@ -1138,6 +1140,7 @@ export default function SyncSettingsPanel({
     setHostedNameDraft("");
     setHostedEmailDraft(connection?.userEmail ?? "");
     setHostedPasswordDraft("");
+    setHostedDraftError(null);
     setPanelModal({ kind: "addHosted", connection: connection ?? null });
   };
 
@@ -1312,15 +1315,16 @@ export default function SyncSettingsPanel({
       panelModal?.kind === "addHosted" ? panelModal.connection ?? null : null;
 
     if (!hostedUrlDraft.trim()) {
-      showFeedback("error", t("sync.hostedUrlRequired"));
+      setHostedDraftError(t("sync.hostedUrlRequired"));
       return;
     }
 
     if (!hostedEmailDraft.trim() || !hostedPasswordDraft.trim()) {
-      showFeedback("error", t("sync.hostedCredentialsRequired"));
+      setHostedDraftError(t("sync.hostedCredentialsRequired"));
       return;
     }
 
+    setHostedDraftError(null);
     setBusyKey("add-hosted");
 
     try {
@@ -1382,7 +1386,9 @@ export default function SyncSettingsPanel({
       closeModal();
     } catch (error) {
       const message = getErrorMessage(error);
-      showFeedback("error", translateSyncManagerError(message, t));
+      const translatedMessage = translateSyncManagerError(message, t);
+      setHostedDraftError(translatedMessage);
+      showFeedback("error", translatedMessage);
     } finally {
       setBusyKey(null);
     }
@@ -3758,14 +3764,20 @@ export default function SyncSettingsPanel({
                     <button
                       type="button"
                       className={hostedMode === "login" ? "is-active" : ""}
-                      onClick={() => setHostedMode("login")}
+                      onClick={() => {
+                        setHostedMode("login");
+                        setHostedDraftError(null);
+                      }}
                     >
                       {t("sync.hostedLogin")}
                     </button>
                     <button
                       type="button"
                       className={hostedMode === "register" ? "is-active" : ""}
-                      onClick={() => setHostedMode("register")}
+                      onClick={() => {
+                        setHostedMode("register");
+                        setHostedDraftError(null);
+                      }}
                     >
                       {t("sync.hostedRegister")}
                     </button>
@@ -3774,7 +3786,10 @@ export default function SyncSettingsPanel({
                 <input
                   className="sync-settings-input"
                   value={hostedUrlDraft}
-                  onChange={(event) => setHostedUrlDraft(event.target.value)}
+                  onChange={(event) => {
+                    setHostedUrlDraft(event.target.value);
+                    setHostedDraftError(null);
+                  }}
                   placeholder={t("sync.endpointPlaceholder")}
                   autoFocus
                 />
@@ -3782,24 +3797,38 @@ export default function SyncSettingsPanel({
                   <input
                     className="sync-settings-input"
                     value={hostedNameDraft}
-                    onChange={(event) => setHostedNameDraft(event.target.value)}
+                    onChange={(event) => {
+                      setHostedNameDraft(event.target.value);
+                      setHostedDraftError(null);
+                    }}
                     placeholder={t("sync.hostedNamePlaceholder")}
                   />
                 ) : null}
                 <input
                   className="sync-settings-input"
                   value={hostedEmailDraft}
-                  onChange={(event) => setHostedEmailDraft(event.target.value)}
+                  onChange={(event) => {
+                    setHostedEmailDraft(event.target.value);
+                    setHostedDraftError(null);
+                  }}
                   placeholder={t("sync.hostedEmailPlaceholder")}
                   type="email"
                 />
                 <input
                   className="sync-settings-input"
                   value={hostedPasswordDraft}
-                  onChange={(event) => setHostedPasswordDraft(event.target.value)}
+                  onChange={(event) => {
+                    setHostedPasswordDraft(event.target.value);
+                    setHostedDraftError(null);
+                  }}
                   placeholder={t("sync.hostedPasswordPlaceholder")}
                   type="password"
                 />
+                {hostedDraftError ? (
+                  <div className="sync-settings-modal-error" role="alert">
+                    {hostedDraftError}
+                  </div>
+                ) : null}
                 <div className="sync-settings-modal-actions">
                   <button type="button" className="sync-settings-inline-action" onClick={closeModal}>
                     {t("dialog.cancel")}

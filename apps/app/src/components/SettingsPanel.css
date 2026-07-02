@@ -226,6 +226,9 @@
 .settings-panel-grid {
   min-width: 0;
   min-height: 0;
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
   overflow: auto;
   padding: 1px 4px 8px 1px;
   scrollbar-width: thin;
@@ -1307,11 +1310,24 @@ button.settings-row:focus-visible {
 @media (max-width: 720px) {
   .settings-panel-shell {
     gap: 8px;
+    height: 100%;
     padding:
       max(8px, env(safe-area-inset-top))
       8px
       max(10px, env(safe-area-inset-bottom));
     grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .settings-panel-shell.is-root-settings .settings-panel-grid,
+  .settings-panel-shell.is-interface-settings .settings-panel-grid,
+  .settings-panel-shell.is-planner-settings .settings-panel-grid {
+    align-content: stretch;
+  }
+
+  .settings-panel-shell.is-root-settings .settings-panel-block,
+  .settings-panel-shell.is-interface-settings .settings-panel-block,
+  .settings-panel-shell.is-planner-settings .settings-panel-block {
+    min-height: 100%;
   }
 
   .settings-panel-nav-button {

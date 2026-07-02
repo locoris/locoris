@@ -654,6 +654,21 @@
   border-radius: 24px;
 }
 
+.planner-mobile-sheet-layer.is-fullscreen-detail .planner-task-panel.is-mobile-sheet {
+  padding:
+    max(14px, env(safe-area-inset-top, 0px))
+    14px
+    max(18px, env(safe-area-inset-bottom, 0px));
+  scrollbar-width: thin;
+}
+
+.planner-task-panel.is-mobile-sheet .planner-task-inspector-head {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  backdrop-filter: blur(18px) saturate(138%);
+}
+
 .planner-task-panel.is-mobile-sheet .planner-task-title-block input {
   min-height: 44px;
   font-size: 1.12rem;

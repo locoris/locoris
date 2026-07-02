@@ -42,7 +42,7 @@
 
 .planner-date-dialog-layer.is-mobile {
   --planner-date-dialog-top-chrome-offset: clamp(92px, 11dvh, 124px);
-  --planner-date-dialog-bottom-nav-offset: clamp(86px, 10dvh, 106px);
+  --planner-date-dialog-bottom-nav-offset: clamp(118px, 15dvh, 164px);
   inset:
     calc(var(--planner-date-dialog-top-chrome-offset) + env(safe-area-inset-top, 0px))
     0
@@ -58,6 +58,10 @@
 }
 
 .planner-date-dialog-layer.is-mobile .planner-date-dialog-sheet {
+  display: flex;
   width: min(100%, 620px);
+  height: 100%;
   max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }

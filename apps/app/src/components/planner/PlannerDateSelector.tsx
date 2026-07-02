@@ -4,7 +4,6 @@ import type { AppLanguage } from "../../types";
 import {
   DEFAULT_PLANNER_END_TIME_MINUTES,
   DEFAULT_PLANNER_START_TIME_MINUTES,
-  formatPlannerTimeMinutes,
   normalizePlannerTaskDateDraft,
   type PlannerTaskDateDraft,
   type PlannerTaskDateRepeat
@@ -33,7 +32,6 @@ const REPEAT_OPTIONS: PlannerTaskDateRepeat[] = ["none", "daily", "weekly", "mon
 const MIN_TIME_DURATION_MINUTES = 15;
 const MAX_TIME_MINUTES = 23 * 60 + 59;
 const MAX_START_TIME_MINUTES = MAX_TIME_MINUTES - MIN_TIME_DURATION_MINUTES;
-const QUICK_TIME_OPTIONS = [9 * 60, 12 * 60, 15 * 60, 18 * 60] as const;
 
 function addDays(value: number, days: number) {
   const date = new Date(value);
@@ -355,18 +353,6 @@ export default function PlannerDateSelector({
                 onChange={updateEndTime}
               />
             </label>
-          </div>
-          <div className="planner-date-selector-time-presets" aria-label={language === "ru" ? "Быстрый выбор времени" : "Quick time presets"}>
-            {QUICK_TIME_OPTIONS.map((minutes) => (
-              <button
-                key={minutes}
-                type="button"
-                className={draft.startTimeMinutes === minutes ? "is-active" : ""}
-                onClick={() => updateStartTime(minutes)}
-              >
-                {formatPlannerTimeMinutes(minutes)}
-              </button>
-            ))}
           </div>
         </div>
       ) : null}

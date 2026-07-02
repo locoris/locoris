@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 
 import "./OrbitalInspectorSubviewHeader.css";
 
-export type OrbitalInspectorSubviewScope = "vault" | "project";
+export type OrbitalInspectorSubviewScope = "vault" | "project" | "documents";
 export type OrbitalInspectorSubviewDocumentFilter = "note" | "canvas";
 
 type InspectorSubviewAction = {
@@ -17,6 +17,7 @@ type InspectorSubviewScopeSwitch = {
   label: string;
   vaultLabel: string;
   projectLabel: string;
+  documentsLabel?: string;
   projectDisabled?: boolean;
   onChange: (scope: OrbitalInspectorSubviewScope) => void;
 };
@@ -256,7 +257,13 @@ export default function OrbitalInspectorSubviewHeader({
       </div>
 
       {scopeSwitch ? (
-        <div className="orbital-inspector-subview-scope" role="group" aria-label={scopeSwitch.label}>
+        <div
+          className={`orbital-inspector-subview-scope ${
+            scopeSwitch.documentsLabel ? "has-documents" : ""
+          }`}
+          role="group"
+          aria-label={scopeSwitch.label}
+        >
           <button
             type="button"
             className={scopeSwitch.value === "vault" ? "is-active" : ""}
@@ -274,6 +281,16 @@ export default function OrbitalInspectorSubviewHeader({
           >
             {scopeSwitch.projectLabel}
           </button>
+          {scopeSwitch.documentsLabel ? (
+            <button
+              type="button"
+              className={scopeSwitch.value === "documents" ? "is-active" : ""}
+              onClick={() => scopeSwitch.onChange("documents")}
+              aria-pressed={scopeSwitch.value === "documents"}
+            >
+              {scopeSwitch.documentsLabel}
+            </button>
+          ) : null}
         </div>
       ) : null}
 

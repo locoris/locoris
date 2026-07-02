@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import type { AppLanguage, Habit, HabitLog, Project } from "../../../types";
 import {
@@ -882,6 +883,9 @@ export default function PlannerHabitsSurface({
     </form>
   );
 
+  const renderMobileOverlay = (content: ReactNode) =>
+    typeof document === "undefined" ? content : createPortal(content, document.body);
+
   return (
     <section
       className={`planner-habits-surface ${isMobile ? "is-mobile" : "is-desktop"} ${
@@ -964,9 +968,9 @@ export default function PlannerHabitsSurface({
         />
       ) : null}
 
-      {isMobile && isComposerOpen ? (
+      {isMobile && isComposerOpen ? renderMobileOverlay(
         <div
-          className="planner-habit-mobile-sheet-layer"
+          className="planner-habit-mobile-sheet-layer is-centered-composer"
           role="dialog"
           aria-modal="true"
           style={{ "--planner-keyboard-inset": `${keyboardInset}px` } as CSSProperties}

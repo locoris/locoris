@@ -1251,6 +1251,12 @@
 .planner-mobile-sheet-layer {
   --planner-mobile-top-chrome-offset: clamp(92px, 11dvh, 124px);
   --planner-mobile-bottom-nav-offset: clamp(86px, 10dvh, 106px);
+  --planner-accent: var(--accent-theme-primary, #8edcff);
+  --planner-accent-2: var(--accent-theme-secondary, #b896ff);
+  --planner-heading: var(--text-heading, #fff);
+  --planner-emphasis: var(--text-emphasis, var(--planner-heading));
+  --planner-panel: color-mix(in srgb, #08111f 74%, var(--planner-accent) 8%);
+  --planner-border: color-mix(in srgb, var(--planner-accent) 32%, rgba(255, 255, 255, 0.16));
   position: fixed;
   inset:
     calc(var(--planner-mobile-top-chrome-offset) + env(safe-area-inset-top, 0px))
@@ -1270,6 +1276,52 @@
   overflow: hidden;
 }
 
+.planner-mobile-sheet-layer.is-fullscreen-detail {
+  inset: 0 !important;
+  width: 100dvw;
+  height: 100dvh;
+  max-height: 100dvh;
+  z-index: 2147483646;
+  align-items: stretch;
+  padding:
+    max(8px, env(safe-area-inset-top, 0px))
+    max(8px, env(safe-area-inset-right, 0px))
+    max(8px, env(safe-area-inset-bottom, 0px))
+    max(8px, env(safe-area-inset-left, 0px));
+}
+
+.planner-mobile-sheet-layer.is-fullscreen-detail .planner-mobile-sheet-backdrop {
+  background: rgba(2, 6, 16, 0.56);
+}
+
+.planner-mobile-sheet-layer.is-centered-composer {
+  inset: 0 !important;
+  width: 100dvw;
+  height: 100dvh;
+  max-height: 100dvh;
+  z-index: 2147483646;
+  align-items: center;
+  padding:
+    max(14px, env(safe-area-inset-top, 0px))
+    max(12px, env(safe-area-inset-right, 0px))
+    max(14px, env(safe-area-inset-bottom, 0px))
+    max(12px, env(safe-area-inset-left, 0px));
+}
+
+.planner-mobile-sheet-layer.is-centered-composer .planner-mobile-sheet-backdrop {
+  background: rgba(2, 6, 16, 0.44);
+  backdrop-filter: none;
+}
+
+.planner-mobile-sheet-layer.is-fullscreen-detail .planner-task-panel.is-mobile-sheet,
+.planner-mobile-sheet-layer.is-fullscreen-detail .planner-habit-mobile-detail-sheet {
+  width: min(100%, 780px);
+  height: 100%;
+  max-height: none;
+  margin: 0 auto;
+  border-radius: 28px;
+}
+
 .planner-mobile-sheet-backdrop {
   position: absolute;
   inset: 0;
@@ -1283,6 +1335,12 @@
   box-sizing: border-box;
   max-height: 100%;
   border-radius: 24px;
+}
+
+.planner-mobile-sheet-layer.is-centered-composer .planner-composer.is-sheet {
+  width: min(620px, calc(100dvw - 24px));
+  max-height: min(86dvh, 720px);
+  border-radius: 28px;
 }
 
 .planner-composer.is-sheet {

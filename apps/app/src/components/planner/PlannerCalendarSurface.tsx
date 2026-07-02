@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 import { createPortal } from "react-dom";
 
 import type {
@@ -509,6 +509,75 @@ function getRangeTitle(
   }).format(cursorAt);
 }
 
+function formatCompactDayMonth(value: number, language: AppLanguage) {
+  const date = new Date(value);
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+
+  if (language === "ru") {
+    return `${day}.${String(month).padStart(2, "0")}`;
+  }
+
+  return `${month}/${day}`;
+}
+
+function getCompactRangeTitle(
+  cursorAt: number,
+  mode: CalendarMode,
+  language: AppLanguage,
+  weekStartsOn: PlannerWeekStartsOn
+) {
+  const locale = language === "ru" ? "ru-RU" : "en-US";
+
+  if (mode === "day") {
+    return new Intl.DateTimeFormat(locale, {
+      weekday: "short",
+      day: "numeric",
+      month: "short"
+    }).format(cursorAt);
+  }
+
+  if (mode === "week") {
+    const weekStart = startOfWeek(cursorAt, weekStartsOn);
+    const weekEnd = addDays(weekStart, 6);
+    return `${formatCompactDayMonth(weekStart, language)} - ${formatCompactDayMonth(weekEnd, language)}`;
+  }
+
+  if (mode === "month") {
+    return new Intl.DateTimeFormat(locale, {
+      month: "short",
+      year: "numeric"
+    }).format(cursorAt);
+  }
+
+  return getRangeTitle(cursorAt, mode, language, weekStartsOn);
+}
+
+function isSameCalendarMonth(leftAt: number, rightAt: number) {
+  const left = new Date(leftAt);
+  const right = new Date(rightAt);
+  return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth();
+}
+
+function isCalendarCursorAtToday(
+  cursorAt: number,
+  mode: CalendarMode,
+  weekStartsOn: PlannerWeekStartsOn,
+  todayStartAt = getStartOfLocalDay()
+) {
+  if (mode === "day") {
+    return getStartOfLocalDay(cursorAt) === todayStartAt;
+  }
+
+  if (mode === "week") {
+    const weekStartAt = startOfWeek(cursorAt, weekStartsOn);
+    const weekEndAt = addDays(weekStartAt, 6);
+    return todayStartAt >= weekStartAt && todayStartAt <= weekEndAt;
+  }
+
+  return isSameCalendarMonth(cursorAt, todayStartAt);
+}
+
 function getEventProjectColor(occurrence: PlannerTaskOccurrence, projectMap: Map<string, Project>) {
   return occurrence.task.projectId
     ? projectMap.get(occurrence.task.projectId)?.color ?? PLANNER_INBOX_EVENT_COLOR
@@ -819,6 +888,16 @@ export default function PlannerCalendarSurface({
   const projectMap = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
   const noteMap = useMemo(() => new Map(notes.map((note) => [note.id, note])), [notes]);
   const todayStartAt = getStartOfLocalDay();
+  const calendarFullRangeTitle = getRangeTitle(cursorAt, mode, language, weekStartsOn);
+  const calendarRangeTitle = isMobile ? getCompactRangeTitle(cursorAt, mode, language, weekStartsOn) : calendarFullRangeTitle;
+  const isCalendarAtToday = isCalendarCursorAtToday(cursorAt, mode, weekStartsOn, todayStartAt);
+
+  const goToToday = () => {
+    const today = getStartOfLocalDay();
+    setCursorAt(today);
+    setSelectedDayAt(today);
+    setSelectedSlotHour(null);
+  };
   const range = useMemo(() => {
     if (mode === "month") {
       const startAt = startOfMonth(cursorAt);
@@ -3519,8 +3598,24 @@ export default function PlannerCalendarSurface({
       }
     ];
 
+    const handleFilterWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+      const filterRow = event.currentTarget;
+
+      if (filterRow.scrollWidth <= filterRow.clientWidth || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+        return;
+      }
+
+      event.preventDefault();
+      filterRow.scrollLeft += event.deltaY;
+    };
+
     return (
-      <div className="planner-calendar-filter-row" role="toolbar" aria-label={language === "ru" ? "Фильтры календаря" : "Calendar filters"}>
+      <div
+        className="planner-calendar-filter-row"
+        role="toolbar"
+        aria-label={language === "ru" ? "Фильтры календаря" : "Calendar filters"}
+        onWheel={handleFilterWheel}
+      >
         {filters.map((filter) => {
           const isActive = calendarFilters[filter.id];
 
@@ -3574,7 +3669,39 @@ export default function PlannerCalendarSurface({
         <header className="planner-calendar-head">
           <div className="planner-calendar-title">
             <span className="planner-kicker">{language === "ru" ? "Календарь" : "Calendar"}</span>
-            <h2>{getRangeTitle(cursorAt, mode, language, weekStartsOn)}</h2>
+            <div className="planner-calendar-period-nav">
+              <button
+                type="button"
+                className="planner-calendar-period-arrow"
+                onClick={() => shiftCursor(-1)}
+                aria-label={language === "ru" ? "Предыдущий период" : "Previous period"}
+              >
+                ‹
+              </button>
+              <h2 aria-live="polite" title={calendarFullRangeTitle}>
+                {calendarRangeTitle}
+              </h2>
+              <button
+                type="button"
+                className="planner-calendar-period-arrow"
+                onClick={() => shiftCursor(1)}
+                aria-label={language === "ru" ? "Следующий период" : "Next period"}
+              >
+                ›
+              </button>
+              <button
+                type="button"
+                className={`planner-calendar-today-button ${isCalendarAtToday ? "is-current" : ""}`}
+                onClick={goToToday}
+                aria-pressed={isCalendarAtToday}
+                aria-label={language === "ru" ? "Вернуться к сегодняшнему дню" : "Return to today"}
+              >
+                <span className="planner-calendar-today-icon" aria-hidden="true" />
+                <span className="planner-calendar-today-label">
+                  {isCalendarAtToday ? (language === "ru" ? "Сегодня" : "Today") : language === "ru" ? "К сегодня" : "To today"}
+                </span>
+              </button>
+            </div>
             <p>
               {language === "ru"
                 ? "Планируй задачи как блоки времени: сроки остаются сроками, расписание становится видимым."
@@ -3607,26 +3734,6 @@ export default function PlannerCalendarSurface({
                         : "Month"}
                 </button>
               ))}
-            </div>
-
-            <div className="planner-calendar-controls">
-              <button type="button" onClick={() => shiftCursor(-1)} aria-label={language === "ru" ? "Назад" : "Previous"}>
-                ‹
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const today = getStartOfLocalDay();
-                  setCursorAt(today);
-                  setSelectedDayAt(today);
-                  setSelectedSlotHour(null);
-                }}
-              >
-                {language === "ru" ? "Сегодня" : "Today"}
-              </button>
-              <button type="button" onClick={() => shiftCursor(1)} aria-label={language === "ru" ? "Вперед" : "Next"}>
-                ›
-              </button>
             </div>
 
             <button

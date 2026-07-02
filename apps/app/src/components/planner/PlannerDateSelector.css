@@ -45,7 +45,6 @@
 
 .planner-date-selector-kicker,
 .planner-date-selector-time span,
-.planner-date-selector-time-presets,
 .planner-date-selector-repeat > span,
 .planner-date-selector-custom-repeat > span {
   color: color-mix(in srgb, var(--planner-date-emphasis) 50%, rgba(230, 239, 255, 0.7) 50%);
@@ -92,8 +91,7 @@
 
 .planner-date-selector-quick,
 .planner-date-selector-options,
-.planner-date-selector-repeat > div,
-.planner-date-selector-time-presets {
+.planner-date-selector-repeat > div {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
@@ -102,8 +100,7 @@
 
 .planner-date-selector-quick button,
 .planner-date-selector-options button,
-.planner-date-selector-repeat button,
-.planner-date-selector-time-presets button {
+.planner-date-selector-repeat button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -120,8 +117,7 @@
 
 .planner-date-selector-quick button.is-active,
 .planner-date-selector-options button.is-active,
-.planner-date-selector-repeat button.is-active,
-.planner-date-selector-time-presets button.is-active {
+.planner-date-selector-repeat button.is-active {
   border-color: color-mix(in srgb, var(--planner-date-accent) 52%, rgba(255, 255, 255, 0.16));
   background: color-mix(in srgb, var(--planner-date-accent) 18%, rgba(255, 255, 255, 0.06));
   color: #fff;
@@ -319,6 +315,30 @@
   padding: 0 13px;
 }
 
+.planner-date-selector-actions button:not(.is-primary) {
+  border-color: color-mix(in srgb, var(--planner-date-accent) 24%, rgba(255, 255, 255, 0.12));
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--planner-date-accent) 20%, #273348 80%),
+      color-mix(in srgb, var(--planner-date-accent-2) 14%, #20283b 86%)
+    );
+  color: rgba(245, 249, 255, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 28px rgba(3, 7, 18, 0.22);
+}
+
+.planner-date-selector-actions button:not(.is-primary):hover {
+  border-color: color-mix(in srgb, var(--planner-date-accent) 42%, rgba(255, 255, 255, 0.16));
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--planner-date-accent) 28%, #2b3950 72%),
+      color-mix(in srgb, var(--planner-date-accent-2) 18%, #242d42 82%)
+    );
+}
+
 .planner-date-selector-actions button.is-primary {
   border-color: color-mix(in srgb, var(--planner-date-accent) 58%, rgba(255, 255, 255, 0.18));
   background: linear-gradient(135deg, color-mix(in srgb, var(--planner-date-accent) 64%, white), var(--planner-date-accent-2));
@@ -327,9 +347,22 @@
 }
 
 .planner-date-selector.is-mobile {
-  max-height: min(78vh, 720px);
+  height: 100%;
+  max-height: none;
   overflow: auto;
   overscroll-behavior: contain;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
+}
+
+.planner-date-selector.is-mobile .planner-date-selector-actions {
+  position: sticky;
+  z-index: 3;
+  bottom: 0;
+  margin: 0 -1px -1px;
+  padding-top: 9px;
+  border-radius: 0 0 19px 19px;
+  background: transparent;
 }
 
 @media (max-width: 520px) {
