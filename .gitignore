@@ -18,6 +18,7 @@ apps/**/dist/
 apps/**/.env
 apps/**/.env.*
 apps/**/.data/
+apps/site/
 
 coverage/
 

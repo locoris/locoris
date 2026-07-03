@@ -1,0 +1,217 @@
+.cloud-vault-picker-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: clamp(14px, 3vw, 30px);
+}
+
+.cloud-vault-picker-dim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.44);
+  backdrop-filter: blur(18px);
+}
+
+.cloud-vault-picker-card {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: min(720px, calc(100vh - 34px));
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: clamp(16px, 2.4vw, 22px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--settings-accent, var(--accent-primary)) 22%, rgba(255, 255, 255, 0.12));
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--settings-accent, var(--accent-primary)) 18%, transparent), transparent 42%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent-secondary, var(--cyan)) 12%, transparent), transparent 38%),
+    linear-gradient(145deg, rgba(28, 32, 48, 0.96), rgba(10, 13, 24, 0.98));
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.cloud-vault-picker-head {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+}
+
+.cloud-vault-picker-head p {
+  margin: 0 0 8px;
+  color: color-mix(in srgb, var(--settings-emphasis, var(--text-emphasis)) 72%, var(--settings-accent, var(--accent-primary)) 28%);
+  font-size: 0.66rem;
+  font-weight: 860;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.cloud-vault-picker-head h3 {
+  margin: 0;
+  color: rgba(250, 252, 255, 0.96);
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  line-height: 1.1;
+}
+
+.cloud-vault-picker-close {
+  width: 42px;
+  height: 42px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--settings-accent, var(--accent-primary)) 24%, rgba(255, 255, 255, 0.14));
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--settings-accent, var(--accent-primary)) 18%, transparent), transparent 62%),
+    rgba(255, 255, 255, 0.046);
+  color: rgba(245, 248, 255, 0.9);
+  cursor: pointer;
+}
+
+.cloud-vault-picker-close svg,
+.cloud-vault-picker-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.cloud-vault-picker-close path,
+.cloud-vault-picker-icon path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cloud-vault-picker-list {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  overflow: auto;
+  padding-right: 3px;
+}
+
+.cloud-vault-picker-row {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--settings-accent, var(--accent-primary)) 10%, transparent), transparent 58%),
+    rgba(255, 255, 255, 0.036);
+  color: rgba(240, 246, 255, 0.9);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cloud-vault-picker-row:hover,
+.cloud-vault-picker-row:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--settings-accent, var(--accent-primary)) 34%, rgba(255, 255, 255, 0.14));
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--settings-accent, var(--accent-primary)) 16%, transparent), transparent 58%),
+    rgba(255, 255, 255, 0.052);
+}
+
+.cloud-vault-picker-row:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.cloud-vault-picker-icon {
+  width: 40px;
+  height: 40px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--settings-accent, var(--accent-primary)) 26%, rgba(255, 255, 255, 0.12));
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--settings-accent, var(--accent-primary)) 11%, rgba(255, 255, 255, 0.04));
+}
+
+.cloud-vault-picker-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.cloud-vault-picker-copy strong,
+.cloud-vault-picker-copy small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cloud-vault-picker-copy strong {
+  color: #fff;
+  font-weight: 760;
+}
+
+.cloud-vault-picker-copy small {
+  color: rgba(200, 210, 238, 0.72);
+  font-size: 0.74rem;
+  font-style: normal;
+}
+
+.cloud-vault-picker-action {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--settings-accent, var(--accent-primary)) 24%, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--settings-accent, var(--accent-primary)) 11%, rgba(255, 255, 255, 0.03));
+  color: rgba(245, 248, 255, 0.9);
+  font-size: 0.72rem;
+  font-weight: 780;
+  white-space: nowrap;
+}
+
+.cloud-vault-picker-row.is-connected .cloud-vault-picker-action {
+  color: color-mix(in srgb, var(--settings-accent-secondary, var(--accent-secondary)) 72%, #fff 28%);
+}
+
+.cloud-vault-picker-empty {
+  padding: 20px;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  color: rgba(205, 215, 242, 0.72);
+  text-align: center;
+}
+
+@media (max-width: 720px), (orientation: portrait) {
+  .cloud-vault-picker-layer {
+    align-items: end;
+    padding: 0;
+  }
+
+  .cloud-vault-picker-card {
+    width: 100%;
+    max-height: min(82vh, calc(100vh - 20px));
+    border-radius: 28px 28px 0 0;
+    border-bottom: 0;
+  }
+
+  .cloud-vault-picker-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .cloud-vault-picker-action {
+    grid-column: 2;
+    width: max-content;
+  }
+}

@@ -1,6 +1,7 @@
 import type {
   AppSettings,
   SyncConnection,
+  SyncConnectionRole,
   SyncConnectionProvider,
   SyncVaultBinding
 } from "../types";
@@ -41,6 +42,10 @@ function sanitizeProvider(value: unknown): SyncConnectionProvider | null {
   return value === "selfHosted" || value === "hosted" || value === "googleDrive" ? value : null;
 }
 
+function sanitizeConnectionRole(value: unknown): SyncConnectionRole {
+  return value === "locorisCloud" ? "locorisCloud" : "external";
+}
+
 function sanitizeText(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
@@ -73,6 +78,7 @@ function normalizeConnection(entry: unknown): PersistedSyncConnection | null {
   return {
     id,
     provider,
+    role: sanitizeConnectionRole(record.role),
     label,
     serverUrl,
     tokenExpiresAt: typeof record.tokenExpiresAt === "number" ? record.tokenExpiresAt : null,
@@ -258,6 +264,7 @@ export function getSyncBindingForVault(localVaultId: string) {
 
 export async function createSyncConnection(input: {
   provider: SyncConnectionProvider;
+  role?: SyncConnectionRole;
   serverUrl: string;
   label?: string;
   managementToken?: string;
@@ -279,6 +286,7 @@ export async function createSyncConnection(input: {
   const connection: SyncConnection = {
     id: crypto.randomUUID(),
     provider: input.provider,
+    role: input.role ?? "external",
     label: sanitizeText(input.label, 120) || buildConnectionLabel(input.provider, serverUrl),
     serverUrl,
     managementToken: sanitizeText(input.managementToken, 512),
@@ -361,6 +369,7 @@ export async function updateSyncConnection(
       typeof patch.userEmail === "string"
         ? sanitizeText(patch.userEmail, 160)
         : currentConnection.userEmail,
+    role: patch.role ?? currentConnection.role ?? "external",
     updatedAt: now()
   };
 
@@ -590,6 +599,7 @@ export async function migrateSyncRegistryFromLegacyVaultSettings(
         connection = {
           id: crypto.randomUUID(),
           provider: "selfHosted",
+          role: "external",
           label: buildConnectionLabel("selfHosted", settings.selfHostedUrl),
           serverUrl: settings.selfHostedUrl.trim(),
           managementToken: "",
@@ -634,6 +644,7 @@ export async function migrateSyncRegistryFromLegacyVaultSettings(
         connection = {
           id: crypto.randomUUID(),
           provider: "hosted",
+          role: "external",
           label:
             settings.hostedUserName.trim() ||
             buildConnectionLabel("hosted", settings.hostedUrl),

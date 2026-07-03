@@ -16,7 +16,8 @@ const ru = {
   },
   dialog: {
     kicker: "Подтверждение",
-    cancel: "Отмена"
+    cancel: "Отмена",
+    ok: "Готово"
   },
   privateVaultWarning: {
     kicker: "Приватное хранилище",
@@ -658,6 +659,11 @@ const ru = {
     hostedLoggedOut: "Облачный аккаунт отключен на этом устройстве.",
     hostedVaultCreated: "Облачное хранилище создано.",
     hostedVaultBound: "Локальное хранилище привязано к облачному хранилищу.",
+    hostedDeviceAuthorizationPending: "Подтверди вход в аккаунте Locoris Cloud.",
+    hostedDeviceCodeExpired: "Код входа истек. Запусти вход через браузер заново.",
+    hostedDeviceCodeUsed: "Этот код входа уже использован. Запусти новый вход.",
+    hostedDeviceCodeInvalid: "Код входа не найден. Запусти вход через браузер заново.",
+    hostedConnectionNotReady: "Подключение создано, но еще не готово. Закрой окно и открой синхронизацию снова.",
     cloudPlanRequired: "Для этого действия нужен активный тариф Locoris Cloud.",
     cloudTrialExpired: "Пробный период Locoris Cloud закончился. Войди и обнови тариф, чтобы продолжить синхронизацию.",
     cloudSubscriptionPastDue: "Оплата облака просрочена. Обнови тариф, чтобы возобновить синхронизацию.",
@@ -716,6 +722,61 @@ const ru = {
       "При первом запуске язык определяется автоматически, но в любой момент его можно переключить вручную.",
     languageEnglish: "Английский",
     languageRussian: "Русский",
+    accountCloudTitle: "Аккаунт и Cloud",
+    accountCloudCaption:
+      "Вход в Locoris Cloud, тариф, устройства и выбор хранилищ, которые синхронизируются через облако.",
+    accountCloudRootDescription:
+      "Облачный аккаунт, тариф, устройства и cloud-синхронизация локальных хранилищ.",
+    accountCloudConnectedCount: "{{count}} подключено",
+    accountCloudSignedOut: "Вход не выполнен",
+    accountCloudReady: "Cloud готов",
+    accountCloudProfileKicker: "Профиль",
+    accountCloudProfileDescription:
+      "Этот аккаунт используется только для Locoris Cloud и подключенных к нему хранилищ.",
+    accountCloudNoAccountTitle: "Locoris Cloud не подключен",
+    accountCloudNoAccountDescription:
+      "Войди или создай аккаунт, чтобы подключать локальные хранилища к облачной синхронизации.",
+    accountCloudSignIn: "Войти в Cloud",
+    accountCloudManage: "Управлять",
+    accountCloudStatusTitle: "Статус Locoris Cloud",
+    accountCloudPlan: "Тариф",
+    accountCloudVaults: "Хранилища",
+    accountCloudDevices: "Устройства",
+    accountCloudStorage: "Данные",
+    accountCloudDuplicateTitle: "Найдены лишние cloud-подключения",
+    accountCloudDuplicateDescription:
+      "Есть {{count}} дополнительных cloud-подключений. Основным считается самое свежее, остальные лучше удалить после проверки.",
+    accountCloudReadOnlyTitle: "Cloud в режиме чтения",
+    accountCloudReadOnlyDescription:
+      "Аккаунт не может записывать изменения. Проверь тариф, оплату или статус сервера.",
+    accountCloudVaultsKicker: "Cloud-хранилища",
+    accountCloudVaultsTitle: "Что синхронизировать через Locoris Cloud",
+    accountCloudVaultsDescription:
+      "Каждое локальное хранилище можно подключить к cloud vault, отключить или импортировать существующее cloud-хранилище как локальное.",
+    accountCloudImportFromCloud: "Импорт из Cloud",
+    accountCloudConnected: "Cloud",
+    accountCloudNotConnected: "Локально",
+    accountCloudVaultUnbound: "Не подключено к Locoris Cloud.",
+    accountCloudConnectVault: "Подключить",
+    accountCloudDisconnect: "Отключить",
+    accountCloudVaultConnected: "«{{vault}}» подключено к Locoris Cloud.",
+    accountCloudVaultDisconnected: "Хранилище отключено от Locoris Cloud.",
+    accountCloudRemoteImported: "«{{vault}}» добавлено из Locoris Cloud.",
+    accountCloudRefreshed: "Статус Locoris Cloud обновлен.",
+    accountCloudDevicesKicker: "Устройство",
+    accountCloudDevicesTitle: "Это устройство",
+    accountCloudDevicesDescription:
+      "Устройства управляются в Account Portal. В приложении показано, под каким устройством выполняется синхронизация.",
+    accountCloudImportKicker: "Cloud vaults",
+    accountCloudImportTitle: "Выбери cloud-хранилище",
+    accountCloudNoRemoteVaults: "В аккаунте пока нет cloud-хранилищ.",
+    accountCloudImportAction: "Импортировать",
+    interfaceTitle: "Интерфейс",
+    interfaceRootDescription:
+      "Язык, темы, движение карты и визуальные сигналы планера.",
+    interfacePanelCaption:
+      "Настрой язык, тему и визуальное поведение Locoris на этом устройстве.",
+    interfaceLanguageKicker: "Язык",
     accentTheme: "Темы",
     accentThemeDescription:
       "Темы интерфейса и движение орбитальной карты. Это локальные настройки клиента, они не меняют данные хранилища.",
@@ -1028,8 +1089,8 @@ const ru = {
     backupRestoreConfirmDetail:
       "Текущее содержимое хранилища будет заменено. Создай бэкап заранее, если к нему может понадобиться вернуться.",
     backupRestoreConfirm: "Восстановить",
-    syncTitle: "Синхронизация",
-    syncDescription: "{{vaultCount}} хранилищ на этом устройстве, подключено {{connectionCount}} способов синхронизации.",
+    syncTitle: "Внешняя синхронизация",
+    syncDescription: "{{vaultCount}} хранилищ на этом устройстве, подключено {{connectionCount}} внешних способов.",
     desktopUpdateTitle: "Обновления приложения",
     desktopUpdateCurrent: "Установлена версия {{version}}.",
     desktopUpdateCurrentUnknown: "Определяем текущую версию приложения…",
@@ -1072,9 +1133,9 @@ const ru = {
       "Системный установщик Android открыт. Подтверди установку обновления в появившемся окне.",
     androidUpdateHint:
       "Android попросит подтвердить установку APK вручную. Если разрешение на установку из этого источника отключено, приложение откроет нужный системный экран.",
-    syncKicker: "Синхронизация",
+    syncKicker: "Внешняя синхронизация",
     syncManagerIntro:
-      "Подключай каждое локальное хранилище к одному удаленному способу. Один способ синхронизации может обслуживать несколько хранилищ, а все связи видны прямо в этом экране.",
+      "Google Drive, self-hosted и legacy-подключения живут здесь. Locoris Cloud настраивается отдельно в разделе «Аккаунт и Cloud».",
     back: "Назад",
     footnote: "",
     vaultsTitle: "Локальные хранилища",
@@ -1082,7 +1143,8 @@ const ru = {
       "Здесь можно создавать хранилища, переименовывать их, удалять и подключать каждое к одному способу синхронизации.",
     connectionsTitle: "Способы синхронизации",
     connectionsDescription:
-      "Добавь облачное подключение, подключи столько своих серверов, сколько нужно, и распредели хранилища по нужным направлениям.",
+      "Подключи Google Drive или свои серверы и распредели локальные хранилища по внешним направлениям.",
+    legacyHostedConnectionTitle: "Legacy Cloud",
     addConnection: "Добавить подключение",
     connectionAdded: "Способ синхронизации добавлен.",
     vaultEncryptionKicker: "Шифрование хранилища",
@@ -1189,6 +1251,51 @@ const ru = {
       "Укажи адрес персонального сервера и management token. После этого можно сразу подключать хранилища прямо на этом экране.",
     hostedModalDescription:
       "Войди или создай облачный аккаунт, и новый способ синхронизации появится в правой колонке готовым к привязкам.",
+    cloudWizardTitle: "Подключить Locoris Cloud",
+    cloudWizardAuthTitle: "Вход без ручных токенов",
+    cloudWizardAuthDescription:
+      "Войди в облачный аккаунт, а Locoris сам подготовит сессию, список облачных хранилищ и безопасные device credentials для привязки.",
+    cloudWizardServerLabel: "Cloud endpoint",
+    cloudWizardAuthMode: "Режим входа",
+    cloudWizardDeviceTitle: "Вход через браузер",
+    cloudWizardDeviceDescription:
+      "Открой аккаунт в браузере, подтверди подключение устройства, и приложение продолжит настройку автоматически.",
+    cloudWizardDeviceAction: "Открыть вход",
+    cloudWizardDeviceWaiting: "Ждем подтверждение…",
+    cloudWizardDeviceCode: "Код для сверки",
+    cloudWizardOpenAccount: "Открыть Account Portal",
+    cloudWizardDeviceExpired: "Код входа истек. Запусти вход через браузер еще раз.",
+    cloudWizardAccountLabel: "Аккаунт",
+    cloudWizardPlan: "Тариф",
+    cloudWizardStorage: "Занято",
+    cloudWizardVaultLimit: "Хранилища",
+    cloudWizardDeviceLimit: "Устройства",
+    cloudWizardReadOnlyWarning:
+      "Сейчас аккаунт в режиме ограничения записи. Можно подключать существующие данные для чтения, но запись и новые привязки потребуют активный тариф.",
+    cloudWizardUploadTitle: "Загрузить текущее хранилище",
+    cloudWizardUploadDescription:
+      "Создать или обновить облачную копию «{{vault}}» и сразу запустить синхронизацию.",
+    cloudWizardUploadAction: "Загрузить и синхронизировать",
+    cloudWizardUploadSuccess: "«{{vault}}» подключено к Locoris Cloud и поставлено на синхронизацию.",
+    cloudWizardNoLocalVault: "На этом устройстве нет локального хранилища для загрузки.",
+    cloudWizardCreateTitle: "Создать новое облачное",
+    cloudWizardCreateDescription:
+      "Создать пустое облачное хранилище и подключить его к этому устройству как отдельное локальное пространство.",
+    cloudWizardCreateAction: "Создать и открыть",
+    cloudWizardNewVaultFallback: "Новое хранилище",
+    cloudWizardExistingTitle: "Подключить существующее облачное",
+    cloudWizardExistingDescription:
+      "Если хранилище уже есть в аккаунте, Locoris создаст локальную копию или свяжет найденную локальную пару.",
+    cloudWizardNoRemoteVaults: "В аккаунте пока нет облачных хранилищ. Загрузи текущее или создай новое.",
+    cloudWizardConnectAction: "Подключить",
+    cloudWizardDoneTitle: "Cloud готов",
+    cloudWizardDoneDescription:
+      "Подключение сохранено, хранилище связано, а синхронизация будет дальше работать через аккаунт и device credentials.",
+    cloudWizardMobileTitle: "Locoris Cloud",
+    cloudWizardMobileDescription: "Войти, выбрать облачное хранилище или загрузить текущее.",
+    cloudWizardConnectedTitle: "Cloud подключен",
+    cloudWizardStartAction: "Подключить",
+    cloudWizardManageAction: "Открыть",
     connectionLabelOptional: "Необязательная подпись",
     noConnectionsTitle: "Пока нет способов синхронизации",
     noConnectionsDescription:

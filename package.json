@@ -1,26 +1,23 @@
 {
   "name": "locoris",
   "private": true,
-  "version": "1.0.41",
+  "version": "1.0.42",
   "workspaces": [
-    "apps/*",
+    "apps/app",
+    "apps/personal-server",
     "packages/*"
   ],
   "overrides": {
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "@types/react": "18.3.28",
+    "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7"
   },
   "scripts": {
     "dev": "npm run dev --workspace @locoris/app",
-    "site:dev": "npm run dev --workspace @locoris/site",
     "build": "npm run build --workspace @locoris/app",
-    "site:build": "npm run build --workspace @locoris/site",
     "preview": "npm run preview --workspace @locoris/app",
-    "site:preview": "npm run preview --workspace @locoris/site",
     "typecheck": "npm run typecheck --workspace @locoris/app",
-    "site:typecheck": "npm run typecheck --workspace @locoris/site",
     "desktop:dev": "npm run desktop:dev --workspace @locoris/app",
     "desktop:build": "npm run desktop:build --workspace @locoris/app",
     "desktop:build:debug": "npm run desktop:build:debug --workspace @locoris/app",

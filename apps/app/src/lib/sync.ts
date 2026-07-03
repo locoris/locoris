@@ -62,6 +62,8 @@ import type {
   HostedAccountUser,
   HostedAccountDevice,
   HostedAccountVault,
+  HostedCloudEntitlement,
+  HostedCloudUsage,
   Note,
   Project,
   SyncEnvelope,
@@ -116,10 +118,12 @@ const JSON_HEADERS = {
   "Content-Type": "application/json"
 };
 
-type HostedAccountOverview = {
+export type HostedAccountOverview = {
   user: HostedAccountUser;
   session: Omit<HostedAccountSession, "token">;
   vaults: HostedAccountVault[];
+  usage: HostedCloudUsage;
+  entitlement: HostedCloudEntitlement;
 };
 
 type RemoteSyncConfig = {
@@ -1653,6 +1657,9 @@ export async function registerHostedAccount(
     name: string;
     email: string;
     password: string;
+    deviceId?: string | null;
+    deviceName?: string | null;
+    clientPlatform?: string | null;
   }
 ) {
   return requestJson<{
@@ -1670,6 +1677,9 @@ export async function loginHostedAccount(
   payload: {
     email: string;
     password: string;
+    deviceId?: string | null;
+    deviceName?: string | null;
+    clientPlatform?: string | null;
   }
 ) {
   return requestJson<{
@@ -1679,6 +1689,42 @@ export async function loginHostedAccount(
     method: "POST",
     headers: JSON_HEADERS,
     body: JSON.stringify(payload)
+  });
+}
+
+export type HostedDeviceLoginStart = {
+  deviceCode: string;
+  userCode: string;
+  verificationUri: string;
+  expiresAt: number;
+  interval: number;
+};
+
+export async function startHostedDeviceLogin(
+  serverUrl: string,
+  payload: {
+    deviceName: string;
+    deviceId?: string | null;
+    clientPlatform?: string | null;
+  }
+) {
+  return requestJson<HostedDeviceLoginStart>(buildAccountUrl(serverUrl, "/v1/auth/device/start"), {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function pollHostedDeviceLogin(serverUrl: string, deviceCode: string) {
+  return requestJson<{
+    user: HostedAccountUser;
+    session: HostedAccountSession;
+  }>(buildAccountUrl(serverUrl, "/v1/auth/device/token"), {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({
+      deviceCode
+    })
   });
 }
 
@@ -1695,6 +1741,8 @@ export async function loadHostedAccountOverview(serverUrl: string, sessionToken:
       user: HostedAccountUser;
       session: Omit<HostedAccountSession, "token">;
       vaultCount: number;
+      usage?: HostedCloudUsage;
+      entitlement?: HostedCloudEntitlement;
     }>(buildAccountUrl(serverUrl, "/v1/auth/me"), {
       method: "GET",
       headers: createBearerHeaders(sessionToken, false)
@@ -1711,7 +1759,49 @@ export async function loadHostedAccountOverview(serverUrl: string, sessionToken:
   return {
     user: mePayload.user,
     session: mePayload.session,
-    vaults: vaultsPayload.vaults
+    vaults: vaultsPayload.vaults,
+    usage: mePayload.usage ?? {
+      storageBytes: 0,
+      vaultCount: mePayload.vaultCount,
+      syncTokenCount: 0,
+      deviceCount: 0
+    },
+    entitlement: mePayload.entitlement ?? {
+      plan: {
+        id: "cloud",
+        name: "Locoris Cloud",
+        limits: {
+          cloudEnabled: true,
+          maxVaults: null,
+          maxSyncTokens: null,
+          storageBytes: null,
+          maxUploadBytes: null,
+          maxJournalEntriesPerVault: null,
+          journalTtlDays: null
+        }
+      },
+      subscription: null,
+      accountStatus: "active",
+      trialEndsAt: null,
+      reason: "OK",
+      limits: {
+        cloudEnabled: true,
+        maxVaults: null,
+        maxSyncTokens: null,
+        storageBytes: null,
+        maxUploadBytes: null,
+        maxJournalEntriesPerVault: null,
+        journalTtlDays: null
+      },
+      capabilities: {
+        canUseCloud: true,
+        canCreateVault: true,
+        canWriteSync: true,
+        canReadSync: true,
+        canIssueToken: true,
+        canDeleteCloudData: true
+      }
+    }
   } satisfies HostedAccountOverview;
 }
 

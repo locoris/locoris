@@ -39,6 +39,7 @@ type SyncSettingsMobileProps = {
   onDeleteLocalVault: (vault: LocalVaultProfile) => void;
   onStartVaultBinding: (vault: LocalVaultProfile) => void;
   onCancelVaultBinding: () => void;
+  onConnectCloud: (connection?: SyncConnection | null) => void;
   onAddConnection: () => void;
   onAddConnectionFromBinding: () => void;
   onBindVaultToConnection: (vaultId: string, connectionId: string) => void | Promise<void>;
@@ -264,6 +265,7 @@ export default function SyncSettingsMobile({
   onDeleteLocalVault,
   onStartVaultBinding,
   onCancelVaultBinding,
+  onConnectCloud,
   onAddConnection,
   onAddConnectionFromBinding,
   onBindVaultToConnection,
@@ -306,6 +308,7 @@ export default function SyncSettingsMobile({
     return counts;
   }, [syncBindings]);
   const detailConnection = detailConnectionId ? connectionsById.get(detailConnectionId) ?? null : null;
+  const hostedConnection = syncConnections.find((connection) => connection.provider === "hosted") ?? null;
   const mobileSheetOpen = isMobilePortrait && Boolean(bindingSheetVault || detailConnection);
   const closeTopMobileSheet = () => {
     if (bindingSheetVault) {
@@ -361,6 +364,7 @@ export default function SyncSettingsMobile({
 
   const getAvailability = (connection: SyncConnection) =>
     online ? connectionAvailability[connection.id] ?? "checking" : "offline";
+  const hostedAvailability = hostedConnection ? getAvailability(hostedConnection) : null;
 
   const getAvailabilityLabel = (availability: ReturnType<typeof getAvailability>) =>
     availability === "available"
@@ -981,6 +985,29 @@ export default function SyncSettingsMobile({
         <span>{t("settings.mobileConnectionCount", { count: syncConnections.length })}</span>
         <span>{t("settings.linkedVaultCount", { count: syncBindings.length })}</span>
       </div>
+
+      {hostedConnection ? (
+        <button
+          type="button"
+          className="sync-mobile-cloud-cta is-connected"
+          onClick={() => onConnectCloud(hostedConnection)}
+        >
+          <span className="sync-mobile-cloud-icon">
+            <HostedGlyph />
+          </span>
+          <span className="sync-mobile-cloud-copy">
+            <strong>{t("settings.legacyHostedConnectionTitle")}</strong>
+            <small>
+              {`${hostedConnection.userEmail || hostedConnection.label} · ${
+                hostedAvailability ? getAvailabilityLabel(hostedAvailability) : t("settings.connectionChecking")
+              }`}
+            </small>
+          </span>
+          <span className="sync-mobile-cloud-action">
+            {t("settings.cloudWizardManageAction")}
+          </span>
+        </button>
+      ) : null}
 
       <nav className="sync-mobile-tabs" aria-label={t("settings.mobileSyncTabsLabel")}>
         <button

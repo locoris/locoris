@@ -1,6 +1,7 @@
 export type AppLanguage = "en" | "ru";
 export type SyncProvider = "none" | "googleDrive" | "selfHosted" | "hosted";
 export type SyncConnectionProvider = Exclude<SyncProvider, "none">;
+export type SyncConnectionRole = "external" | "locorisCloud";
 export type MobileSection = "vault" | "notes" | "editor";
 export type SaveState = "idle" | "saving" | "saved";
 export type AssetKind = "image" | "file" | "audio" | "video";
@@ -364,6 +365,7 @@ export interface SyncRemoteVault {
 export interface SyncConnection {
   id: string;
   provider: SyncConnectionProvider;
+  role?: SyncConnectionRole;
   label: string;
   serverUrl: string;
   managementToken: string;
@@ -411,6 +413,9 @@ export interface HostedAccountUser {
 
 export interface HostedAccountSession {
   id: string;
+  deviceId?: string | null;
+  deviceName?: string | null;
+  clientPlatform?: string | null;
   createdAt: number;
   expiresAt: number;
   token: string;
@@ -427,6 +432,50 @@ export interface HostedAccountVault {
   lastRevision: string | null;
   lastSyncAt: number | null;
   tokenCount: number;
+  deviceCount?: number;
+}
+
+export interface HostedCloudLimits {
+  cloudEnabled: boolean;
+  maxVaults: number | null;
+  maxSyncTokens: number | null;
+  storageBytes: number | null;
+  maxUploadBytes: number | null;
+  maxJournalEntriesPerVault: number | null;
+  journalTtlDays: number | null;
+}
+
+export interface HostedCloudPlan {
+  id: string;
+  name: string;
+  description?: string;
+  billingMode?: string;
+  amountRub?: number;
+  interval?: string;
+  limits: HostedCloudLimits;
+}
+
+export interface HostedCloudEntitlement {
+  plan: HostedCloudPlan;
+  subscription: unknown | null;
+  accountStatus: string;
+  trialEndsAt: number | null;
+  reason: string;
+  limits: HostedCloudLimits;
+  capabilities: {
+    canUseCloud: boolean;
+    canCreateVault: boolean;
+    canWriteSync: boolean;
+    canReadSync: boolean;
+    canIssueToken: boolean;
+    canDeleteCloudData: boolean;
+  };
+}
+
+export interface HostedCloudUsage {
+  storageBytes: number;
+  vaultCount: number;
+  syncTokenCount: number;
   deviceCount?: number;
 }
 

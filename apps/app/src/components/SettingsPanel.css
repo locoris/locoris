@@ -266,6 +266,15 @@
   align-content: start;
 }
 
+.settings-language-block {
+  position: relative;
+  z-index: 1;
+}
+
+.settings-language-block.is-picker-open {
+  z-index: 12;
+}
+
 .settings-panel-block + .settings-panel-block {
   margin-top: 14px;
 }
@@ -283,6 +292,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.settings-row-stack-single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .settings-row {
@@ -352,7 +365,17 @@ button.settings-row:focus-visible {
   --settings-row-tint: rgb(var(--cyan-rgb) / 0.1);
 }
 
+.settings-row.is-account-cloud {
+  --settings-row-accent: #92f3e2;
+  --settings-row-tint: rgba(146, 243, 226, 0.12);
+}
+
 .settings-row.is-accent {
+  --settings-row-accent: var(--settings-accent);
+  --settings-row-tint: color-mix(in srgb, var(--settings-accent) 13%, transparent);
+}
+
+.settings-row.is-interface {
   --settings-row-accent: var(--settings-accent);
   --settings-row-tint: color-mix(in srgb, var(--settings-accent) 13%, transparent);
 }

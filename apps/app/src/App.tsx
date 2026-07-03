@@ -2870,6 +2870,7 @@ export default function App() {
 
   const handleCreateSyncConnection = async (input: {
     provider: SyncConnectionProvider;
+    role?: SyncConnection["role"];
     serverUrl: string;
     label?: string;
     managementToken?: string;
@@ -2879,8 +2880,9 @@ export default function App() {
     userName?: string;
     userEmail?: string;
   }) => {
-    await createSyncConnection(input);
+    const connection = await createSyncConnection(input);
     refreshSyncRegistryState();
+    return connection;
   };
 
   const handleDeleteSyncConnection = async (connectionId: string) => {

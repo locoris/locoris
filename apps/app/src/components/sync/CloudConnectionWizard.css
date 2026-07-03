@@ -1,0 +1,450 @@
+.cloud-wizard {
+  --cloud-wizard-accent: var(--accent-theme-primary, var(--sync-settings-accent, var(--gold)));
+  --cloud-wizard-secondary: var(--accent-theme-secondary, var(--sync-settings-secondary, var(--cyan)));
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  color: rgba(245, 248, 255, 0.94);
+}
+
+.cloud-wizard svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cloud-wizard-icon-accent {
+  stroke: color-mix(in srgb, var(--cloud-wizard-accent) 72%, #fff 28%);
+}
+
+.cloud-wizard-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cloud-wizard-rail span {
+  min-height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--cloud-wizard-accent) 14%, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(197, 205, 232, 0.78);
+  font-size: 0.72rem;
+  font-weight: 860;
+  letter-spacing: 0.08em;
+}
+
+.cloud-wizard-rail span.is-active {
+  border-color: color-mix(in srgb, var(--cloud-wizard-accent) 42%, rgba(255, 255, 255, 0.16));
+  background:
+    radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--cloud-wizard-accent) 20%, transparent), transparent 64%),
+    rgba(255, 255, 255, 0.048);
+  color: color-mix(in srgb, var(--cloud-wizard-accent) 48%, #fff 52%);
+}
+
+.cloud-wizard-section {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cloud-wizard-hero,
+.cloud-wizard-account,
+.cloud-wizard-auth-card,
+.cloud-wizard-device-card,
+.cloud-wizard-action-card,
+.cloud-wizard-remote-section,
+.cloud-wizard-done,
+.cloud-wizard-warning,
+.cloud-wizard-error {
+  border: 1px solid color-mix(in srgb, var(--cloud-wizard-accent) 14%, rgba(255, 255, 255, 0.12));
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cloud-wizard-accent) 10%, transparent), transparent 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.058), rgba(255, 255, 255, 0.018)),
+    rgba(255, 255, 255, 0.026);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 16px 34px rgba(0, 0, 0, 0.18);
+}
+
+.cloud-wizard-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+}
+
+.cloud-wizard-hero-icon,
+.cloud-wizard-device-icon,
+.cloud-wizard-action-icon,
+.cloud-wizard-done-icon,
+.cloud-wizard-remote-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--cloud-wizard-secondary) 24%, rgba(255, 255, 255, 0.14));
+  border-radius: 17px;
+  background:
+    radial-gradient(circle at 30% 0%, color-mix(in srgb, var(--cloud-wizard-secondary) 28%, transparent), transparent 70%),
+    rgba(255, 255, 255, 0.04);
+  color: color-mix(in srgb, var(--cloud-wizard-secondary) 58%, #fff 42%);
+}
+
+.cloud-wizard-hero strong,
+.cloud-wizard-device-card strong,
+.cloud-wizard-action-card strong,
+.cloud-wizard-section-head strong,
+.cloud-wizard-done strong {
+  display: block;
+  color: rgba(252, 253, 255, 0.98);
+  font-size: 1rem;
+  line-height: 1.16;
+}
+
+.cloud-wizard-hero p,
+.cloud-wizard-device-card p,
+.cloud-wizard-action-card p,
+.cloud-wizard-section-head span,
+.cloud-wizard-done p {
+  margin: 6px 0 0;
+  color: rgba(197, 205, 232, 0.78);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
+.cloud-wizard-auth-grid,
+.cloud-wizard-actions-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(260px, 0.95fr);
+  gap: 12px;
+  min-width: 0;
+}
+
+.cloud-wizard-auth-card,
+.cloud-wizard-device-card,
+.cloud-wizard-action-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.cloud-wizard-action-card.is-featured {
+  border-color: color-mix(in srgb, var(--cloud-wizard-secondary) 26%, rgba(255, 255, 255, 0.14));
+}
+
+.cloud-wizard-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.028);
+}
+
+.cloud-wizard-mode-switch button {
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(197, 205, 232, 0.78);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 820;
+}
+
+.cloud-wizard-mode-switch button.is-active {
+  border-color: color-mix(in srgb, var(--cloud-wizard-accent) 32%, rgba(255, 255, 255, 0.13));
+  background: color-mix(in srgb, var(--cloud-wizard-accent) 12%, rgba(255, 255, 255, 0.035));
+  color: rgba(252, 253, 255, 0.96);
+}
+
+.cloud-wizard-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.cloud-wizard-field span {
+  color: color-mix(in srgb, var(--cloud-wizard-accent) 58%, rgba(255, 255, 255, 0.74));
+  font-size: 0.66rem;
+  font-weight: 860;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.cloud-wizard input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid color-mix(in srgb, var(--cloud-wizard-secondary) 16%, rgba(255, 255, 255, 0.13));
+  border-radius: 15px;
+  background: rgba(6, 9, 20, 0.48);
+  color: rgba(252, 253, 255, 0.96);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 760;
+  outline: none;
+  padding: 0 13px;
+}
+
+.cloud-wizard input:focus {
+  border-color: color-mix(in srgb, var(--cloud-wizard-secondary) 44%, rgba(255, 255, 255, 0.18));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cloud-wizard-secondary) 14%, transparent);
+}
+
+.cloud-wizard-primary,
+.cloud-wizard-secondary,
+.cloud-wizard-refresh {
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid color-mix(in srgb, var(--cloud-wizard-accent) 30%, rgba(255, 255, 255, 0.14));
+  border-radius: 15px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cloud-wizard-accent) 24%, rgba(255, 255, 255, 0.045)), rgba(255, 255, 255, 0.016)),
+    rgba(255, 255, 255, 0.034);
+  color: color-mix(in srgb, var(--cloud-wizard-accent) 36%, rgba(255, 255, 255, 0.98));
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 850;
+  line-height: 1.15;
+  padding: 0 14px;
+}
+
+.cloud-wizard-secondary,
+.cloud-wizard-refresh {
+  border-color: color-mix(in srgb, var(--cloud-wizard-secondary) 22%, rgba(255, 255, 255, 0.12));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cloud-wizard-secondary) 12%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0.014)),
+    rgba(255, 255, 255, 0.028);
+  color: color-mix(in srgb, var(--cloud-wizard-secondary) 34%, rgba(255, 255, 255, 0.95));
+}
+
+.cloud-wizard-primary:disabled,
+.cloud-wizard-secondary:disabled,
+.cloud-wizard-refresh:disabled,
+.cloud-wizard-remote-row:disabled {
+  opacity: 0.55;
+}
+
+.cloud-wizard-device-code {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--cloud-wizard-secondary) 24%, rgba(255, 255, 255, 0.13));
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.032);
+}
+
+.cloud-wizard-device-code span,
+.cloud-wizard-account span,
+.cloud-wizard-preflight small {
+  color: rgba(197, 205, 232, 0.72);
+  font-size: 0.68rem;
+  font-weight: 820;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cloud-wizard-device-code strong {
+  color: rgba(252, 253, 255, 0.98);
+  font-size: 1.22rem;
+  letter-spacing: 0.08em;
+}
+
+.cloud-wizard-device-code a {
+  color: color-mix(in srgb, var(--cloud-wizard-secondary) 60%, #fff 40%);
+  font-size: 0.78rem;
+  font-weight: 820;
+  text-decoration: none;
+}
+
+.cloud-wizard-account {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+}
+
+.cloud-wizard-account strong {
+  display: block;
+  margin-top: 4px;
+  color: rgba(252, 253, 255, 0.98);
+  font-size: 0.98rem;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+
+.cloud-wizard-preflight {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cloud-wizard-preflight span {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.028);
+}
+
+.cloud-wizard-preflight strong {
+  display: block;
+  margin-top: 5px;
+  color: rgba(252, 253, 255, 0.96);
+  font-size: 0.9rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.cloud-wizard-warning,
+.cloud-wizard-error {
+  padding: 12px 14px;
+  border-color: rgba(255, 149, 184, 0.25);
+  color: rgba(255, 220, 230, 0.95);
+  font-size: 0.82rem;
+  font-weight: 760;
+  line-height: 1.4;
+}
+
+.cloud-wizard-warning {
+  border-color: rgba(255, 210, 125, 0.26);
+  color: rgba(255, 240, 203, 0.95);
+}
+
+.cloud-wizard-section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.cloud-wizard-section-head > span {
+  min-width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 246, 220, 0.95);
+  font-weight: 860;
+}
+
+.cloud-wizard-remote-section {
+  padding: 16px;
+}
+
+.cloud-wizard-remote-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cloud-wizard-remote-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid color-mix(in srgb, var(--cloud-wizard-secondary) 14%, rgba(255, 255, 255, 0.1));
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.028);
+  color: inherit;
+  font: inherit;
+  padding: 10px;
+  text-align: left;
+}
+
+.cloud-wizard-remote-row strong,
+.cloud-wizard-remote-row small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cloud-wizard-remote-row small {
+  margin-top: 3px;
+  color: rgba(197, 205, 232, 0.72);
+  font-size: 0.72rem;
+  font-weight: 760;
+}
+
+.cloud-wizard-remote-row em {
+  color: color-mix(in srgb, var(--cloud-wizard-secondary) 40%, #fff 60%);
+  font-size: 0.74rem;
+  font-style: normal;
+  font-weight: 840;
+}
+
+.cloud-wizard-empty {
+  margin-top: 12px;
+  padding: 13px;
+  border: 1px dashed color-mix(in srgb, var(--cloud-wizard-accent) 22%, rgba(255, 255, 255, 0.12));
+  border-radius: 16px;
+  color: rgba(197, 205, 232, 0.78);
+  font-size: 0.8rem;
+  font-weight: 720;
+  line-height: 1.4;
+}
+
+.cloud-wizard-done {
+  justify-items: center;
+  padding: 24px;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .cloud-wizard-auth-grid,
+  .cloud-wizard-actions-grid,
+  .cloud-wizard-preflight {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-wizard-account {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 920px) and (orientation: portrait) {
+  .sync-settings-premium-dialog .sync-settings-modal-card {
+    align-self: end;
+    width: min(100%, 720px);
+    max-height: calc(100dvh - max(18px, env(safe-area-inset-top)));
+    border-radius: 28px 28px 0 0;
+  }
+
+  .cloud-wizard {
+    gap: 12px;
+  }
+
+  .cloud-wizard-hero,
+  .cloud-wizard-auth-card,
+  .cloud-wizard-device-card,
+  .cloud-wizard-action-card,
+  .cloud-wizard-remote-section {
+    border-radius: 20px;
+    padding: 14px;
+  }
+
+  .cloud-wizard-remote-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .cloud-wizard-remote-row em {
+    grid-column: 2;
+  }
+}

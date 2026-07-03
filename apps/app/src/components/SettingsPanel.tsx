@@ -37,6 +37,7 @@ import type {
 } from "../types";
 import BackupSettingsPanel from "./BackupSettingsPanel";
 import SyncSettingsPanel from "./SyncSettingsPanel";
+import AccountCloudPanel from "./accountCloud/AccountCloudPanel";
 import AiIntegrationSettings from "./settings/AiIntegrationSettings";
 import "./SettingsPanel.css";
 
@@ -95,6 +96,7 @@ interface SettingsPanelProps {
   ) => void | Promise<void>;
   onCreateConnection: (input: {
     provider: "selfHosted" | "hosted" | "googleDrive";
+    role?: SyncConnection["role"];
     serverUrl: string;
     label?: string;
     managementToken?: string;
@@ -104,7 +106,7 @@ interface SettingsPanelProps {
     userId?: string | null;
     userName?: string;
     userEmail?: string;
-  }) => void | Promise<void>;
+  }) => SyncConnection | void | Promise<SyncConnection | void>;
   onDeleteConnection: (connectionId: string) => void | Promise<void>;
   onUpdateConnection: (
     connectionId: string,
@@ -158,6 +160,15 @@ function LanguageGlyph() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
       <path d="M3.2 4.5h6.2M6.3 4.5c0 5-1.9 8.4-3.6 10.6M6.3 4.5c1.2 2.4 2.8 4.8 4.9 6.8M11.8 6.8h5M14.3 6.8v8.4M11.6 12.4h5.4" />
+    </svg>
+  );
+}
+
+function AccountCloudGlyph() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M5.6 14.5h8.9a3 3 0 0 0 .3-5.9 4.9 4.9 0 0 0-9.5-1.5 3.8 3.8 0 0 0 .3 7.4Z" />
+      <path d="M8.1 10.9h4.2M10.2 8.8V13" className="settings-row-icon-accent" />
     </svg>
   );
 }
@@ -239,7 +250,7 @@ function ChevronGlyph({ expanded = false }: { expanded?: boolean }) {
   );
 }
 
-type SettingsView = "root" | "sync" | "accent" | "planner" | "ai" | "backup";
+type SettingsView = "root" | "accountCloud" | "sync" | "interface" | "planner" | "ai" | "backup";
 
 const LANGUAGE_OPTIONS: Array<{
   value: AppLanguage;
@@ -642,6 +653,24 @@ export default function SettingsPanel({
   const aiConnectionLabel = aiConnected
     ? t("settings.aiConnected")
     : t("settings.aiNotConnected");
+  const locorisCloudConnections = syncConnections.filter(
+    (connection) => connection.provider === "hosted" && connection.role === "locorisCloud"
+  );
+  const locorisCloudConnectionIds = new Set(locorisCloudConnections.map((connection) => connection.id));
+  const locorisCloudBindingCount = syncBindings.filter((binding) =>
+    locorisCloudConnectionIds.has(binding.connectionId)
+  ).length;
+  const externalSyncConnections = syncConnections.filter(
+    (connection) => connection.role !== "locorisCloud"
+  );
+  const externalSyncConnectionIds = new Set(externalSyncConnections.map((connection) => connection.id));
+  const externalSyncBindingCount = syncBindings.filter((binding) =>
+    externalSyncConnectionIds.has(binding.connectionId)
+  ).length;
+  const accountCloudLabel =
+    locorisCloudConnections.length > 0
+      ? t("settings.accountCloudConnectedCount", { count: locorisCloudBindingCount })
+      : t("settings.accountCloudSignedOut");
 
   const renderAccentThemeOptions = (panel = false) => (
     <div
@@ -878,6 +907,33 @@ export default function SettingsPanel({
     </header>
   );
 
+  if (view === "accountCloud") {
+    return (
+      <AccountCloudPanel
+        settings={settings}
+        online={online}
+        localVaults={localVaults}
+        activeLocalVaultId={activeLocalVaultId}
+        selectedLocalVaultId={selectedLocalVaultId}
+        syncConnections={syncConnections}
+        syncBindings={syncBindings}
+        vaultEncryptionById={vaultEncryptionById}
+        syncFeedback={syncFeedback}
+        onBack={() => setView("root")}
+        onClose={onClose}
+        onSelectLocalVault={onSelectLocalVault}
+        onCreateConnection={onCreateConnection}
+        onDeleteConnection={onDeleteConnection}
+        onUpdateConnection={onUpdateConnection}
+        onRefreshHostedConnectionCredentials={onRefreshHostedConnectionCredentials}
+        onBindVault={onBindVault}
+        onImportRemoteVault={onImportRemoteVault}
+        onClearBinding={onClearBinding}
+        onRunVaultSync={onRunVaultSync}
+      />
+    );
+  }
+
   if (view === "sync") {
     return (
       <SyncSettingsPanel
@@ -1046,14 +1102,92 @@ export default function SettingsPanel({
     );
   }
 
-  if (view === "accent") {
+  if (view === "interface") {
     return (
       <section className="settings-panel-shell is-interface-settings">
-        {renderSettingsHeader(t("settings.accentTheme"), t("settings.accentThemePanelCaption"), {
+        {renderSettingsHeader(t("settings.interfaceTitle"), t("settings.interfacePanelCaption"), {
           back: true
         })}
 
         <div className="settings-panel-grid">
+          <section
+            className={`settings-panel-block settings-panel-block-primary settings-language-block ${languagePickerOpen ? "is-picker-open" : ""}`}
+          >
+            <div className="settings-panel-block-head">
+              <p className="panel-kicker settings-panel-block-kicker">{t("settings.interfaceLanguageKicker")}</p>
+            </div>
+
+            <div className="settings-row-stack settings-row-stack-single">
+              <div className="settings-row settings-row-static is-language">
+                <span className="settings-row-icon" aria-hidden="true">
+                  <LanguageGlyph />
+                </span>
+                <div className="settings-row-copy">
+                  <strong>{t("settings.language")}</strong>
+                  <span>{t("settings.languageDescription")}</span>
+                </div>
+                <div
+                  className={`settings-language-picker ${languagePickerOpen ? "is-open" : ""}`}
+                  ref={languagePickerRef}
+                >
+                  <button
+                    type="button"
+                    className="settings-language-trigger"
+                    onClick={() => setLanguagePickerOpen((current) => !current)}
+                    aria-haspopup="listbox"
+                    aria-expanded={languagePickerOpen}
+                    aria-controls="settings-language-menu"
+                  >
+                    <span className="settings-language-option-mark" aria-hidden="true">
+                      {selectedLanguageOption.code}
+                    </span>
+                    <span className="settings-language-option-copy">
+                      <strong>{t(selectedLanguageOption.labelKey)}</strong>
+                      <span>{selectedLanguageOption.nativeLabel}</span>
+                    </span>
+                    <span className="settings-row-action-icon settings-language-chevron" aria-hidden="true">
+                      <ChevronGlyph expanded={languagePickerOpen} />
+                    </span>
+                  </button>
+
+                  {languagePickerOpen ? (
+                    <div
+                      id="settings-language-menu"
+                      className="settings-language-menu"
+                      role="listbox"
+                      aria-label={t("settings.language")}
+                    >
+                    {LANGUAGE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`settings-language-option ${settings.language === option.value ? "is-active" : ""}`}
+                        onClick={() => {
+                          onLanguageChange(option.value);
+                          setLanguagePickerOpen(false);
+                        }}
+                        role="option"
+                        aria-selected={settings.language === option.value}
+                      >
+                        <span className="settings-language-option-mark" aria-hidden="true">
+                          {option.code}
+                        </span>
+                        <span className="settings-language-option-copy">
+                          <strong>{t(option.labelKey)}</strong>
+                          <span>{option.nativeLabel}</span>
+                        </span>
+                        <span className="settings-language-option-check" aria-hidden="true">
+                          {settings.language === option.value ? "✓" : ""}
+                        </span>
+                      </button>
+                    ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section className="settings-panel-block settings-panel-block-primary">
             <div className="settings-panel-block-head">
               <p className="panel-kicker settings-panel-block-kicker">{t("settings.accentThemeChoose")}</p>
@@ -1101,88 +1235,42 @@ export default function SettingsPanel({
           </div>
 
           <div className="settings-row-stack">
-            <div className="settings-row settings-row-static is-language">
-              <span className="settings-row-icon" aria-hidden="true">
-                <LanguageGlyph />
+            <button
+              type="button"
+              className="settings-row settings-row-destination is-account-cloud"
+              onClick={() => setView("accountCloud")}
+            >
+              <span className="settings-row-icon settings-destination-icon" aria-hidden="true">
+                <AccountCloudGlyph />
               </span>
               <div className="settings-row-copy">
-                <strong>{t("settings.language")}</strong>
-                <span>{t("settings.languageDescription")}</span>
+                <strong>{t("settings.accountCloudTitle")}</strong>
+                <span>{t("settings.accountCloudRootDescription")}</span>
               </div>
-              <div
-                className={`settings-language-picker ${languagePickerOpen ? "is-open" : ""}`}
-                ref={languagePickerRef}
-              >
-                <button
-                  type="button"
-                  className="settings-language-trigger"
-                  onClick={() => setLanguagePickerOpen((current) => !current)}
-                  aria-haspopup="listbox"
-                  aria-expanded={languagePickerOpen}
-                  aria-controls="settings-language-menu"
-                >
-                  <span className="settings-language-option-mark" aria-hidden="true">
-                    {selectedLanguageOption.code}
-                  </span>
-                  <span className="settings-language-option-copy">
-                    <strong>{t(selectedLanguageOption.labelKey)}</strong>
-                    <span>{selectedLanguageOption.nativeLabel}</span>
-                  </span>
-                  <span className="settings-row-action-icon settings-language-chevron" aria-hidden="true">
-                    <ChevronGlyph expanded={languagePickerOpen} />
-                  </span>
-                </button>
-
-                {languagePickerOpen ? (
-                  <div
-                    id="settings-language-menu"
-                    className="settings-language-menu"
-                    role="listbox"
-                    aria-label={t("settings.language")}
-                  >
-                  {LANGUAGE_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`settings-language-option ${settings.language === option.value ? "is-active" : ""}`}
-                      onClick={() => {
-                        onLanguageChange(option.value);
-                        setLanguagePickerOpen(false);
-                      }}
-                      role="option"
-                      aria-selected={settings.language === option.value}
-                    >
-                      <span className="settings-language-option-mark" aria-hidden="true">
-                        {option.code}
-                      </span>
-                      <span className="settings-language-option-copy">
-                        <strong>{t(option.labelKey)}</strong>
-                        <span>{option.nativeLabel}</span>
-                      </span>
-                      <span className="settings-language-option-check" aria-hidden="true">
-                        {settings.language === option.value ? "✓" : ""}
-                      </span>
-                    </button>
-                  ))}
-                  </div>
-                ) : null}
-              </div>
-            </div>
+              <span className="settings-row-side">
+                <span className="settings-row-count">{accountCloudLabel}</span>
+                <span className="settings-row-action-icon" aria-hidden="true">
+                  <ChevronGlyph />
+                </span>
+              </span>
+            </button>
 
             <button
               type="button"
-              className="settings-row settings-row-destination is-accent"
-              onClick={() => setView("accent")}
+              className="settings-row settings-row-destination is-interface"
+              onClick={() => setView("interface")}
             >
               <span className="settings-row-icon settings-destination-icon" aria-hidden="true">
                 <AccentGlyph />
               </span>
               <div className="settings-row-copy">
-                <strong>{t("settings.accentTheme")}</strong>
-                <span>{t("settings.accentThemeDescription")}</span>
+                <strong>{t("settings.interfaceTitle")}</strong>
+                <span>{t("settings.interfaceRootDescription")}</span>
               </div>
               <span className="settings-row-side">
-                <span className="settings-row-count">{t(currentAccentTheme.labelKey)}</span>
+                <span className="settings-row-count">
+                  {t(currentAccentTheme.labelKey)} · {t(selectedLanguageOption.labelKey)}
+                </span>
                 <span className="settings-row-action-icon" aria-hidden="true">
                   <ChevronGlyph />
                 </span>
@@ -1264,12 +1352,12 @@ export default function SettingsPanel({
                 <span>
                   {t("settings.syncDescription", {
                     vaultCount: localVaults.length,
-                    connectionCount: syncConnections.length
+                    connectionCount: externalSyncConnections.length
                   })}
                 </span>
               </div>
               <span className="settings-row-side">
-                <span className="settings-row-count">{syncBindings.length}</span>
+                <span className="settings-row-count">{externalSyncBindingCount}</span>
                 <span className="settings-row-action-icon" aria-hidden="true">
                   <ChevronGlyph />
                 </span>

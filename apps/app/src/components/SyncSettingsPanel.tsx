@@ -26,11 +26,14 @@ import {
   loadGoogleDriveVaults,
   loadPersonalServerVaults,
   loginHostedAccount,
+  pollHostedDeviceLogin,
   prepareGoogleDriveOAuth,
   probeSyncConnectionAvailability,
   refreshGoogleDriveAccountSession,
   registerHostedVaultDevice,
-  registerHostedAccount
+  registerHostedAccount,
+  startHostedDeviceLogin,
+  type HostedAccountOverview
 } from "../lib/sync";
 import type {
   AppSettings,
@@ -41,6 +44,7 @@ import type {
   VaultEncryptionSummary
 } from "../types";
 import ConfirmDialog from "./ConfirmDialog";
+import CloudConnectionWizard, { type CloudWizardAuthResult } from "./sync/CloudConnectionWizard";
 import { SyncSettingsDialog, SyncSettingsLayout } from "./sync/SyncSettingsLayout";
 import SyncSettingsMobile from "./sync/SyncSettingsMobile";
 import "./SyncSettingsPanel.css";
@@ -77,6 +81,7 @@ interface SyncSettingsPanelProps {
   ) => void | Promise<void>;
   onCreateConnection: (input: {
     provider: "selfHosted" | "hosted" | "googleDrive";
+    role?: SyncConnection["role"];
     serverUrl: string;
     label?: string;
     managementToken?: string;
@@ -86,7 +91,7 @@ interface SyncSettingsPanelProps {
     userId?: string | null;
     userName?: string;
     userEmail?: string;
-  }) => void | Promise<void>;
+  }) => SyncConnection | void | Promise<SyncConnection | void>;
   onDeleteConnection: (connectionId: string) => void | Promise<void>;
   onUpdateConnection: (
     connectionId: string,
@@ -149,6 +154,7 @@ type PanelModal =
     }
   | { kind: "addConnection" }
   | { kind: "addSelfHosted" }
+  | { kind: "hostedWizard"; connection?: SyncConnection | null }
   | { kind: "addHosted"; connection?: SyncConnection | null }
   | { kind: "addGoogleDrive" }
   | null;
@@ -421,6 +427,17 @@ function translateSyncManagerError(message: string, t: ReturnType<typeof useTran
       return t("sync.serverNotFound");
     case "INVALID_CREDENTIALS":
       return t("sync.hostedInvalidCredentials");
+    case "AUTHORIZATION_PENDING":
+      return t("sync.hostedDeviceAuthorizationPending");
+    case "DEVICE_CODE_EXPIRED":
+      return t("sync.hostedDeviceCodeExpired");
+    case "DEVICE_CODE_ALREADY_USED":
+      return t("sync.hostedDeviceCodeUsed");
+    case "DEVICE_CODE_NOT_FOUND":
+    case "INVALID_DEVICE_CODE":
+      return t("sync.hostedDeviceCodeInvalid");
+    case "CLOUD_CONNECTION_NOT_READY":
+      return t("sync.hostedConnectionNotReady");
     case "PLAN_REQUIRED":
       return t("sync.cloudPlanRequired");
     case "TRIAL_EXPIRED":
@@ -522,8 +539,8 @@ export default function SyncSettingsPanel({
   localVaults,
   activeLocalVaultId,
   selectedLocalVaultId,
-  syncConnections,
-  syncBindings,
+  syncConnections: allSyncConnections,
+  syncBindings: allSyncBindings,
   vaultEncryptionById,
   syncFeedback = null,
   onBack,
@@ -552,6 +569,18 @@ export default function SyncSettingsPanel({
     () => [...localVaults].sort((left, right) => left.createdAt - right.createdAt),
     [localVaults]
   );
+  const syncConnections = useMemo(
+    () => allSyncConnections.filter((connection) => connection.role !== "locorisCloud"),
+    [allSyncConnections]
+  );
+  const managedConnectionIds = useMemo(
+    () => new Set(syncConnections.map((connection) => connection.id)),
+    [syncConnections]
+  );
+  const syncBindings = useMemo(
+    () => allSyncBindings.filter((binding) => managedConnectionIds.has(binding.connectionId)),
+    [allSyncBindings, managedConnectionIds]
+  );
   const getVaultLabel = (vault: Pick<LocalVaultProfile, "id" | "name"> | null | undefined) =>
     getDisplayVaultName(
       vault ?? null,
@@ -566,7 +595,6 @@ export default function SyncSettingsPanel({
     () => new Map(syncConnections.map((connection) => [connection.id, connection])),
     [syncConnections]
   );
-  const hostedConnectionExists = syncConnections.some((connection) => connection.provider === "hosted");
   const googleDriveConfigured = googleDriveClientConfigured();
   const googleDriveClientId = getConfiguredGoogleDriveClientId();
   const [panelModal, setPanelModal] = useState<PanelModal>(null);
@@ -1141,7 +1169,7 @@ export default function SyncSettingsPanel({
     setHostedEmailDraft(connection?.userEmail ?? "");
     setHostedPasswordDraft("");
     setHostedDraftError(null);
-    setPanelModal({ kind: "addHosted", connection: connection ?? null });
+    setPanelModal({ kind: "hostedWizard", connection: connection ?? null });
   };
 
   const validateSelfHostedConnectionDraft = async (): Promise<ValidatedSelfHostedDraft | null> => {
@@ -1333,11 +1361,17 @@ export default function SyncSettingsPanel({
           ? await registerHostedAccount(hostedUrlDraft.trim(), {
               name: hostedNameDraft.trim() || hostedEmailDraft.trim(),
               email: hostedEmailDraft.trim(),
-              password: hostedPasswordDraft
+              password: hostedPasswordDraft,
+              deviceName: getHostedDeviceName(settings),
+              deviceId: settings.localDeviceId,
+              clientPlatform: getHostedDevicePlatform()
             })
           : await loginHostedAccount(hostedUrlDraft.trim(), {
               email: hostedEmailDraft.trim(),
-              password: hostedPasswordDraft
+              password: hostedPasswordDraft,
+              deviceName: getHostedDeviceName(settings),
+              deviceId: settings.localDeviceId,
+              clientPlatform: getHostedDevicePlatform()
             });
 
       if (hostedEditingConnection) {
@@ -1392,6 +1426,178 @@ export default function SyncSettingsPanel({
     } finally {
       setBusyKey(null);
     }
+  };
+
+  const loadHostedOverviewForWizard = async (connection: SyncConnection): Promise<HostedAccountOverview> => {
+    const overview = await loadHostedAccountOverview(connection.serverUrl, connection.sessionToken);
+
+    setRemoteVaultsByConnectionId((current) => ({
+      ...current,
+      [connection.id]: normalizeRemoteVaultEntries(overview.vaults)
+    }));
+    setRemoteVaultErrors((current) => ({
+      ...current,
+      [connection.id]: null
+    }));
+    setConnectionAvailability((current) => ({
+      ...current,
+      [connection.id]: "available"
+    }));
+
+    return overview;
+  };
+
+  const upsertHostedWizardConnection = async (
+    serverUrl: string,
+    result: {
+      user: {
+        id: string;
+        name: string;
+        email: string | null;
+      };
+      session: {
+        token: string;
+      };
+    },
+    connection?: SyncConnection | null
+  ): Promise<CloudWizardAuthResult> => {
+    const normalizedUrl = serverUrl.trim();
+    const hostedConnection = connection ?? syncConnections.find((entry) => entry.provider === "hosted") ?? null;
+
+    if (hostedConnection) {
+      const refreshedConnection = {
+        ...hostedConnection,
+        serverUrl: normalizedUrl,
+        sessionToken: result.session.token,
+        userId: result.user.id,
+        userName: result.user.name,
+        userEmail: result.user.email ?? "",
+        updatedAt: Date.now()
+      } satisfies SyncConnection;
+
+      await Promise.resolve(
+        onUpdateConnection(hostedConnection.id, {
+          serverUrl: refreshedConnection.serverUrl,
+          sessionToken: refreshedConnection.sessionToken,
+          userId: refreshedConnection.userId,
+          userName: refreshedConnection.userName,
+          userEmail: refreshedConnection.userEmail
+        })
+      );
+      await Promise.resolve(onRefreshHostedConnectionCredentials(refreshedConnection));
+
+      return {
+        connection: refreshedConnection,
+        overview: await loadHostedOverviewForWizard(refreshedConnection)
+      };
+    }
+
+    const createdConnection = await Promise.resolve(
+      onCreateConnection({
+        provider: "hosted",
+        serverUrl: normalizedUrl,
+        sessionToken: result.session.token,
+        userId: result.user.id,
+        userName: result.user.name,
+        userEmail: result.user.email ?? ""
+      })
+    );
+
+    if (!createdConnection) {
+      throw new Error("CLOUD_CONNECTION_NOT_READY");
+    }
+
+    return {
+      connection: createdConnection,
+      overview: await loadHostedOverviewForWizard(createdConnection)
+    };
+  };
+
+  const handleCloudWizardAuthenticate = async (input: {
+    mode: "login" | "register";
+    serverUrl: string;
+    name: string;
+    email: string;
+    password: string;
+    connection?: SyncConnection | null;
+  }) => {
+    const result =
+      input.mode === "register" && !input.connection
+        ? await registerHostedAccount(input.serverUrl, {
+            name: input.name || input.email,
+            email: input.email,
+            password: input.password,
+            deviceName: getHostedDeviceName(settings),
+            deviceId: settings.localDeviceId,
+            clientPlatform: getHostedDevicePlatform()
+          })
+        : await loginHostedAccount(input.serverUrl, {
+            email: input.email,
+            password: input.password,
+            deviceName: getHostedDeviceName(settings),
+            deviceId: settings.localDeviceId,
+            clientPlatform: getHostedDevicePlatform()
+          });
+
+    return upsertHostedWizardConnection(input.serverUrl, result, input.connection);
+  };
+
+  const handleCloudWizardStartDeviceLogin = async (serverUrl: string) =>
+    startHostedDeviceLogin(serverUrl, {
+      deviceName: getHostedDeviceName(settings),
+      deviceId: settings.localDeviceId,
+      clientPlatform: getHostedDevicePlatform()
+    });
+
+  const handleCloudWizardPollDeviceLogin = async (
+    serverUrl: string,
+    deviceCode: string,
+    connection?: SyncConnection | null
+  ) => {
+    const result = await pollHostedDeviceLogin(serverUrl, deviceCode);
+
+    return upsertHostedWizardConnection(serverUrl, result, connection);
+  };
+
+  const handleCloudWizardUploadVault = async (connection: SyncConnection, vault: LocalVaultProfile) => {
+    const encryption = resolveVaultEncryptionSummary(vault);
+
+    if (vault.vaultKind === "private" && encryption.enabled && encryption.state === "locked") {
+      throw new Error("VAULT_ENCRYPTION_LOCKED");
+    }
+
+    await performVaultBinding(vault, connection, {
+      refreshCatalog: true
+    });
+    await Promise.resolve(onRunVaultSync(vault.id));
+    await loadHostedOverviewForWizard(connection);
+    showFeedback("success", t("settings.cloudWizardUploadSuccess", { vault: getVaultLabel(vault) }));
+  };
+
+  const handleCloudWizardCreateVault = async (connection: SyncConnection, name: string) => {
+    const created = await createHostedVault(connection.serverUrl, connection.sessionToken, {
+      name
+    });
+
+    setRemoteVaultsByConnectionId((current) => ({
+      ...current,
+      [connection.id]: normalizeRemoteVaultEntries([created.vault, ...(current[connection.id] ?? [])])
+    }));
+
+    await requestRemoteVaultImport(connection, created.vault, {
+      openAfterImport: true
+    });
+    await loadHostedOverviewForWizard(connection);
+  };
+
+  const handleCloudWizardConnectRemoteVault = async (
+    connection: SyncConnection,
+    remoteVault: SyncRemoteVault
+  ) => {
+    await requestRemoteVaultImport(connection, remoteVault, {
+      openAfterImport: true
+    });
+    await loadHostedOverviewForWizard(connection);
   };
 
   const handleAddGoogleDriveConnection = async () => {
@@ -2482,6 +2688,7 @@ export default function SyncSettingsPanel({
         onDeleteLocalVault={requestDeleteLocalVault}
         onStartVaultBinding={startVaultBindingFlow}
         onCancelVaultBinding={cancelVaultBindingFlow}
+        onConnectCloud={openHostedConnectionModal}
         onAddConnection={openAddConnectionCatalog}
         onAddConnectionFromBinding={openAddConnectionFromBindingFlow}
         onBindVaultToConnection={requestVaultBindingFromSheet}
@@ -2889,7 +3096,7 @@ export default function SyncSettingsPanel({
                               }`}
                             >
                               {connection.provider === "hosted"
-                                ? t("sync.hosted")
+                                ? t("settings.legacyHostedConnectionTitle")
                                 : connection.provider === "googleDrive"
                                   ? t("sync.googleDrive")
                                   : t("sync.selfHosted")}
@@ -2932,6 +3139,23 @@ export default function SyncSettingsPanel({
                               <span className="sync-settings-mini-chip">+{boundCount - previewNames.length}</span>
                             ) : null}
                           </div>
+                          {connection.provider === "hosted" ? (
+                            <div className="sync-settings-card-actions">
+                              <button
+                                type="button"
+                                className="sync-settings-inline-action"
+                                disabled={busyKey !== null}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openHostedConnectionModal(connection);
+                                }}
+                              >
+                                {availability === "authError"
+                                  ? t("settings.hostedReconnect")
+                                  : t("settings.cloudWizardManageAction")}
+                              </button>
+                            </div>
+                          ) : null}
                           {canRepairSelfHostedAuth ? (
                             <div className="sync-settings-card-actions">
                               <button
@@ -2947,7 +3171,7 @@ export default function SyncSettingsPanel({
                               </button>
                             </div>
                           ) : null}
-                          {canRepairHostedAuth ? (
+                          {canRepairHostedAuth && connection.provider !== "hosted" ? (
                             <div className="sync-settings-card-actions">
                               <button
                                 type="button"
@@ -3240,7 +3464,7 @@ export default function SyncSettingsPanel({
                   ? t("settings.addConnection")
                   : panelModal?.kind === "addGoogleDrive"
                     ? t("sync.googleDrive")
-                    : panelModal?.kind === "addHosted"
+                    : panelModal?.kind === "hostedWizard" || panelModal?.kind === "addHosted"
                       ? t("sync.hosted")
                       : t("sync.selfHosted")
         }
@@ -3257,7 +3481,9 @@ export default function SyncSettingsPanel({
                   ? t("settings.connectionCatalogTitle")
                   : panelModal?.kind === "addGoogleDrive"
                     ? t("settings.googleDriveConnectionTitle")
-                    : panelModal?.kind === "addHosted"
+                    : panelModal?.kind === "hostedWizard"
+                      ? t("settings.cloudWizardTitle")
+                      : panelModal?.kind === "addHosted"
                       ? t("settings.hostedConnectionTitle")
                       : selfHostedEditingConnection
                         ? t("settings.selfHostedReconnectTitle")
@@ -3619,22 +3845,6 @@ export default function SyncSettingsPanel({
               <div className="sync-settings-modal-body">
                 <p className="sync-settings-modal-copy">{t("settings.connectionCatalogDescription")}</p>
                 <div className="sync-settings-provider-grid">
-                  {!hostedConnectionExists ? (
-                    <button
-                      type="button"
-                      className="sync-settings-provider-card"
-                      onClick={() => openHostedConnectionModal()}
-                    >
-                      <span className="sync-settings-provider-icon" style={{ "--item-color": providerAccent("hosted") } as CSSProperties}>
-                        <HostedGlyph />
-                      </span>
-                      <div className="sync-settings-provider-copy">
-                        <strong>{t("sync.hosted")}</strong>
-                        <span>{t("settings.hostedConnectionDescription")}</span>
-                      </div>
-                    </button>
-                  ) : null}
-
                   <button
                     type="button"
                     className="sync-settings-provider-card"
@@ -3750,6 +3960,26 @@ export default function SyncSettingsPanel({
                   </button>
                 </div>
               </div>
+            ) : null}
+
+            {panelModal.kind === "hostedWizard" ? (
+              <CloudConnectionWizard
+                connection={panelModal.connection ?? null}
+                localVaults={sortedVaults}
+                selectedLocalVaultId={selectedLocalVaultId}
+                activeLocalVaultId={activeLocalVaultId}
+                defaultServerUrl={panelModal.connection?.serverUrl ?? hostedUrlDraft}
+                getVaultLabel={getVaultLabel}
+                translateError={(message) => translateSyncManagerError(message, t)}
+                onAuthenticate={handleCloudWizardAuthenticate}
+                onStartDeviceLogin={handleCloudWizardStartDeviceLogin}
+                onPollDeviceLogin={handleCloudWizardPollDeviceLogin}
+                onUploadCurrentVault={handleCloudWizardUploadVault}
+                onCreateHostedVault={handleCloudWizardCreateVault}
+                onConnectRemoteVault={handleCloudWizardConnectRemoteVault}
+                onRefreshOverview={loadHostedOverviewForWizard}
+                onClose={closeModal}
+              />
             ) : null}
 
             {panelModal.kind === "addHosted" ? (

@@ -16,7 +16,8 @@ const en = {
   },
   dialog: {
     kicker: "Confirm action",
-    cancel: "Cancel"
+    cancel: "Cancel",
+    ok: "Done"
   },
   privateVaultWarning: {
     kicker: "Private vault",
@@ -656,6 +657,11 @@ const en = {
     hostedLoggedOut: "Hosted account signed out on this device.",
     hostedVaultCreated: "Hosted vault created.",
     hostedVaultBound: "Local vault bound to the hosted vault.",
+    hostedDeviceAuthorizationPending: "Approve sign-in in Locoris Cloud Account.",
+    hostedDeviceCodeExpired: "The sign-in code expired. Start browser sign-in again.",
+    hostedDeviceCodeUsed: "This sign-in code has already been used. Start a new sign-in.",
+    hostedDeviceCodeInvalid: "The sign-in code was not found. Start browser sign-in again.",
+    hostedConnectionNotReady: "The connection was created but is not ready yet. Close this window and open sync again.",
     cloudPlanRequired: "An active Locoris Cloud plan is required for this action.",
     cloudTrialExpired: "Your Locoris Cloud trial has expired. Sign in and update the plan to continue syncing.",
     cloudSubscriptionPastDue: "Cloud payment is past due. Update the plan to resume sync.",
@@ -714,6 +720,61 @@ const en = {
       "Detected automatically on first launch, but you can switch it manually whenever you want.",
     languageEnglish: "English",
     languageRussian: "Russian",
+    accountCloudTitle: "Account & Cloud",
+    accountCloudCaption:
+      "Locoris Cloud sign-in, plan, devices, and the vaults that sync through your cloud account.",
+    accountCloudRootDescription:
+      "Cloud account, plan, devices, and cloud sync for local vaults.",
+    accountCloudConnectedCount: "{{count}} connected",
+    accountCloudSignedOut: "Signed out",
+    accountCloudReady: "Cloud ready",
+    accountCloudProfileKicker: "Profile",
+    accountCloudProfileDescription:
+      "This account is used only for Locoris Cloud and the vaults connected to it.",
+    accountCloudNoAccountTitle: "Locoris Cloud is not connected",
+    accountCloudNoAccountDescription:
+      "Sign in or create an account to connect local vaults to cloud sync.",
+    accountCloudSignIn: "Sign in to Cloud",
+    accountCloudManage: "Manage",
+    accountCloudStatusTitle: "Locoris Cloud status",
+    accountCloudPlan: "Plan",
+    accountCloudVaults: "Vaults",
+    accountCloudDevices: "Devices",
+    accountCloudStorage: "Data",
+    accountCloudDuplicateTitle: "Extra cloud connections found",
+    accountCloudDuplicateDescription:
+      "There are {{count}} additional cloud connections. The newest one is treated as primary; remove the others after checking them.",
+    accountCloudReadOnlyTitle: "Cloud is read-only",
+    accountCloudReadOnlyDescription:
+      "This account cannot write changes right now. Check the plan, billing, or server status.",
+    accountCloudVaultsKicker: "Cloud vaults",
+    accountCloudVaultsTitle: "Choose what syncs through Locoris Cloud",
+    accountCloudVaultsDescription:
+      "Each local vault can be connected to a cloud vault, disconnected, or imported from an existing cloud vault.",
+    accountCloudImportFromCloud: "Import from Cloud",
+    accountCloudConnected: "Cloud",
+    accountCloudNotConnected: "Local",
+    accountCloudVaultUnbound: "Not connected to Locoris Cloud.",
+    accountCloudConnectVault: "Connect",
+    accountCloudDisconnect: "Disconnect",
+    accountCloudVaultConnected: "“{{vault}}” is connected to Locoris Cloud.",
+    accountCloudVaultDisconnected: "Vault disconnected from Locoris Cloud.",
+    accountCloudRemoteImported: "“{{vault}}” was added from Locoris Cloud.",
+    accountCloudRefreshed: "Locoris Cloud status refreshed.",
+    accountCloudDevicesKicker: "Device",
+    accountCloudDevicesTitle: "This device",
+    accountCloudDevicesDescription:
+      "Devices are managed in the Account Portal. The app shows which device identity is used for sync.",
+    accountCloudImportKicker: "Cloud vaults",
+    accountCloudImportTitle: "Choose a cloud vault",
+    accountCloudNoRemoteVaults: "There are no cloud vaults in this account yet.",
+    accountCloudImportAction: "Import",
+    interfaceTitle: "Interface",
+    interfaceRootDescription:
+      "Language, themes, map motion, and planner visual signals.",
+    interfacePanelCaption:
+      "Tune language, theme, and visual behavior for Locoris on this device.",
+    interfaceLanguageKicker: "Language",
     accentTheme: "Themes",
     accentThemeDescription:
       "Interface themes and orbital map motion. These are local client preferences and do not change vault data.",
@@ -1026,8 +1087,8 @@ const en = {
     backupRestoreConfirmDetail:
       "The current vault content will be replaced. Create a backup first if you may need to return to it.",
     backupRestoreConfirm: "Restore",
-    syncTitle: "Synchronization",
-    syncDescription: "{{vaultCount}} vaults on this device, {{connectionCount}} sync methods connected.",
+    syncTitle: "External sync",
+    syncDescription: "{{vaultCount}} vaults on this device, {{connectionCount}} external methods connected.",
     desktopUpdateTitle: "App updates",
     desktopUpdateCurrent: "Installed version {{version}}.",
     desktopUpdateCurrentUnknown: "Detecting the current app version…",
@@ -1069,9 +1130,9 @@ const en = {
       "The Android system installer is open. Confirm the update installation in the system prompt.",
     androidUpdateHint:
       "Android asks you to confirm APK installation manually. If installing from this source is disabled, the app opens the required system settings screen.",
-    syncKicker: "Synchronization",
+    syncKicker: "External sync",
     syncManagerIntro:
-      "Connect each local vault to one remote method. A single sync method can hold many vaults, and every link is visualized directly in this layout.",
+      "Google Drive, self-hosted, and legacy connections live here. Locoris Cloud is configured separately in Account & Cloud.",
     back: "Back",
     footnote: "",
     vaultsTitle: "Local vaults",
@@ -1079,7 +1140,8 @@ const en = {
       "Create vaults here, rename them, remove them, and connect each one to a single sync method.",
     connectionsTitle: "Sync methods",
     connectionsDescription:
-      "Add your managed cloud once, connect as many self-hosted servers as you need, then wire vaults into the right destination.",
+      "Connect Google Drive or your own servers, then route local vaults to the right external destination.",
+    legacyHostedConnectionTitle: "Legacy Cloud",
     addConnection: "Add connection",
     connectionAdded: "Sync method added.",
     vaultEncryptionKicker: "Vault encryption",
@@ -1186,6 +1248,51 @@ const en = {
       "Enter the personal server endpoint and management token. After that the server will be ready for vault connections.",
     hostedModalDescription:
       "Sign in or create a cloud account, and the new sync method will appear in the right column ready for bindings.",
+    cloudWizardTitle: "Connect Locoris Cloud",
+    cloudWizardAuthTitle: "Sign in without manual tokens",
+    cloudWizardAuthDescription:
+      "Sign in to your cloud account and Locoris prepares the account session, hosted vault catalog, and safe device credentials for binding.",
+    cloudWizardServerLabel: "Cloud endpoint",
+    cloudWizardAuthMode: "Sign-in mode",
+    cloudWizardDeviceTitle: "Browser sign-in",
+    cloudWizardDeviceDescription:
+      "Open the account portal, approve this device, and the app will continue setup automatically.",
+    cloudWizardDeviceAction: "Open sign-in",
+    cloudWizardDeviceWaiting: "Waiting for approval…",
+    cloudWizardDeviceCode: "Verification code",
+    cloudWizardOpenAccount: "Open Account Portal",
+    cloudWizardDeviceExpired: "The sign-in code expired. Start browser sign-in again.",
+    cloudWizardAccountLabel: "Account",
+    cloudWizardPlan: "Plan",
+    cloudWizardStorage: "Used",
+    cloudWizardVaultLimit: "Vaults",
+    cloudWizardDeviceLimit: "Devices",
+    cloudWizardReadOnlyWarning:
+      "This account is currently write-limited. Existing data can be inspected, but writing and new bindings require an active plan.",
+    cloudWizardUploadTitle: "Upload current vault",
+    cloudWizardUploadDescription:
+      "Create or update the cloud copy of “{{vault}}” and start sync immediately.",
+    cloudWizardUploadAction: "Upload and sync",
+    cloudWizardUploadSuccess: "“{{vault}}” is connected to Locoris Cloud and queued for sync.",
+    cloudWizardNoLocalVault: "There is no local vault on this device to upload.",
+    cloudWizardCreateTitle: "Create a new cloud vault",
+    cloudWizardCreateDescription:
+      "Create an empty hosted vault and connect it to this device as a separate local space.",
+    cloudWizardCreateAction: "Create and open",
+    cloudWizardNewVaultFallback: "New vault",
+    cloudWizardExistingTitle: "Connect existing cloud vault",
+    cloudWizardExistingDescription:
+      "If a vault already exists in the account, Locoris creates a local copy or links the matching local pair.",
+    cloudWizardNoRemoteVaults: "No hosted vaults in this account yet. Upload the current vault or create a new one.",
+    cloudWizardConnectAction: "Connect",
+    cloudWizardDoneTitle: "Cloud is ready",
+    cloudWizardDoneDescription:
+      "The connection is saved, the vault is linked, and future sync uses your account and device credentials.",
+    cloudWizardMobileTitle: "Locoris Cloud",
+    cloudWizardMobileDescription: "Sign in, choose a hosted vault, or upload the current one.",
+    cloudWizardConnectedTitle: "Cloud connected",
+    cloudWizardStartAction: "Connect",
+    cloudWizardManageAction: "Open",
     connectionLabelOptional: "Optional label",
     noConnectionsTitle: "No sync methods yet",
     noConnectionsDescription:
