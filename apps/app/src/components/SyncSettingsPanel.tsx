@@ -372,6 +372,7 @@ function translateSyncManagerError(message: string, t: ReturnType<typeof useTran
     case "SYNC_SERVER_URL_REQUIRED":
       return t("sync.urlRequired");
     case "SYNC_TOKEN_REQUIRED":
+    case "SELF_HOSTED_TOKEN_REQUIRED":
       return t("sync.tokenRequired");
     case "PAIRING_PACKAGE_INVALID":
     case "PAIRING_CODE_INVALID":

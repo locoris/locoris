@@ -1,8 +1,9 @@
 import { app, BrowserWindow, dialog, Menu, nativeImage, shell, Tray } from "electron";
 import { appendFile, mkdir } from "node:fs/promises";
-import net from "node:net";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { resolveDesktopServerPort } from "./desktop-port.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const runtimeRoot = path.join(root, "dist-server");
@@ -16,24 +17,6 @@ let closeServer = null;
 let serverClosed = false;
 let serverShutdownPending = false;
 let logFile = null;
-
-function reservePort(preferredPort = 8787) {
-  return new Promise((resolve, reject) => {
-    const probe = net.createServer();
-    probe.once("error", () => {
-      const fallback = net.createServer();
-      fallback.once("error", reject);
-      fallback.listen(0, () => {
-        const address = fallback.address();
-        const port = typeof address === "object" && address ? address.port : preferredPort;
-        fallback.close((error) => error ? reject(error) : resolve(port));
-      });
-    });
-    probe.listen(preferredPort, () => {
-      probe.close((error) => error ? reject(error) : resolve(preferredPort));
-    });
-  });
-}
 
 async function waitForServer(baseUrl) {
   const deadline = Date.now() + 20_000;
@@ -226,7 +209,11 @@ async function createTray() {
 }
 
 async function startServerRuntime() {
-  const port = await reservePort(Number(process.env.PORT) || 8787);
+  const explicitPort = process.env.PORT?.trim() || null;
+  const port = await resolveDesktopServerPort({
+    stateFile: path.join(app.getPath("userData"), "desktop-server.json"),
+    explicitPort
+  });
   const expectedBaseUrl = `http://127.0.0.1:${port}`;
   process.env.PORT = String(port);
   process.env.LOCORIS_DESKTOP_SERVER = "1";

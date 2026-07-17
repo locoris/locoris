@@ -46,9 +46,10 @@ async function findPackagedExecutable() {
 const executable = await findPackagedExecutable();
 const dataDir = await mkdtemp(path.join(os.tmpdir(), "locoris-server-package-smoke-"));
 const command = process.platform === "linux" ? "xvfb-run" : executable;
+const electronProfile = path.join(dataDir, "electron-profile");
 const args = process.platform === "linux"
-  ? ["-a", executable, "--smoke-test", "--no-sandbox"]
-  : ["--smoke-test"];
+  ? ["-a", executable, "--smoke-test", "--no-sandbox", `--user-data-dir=${electronProfile}`]
+  : ["--smoke-test", `--user-data-dir=${electronProfile}`];
 
 try {
   await new Promise((resolve, reject) => {
