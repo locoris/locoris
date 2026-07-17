@@ -46,7 +46,9 @@ async function findPackagedExecutable() {
 const executable = await findPackagedExecutable();
 const dataDir = await mkdtemp(path.join(os.tmpdir(), "locoris-server-package-smoke-"));
 const command = process.platform === "linux" ? "xvfb-run" : executable;
-const args = process.platform === "linux" ? ["-a", executable, "--smoke-test"] : ["--smoke-test"];
+const args = process.platform === "linux"
+  ? ["-a", executable, "--smoke-test", "--no-sandbox"]
+  : ["--smoke-test"];
 
 try {
   await new Promise((resolve, reject) => {
