@@ -92,27 +92,6 @@
   font-weight: 760;
 }
 
-.backup-settings-feedback {
-  padding: 10px 12px;
-  border-radius: 15px;
-  border: 1px solid rgb(var(--line-rgb) / 0.12);
-  background: rgba(255, 255, 255, 0.028);
-}
-
-.backup-settings-feedback.is-success {
-  border-color: color-mix(in srgb, #8ff0c2 24%, rgb(var(--line-rgb) / 0.12));
-  color: color-mix(in srgb, var(--text) 76%, #8ff0c2 24%);
-}
-
-.backup-settings-feedback.is-error {
-  border-color: color-mix(in srgb, var(--red) 28%, rgb(var(--line-rgb) / 0.12));
-  color: color-mix(in srgb, var(--text) 72%, var(--red) 28%);
-}
-
-.backup-settings-feedback.is-info {
-  border-color: color-mix(in srgb, var(--utility-modal-accent, var(--gold)) 24%, rgb(var(--line-rgb) / 0.12));
-}
-
 @media (max-width: 900px) {
   .backup-settings-card-grid {
     grid-template-columns: minmax(0, 1fr);

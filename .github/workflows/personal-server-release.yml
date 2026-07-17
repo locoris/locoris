@@ -1,0 +1,121 @@
+name: Personal Server Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "server-v*"
+
+concurrency:
+  group: personal-server-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NPM_CONFIG_FETCH_RETRIES: "5"
+  NPM_CONFIG_FETCH_RETRY_FACTOR: "2"
+  NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: "20000"
+  NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: "120000"
+
+jobs:
+  desktop:
+    name: Locoris Server · ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            label: macOS arm64
+            artifact: macos-arm64
+          - os: macos-15-intel
+            label: macOS x64
+            artifact: macos-x64
+          - os: windows-2025
+            label: Windows x64
+            artifact: windows-x64
+          - os: ubuntu-24.04
+            label: Linux x64
+            artifact: linux-x64
+    runs-on: ${{ matrix.os }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if npm ci --prefer-offline --no-audit; then
+              exit 0
+            fi
+            if [ "${attempt}" = "3" ]; then
+              exit 1
+            fi
+            sleep $((attempt * 20))
+          done
+      - if: startsWith(github.ref, 'refs/tags/server-v')
+        name: Apply release version
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#server-v}" --workspace @locoris/personal-server --no-git-tag-version
+      - run: npm test --workspace @locoris/personal-server
+      - run: npm run desktop:dist --workspace @locoris/personal-server
+      - run: npm run desktop:checksums --workspace @locoris/personal-server -- ${{ matrix.artifact }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: locoris-server-${{ matrix.artifact }}
+          path: |
+            apps/personal-server/release-server/*.AppImage
+            apps/personal-server/release-server/*.deb
+            apps/personal-server/release-server/*.dmg
+            apps/personal-server/release-server/*.exe
+            apps/personal-server/release-server/*.zip
+            apps/personal-server/release-server/SHA256SUMS-*.txt
+          if-no-files-found: error
+      - if: startsWith(github.ref, 'refs/tags/server-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apps/personal-server/release-server/*.AppImage
+            apps/personal-server/release-server/*.deb
+            apps/personal-server/release-server/*.dmg
+            apps/personal-server/release-server/*.exe
+            apps/personal-server/release-server/*.zip
+            apps/personal-server/release-server/SHA256SUMS-*.txt
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v3
+      - if: startsWith(github.ref, 'refs/tags/server-v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/locoris-server
+          tags: |
+            type=match,pattern=server-v(.*),group=1
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/server-v') }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/personal-server/Dockerfile
+          push: ${{ startsWith(github.ref, 'refs/tags/server-v') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

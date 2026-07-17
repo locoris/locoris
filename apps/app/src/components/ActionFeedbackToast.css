@@ -1,0 +1,26 @@
+.action-feedback-toast {
+  position: fixed;
+  z-index: 460;
+  width: min(420px, calc(100vw - 28px));
+  pointer-events: none;
+}
+
+.action-feedback-toast:not(.is-anchored) {
+  right: max(18px, env(safe-area-inset-right, 0px));
+  bottom: max(18px, env(safe-area-inset-bottom, 0px));
+}
+
+.action-feedback-toast .transient-notice {
+  pointer-events: auto;
+}
+
+@media (max-width: 920px) and (orientation: portrait) {
+  .action-feedback-toast {
+    width: min(420px, calc(100vw - 24px));
+  }
+
+  .action-feedback-toast:not(.is-anchored) {
+    right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: calc(var(--orbital-mobile-bottom-nav-clearance, 84px) + 12px);
+  }
+}

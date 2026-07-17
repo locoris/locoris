@@ -1,13 +1,166 @@
-const en = {
+import inline from "./inline/en";
+import { defineLocalePack } from "../localization/localePack";
+
+const messages = {
+  inline,
   app: {
     name: "Locoris",
     tagline: "Orbital knowledge map",
+    demoVaultName: "Locoris Demo Vault",
     newNote: "New note",
     localVault: "Local-first vault",
     syncReady: "Sync architecture ready",
     networkOnline: "Network detected",
     networkOffline: "Offline mode",
     booting: "Booting local vault..."
+  },
+  webAccess: {
+    statusLabel: "Web access status",
+    welcomeKicker: "Web app",
+    welcomeTitle: "Sign in to Locoris Cloud",
+    welcomeDescription:
+      "The web app works as a Cloud account device, so data, limits, and recovery stay clear and manageable.",
+    tryBrowserTitle: "Try locally",
+    tryBrowserDescription:
+      "Data stays in this browser. Good for evaluation, quick notes, and safe export.",
+    signInTitle: "Sign in to Cloud",
+    signInDescription:
+      "Connect an account to open web access, cloud vaults, a trial, or an active plan.",
+    exportDemo: "Export demo",
+    downloadApp: "Download app",
+    localTitle: "Local browser vault",
+    localDescription: "“{{vault}}” is stored in this browser IndexedDB. Export before clearing browser data.",
+    cloudTitle: "Cloud Web",
+    cloudDescription: "{{account}}. This vault syncs through Locoris Cloud.",
+    cloudAccountFallback: "Cloud account",
+    cloudPlanFallback: "Cloud",
+    pendingTitle: "Vault is not in Locoris Cloud",
+    pendingLocalDescription:
+      "“{{vault}}” is stored only in this browser. Connect Locoris Cloud so the web app syncs across devices and is not tied to browser cleanup.",
+    pendingExternalDescription:
+      "“{{vault}}” currently syncs through {{provider}}. Locoris Cloud adds the web app as a device, with account, limits, and recovery in one managed place.",
+    readOnlyTitle: "Cloud is read-only",
+    readOnlyDescription:
+      "The plan or trial does not allow writes. You can open and export data, but syncing changes requires active Cloud.",
+    unavailableTitle: "Web access is not included",
+    unavailableDescription: "Cloud Web requires an active trial or a plan that includes web access.",
+    unavailableActionDescription:
+      "Open the account area to restore the plan, export data, or switch to the desktop/mobile app.",
+    trialExpiredKicker: "Trial complete",
+    trialExpiredTitle: "Your trial ended. Your data is still here",
+    trialExpiredDescription:
+      "Locoris kept your cloud vaults and local data. Subscribe to Cloud to restore web access and continue syncing without reconnecting anything.",
+    trialRetentionExpiredTitle: "Cloud retention has ended",
+    trialRetentionExpiredDescription:
+      "Local vaults remain on your devices, but the old cloud copy is no longer guaranteed. A new plan enables Cloud again for data that is still available.",
+    trialExpiredPanelTitle: "Continue where you left off",
+    trialExpiredPanelDescription:
+      "A subscription restores Cloud writes, the web app, and sync for devices you already connected.",
+    trialRetentionExpiredPanelDescription:
+      "Subscribe to use Cloud again. If the server copy has already been removed, connect a surviving local vault as a new cloud vault.",
+    trialTimelineLabel: "Trial and retention timeline",
+    trialEndedOn: "Trial ended {{date}}",
+    trialReadOnlyUntil: "Read and export until {{date}}",
+    trialArchiveUntil: "Recovery available until {{date}}",
+    trialDataSafeTitle: "Your data is not being deleted now",
+    trialDataSafeDescription:
+      "The cloud copy remains available under the retention timeline, and local vaults stay on your devices regardless of subscription.",
+    localDataSafeTitle: "Your local data stays yours",
+    localDataSafeDescription:
+      "A subscription never removes local vaults. Availability of the cloud copy after retention ends must be checked separately.",
+    recommendedPlan: "Recommended plan",
+    perMonth: "per month",
+    subscribeAction: "Subscribe now",
+    upgradeNote: "This opens Billing with plan and payment details. The local Locoris app remains free.",
+    upgradeSyncTitle: "Uninterrupted sync",
+    upgradeSyncDescription: "Changes resume syncing automatically across your connected devices.",
+    upgradeWebTitle: "Full web access",
+    upgradeWebDescription: "Use your vaults in the browser, desktop, and Android from one account.",
+    upgradeHistoryTitle: "History and recovery",
+    upgradeHistoryDescription: "Cloud keeps sync versions and gives you time to restore the state you need.",
+    unlimited: "unlimited",
+    planVaultLimit: "Cloud vaults: {{count}}",
+    planVaultLimit_one: "Cloud vault: {{count}}",
+    planVaultLimit_other: "Cloud vaults: {{count}}",
+    planDeviceLimit: "Devices: {{count}}",
+    planDeviceLimit_one: "Device: {{count}}",
+    planDeviceLimit_other: "Devices: {{count}}",
+    planStorageLimit: "Cloud: {{storage}}",
+    planHistoryLimit: "History: {{history}}",
+    planHistoryDays: "{{days}} days",
+    attentionTitle: "Cloud needs attention",
+    openCloud: "Sign in to Cloud",
+    manageCloud: "Account & Cloud",
+    connecting: "Connecting…",
+    connectCurrentVault: "Connect vault",
+    exportVault: "Export",
+    exportSuccess: "Vault backup downloaded.",
+    connectSuccess: "“{{vault}}” is connected to Cloud Web and queued for sync.",
+    localVaultLimit:
+      "The web app allows one local vault without active Cloud writes. Connect Cloud or export your data before creating another vault.",
+    authHomeLabel: "Open the Locoris website",
+    authContextLabel: "About Locoris for web",
+    authKicker: "Locoris Cloud Web",
+    authTitle: "Continue working in your browser",
+    authDescription:
+      "Sign in or create an account to open your cloud vaults and use the web app as a protected Locoris device.",
+    authCheckingTitle: "Checking protected access",
+    authCheckingDescription: "Locoris is securely renewing this browser session. Your local state stays in place.",
+    authReauthTitle: "Confirm it is still you",
+    authReauthDescription:
+      "Cloud access was revoked or can no longer be renewed. Sign in again without reconnecting your vaults.",
+    authReauthPanelTitle: "Sign in again",
+    authReauthPanelDescription: "Your email is ready. Enter your password to restore Cloud access and resume sync.",
+    authCloudBenefitTitle: "One Cloud account",
+    authCloudBenefitDescription: "Vaults, sync, limits, and recovery are managed from one account.",
+    authAppsBenefitTitle: "Every device",
+    authAppsBenefitDescription: "Web, desktop, and Android share the same connected cloud vaults.",
+    authSecurityBenefitTitle: "Controlled access",
+    authSecurityBenefitDescription: "Each browser is registered as a device and can be revoked from your account.",
+    authNoAccountTitle: "Only Cloud Web requires an account",
+    authNoAccountDescription: "The desktop and Android apps remain local-first and work without an account.",
+    authDownloadApps: "Download the apps",
+    authPanelLabel: "Sign in and registration",
+    authAccountStatus: "Account access",
+    authOpenAccountPortal: "Open account",
+    authSecureAccess: "Secure access",
+    authLoginTitle: "Welcome back",
+    authLoginDescription: "Sign in to Locoris Cloud to continue in the web app.",
+    authRegisterTitle: "Create your account",
+    authRegisterDescription: "A new account receives Cloud trial access under the current plan terms.",
+    authModeLabel: "Authentication mode",
+    authLoginTab: "Sign in",
+    authRegisterTab: "Create account",
+    authEmailLabel: "Email",
+    authPasswordLabel: "Password",
+    authPasswordPlaceholder: "At least 8 characters",
+    authPasswordConfirmationLabel: "Repeat password",
+    authPasswordConfirmationPlaceholder: "Enter the same password again",
+    authPasswordStrength: "Password strength",
+    authShowPassword: "Show password",
+    authHidePassword: "Hide password",
+    authCapsLock: "Caps Lock is on.",
+    authLegalPrefix: "I accept the",
+    authTerms: "Terms of Use",
+    authLegalJoin: "and",
+    authPrivacy: "Privacy Policy",
+    authLoginAction: "Sign in to Locoris",
+    authRegisterAction: "Create account",
+    authSubmitting: "Checking…",
+    authAccessHelp: "Having trouble signing in?",
+    authFooterSecurity: "This session is linked to this browser and device.",
+    authLegalNavigation: "Legal information",
+    authInvalidEmail: "Check the email format.",
+    authInvalidCredentials: "Sign-in failed. Check your email and password and try again.",
+    authRegistrationFailed: "The account could not be created. Check your details or try signing in with this email.",
+    authPasswordHint: "Use a password with at least 8 characters.",
+    authPasswordsMismatch: "The passwords do not match.",
+    authLegalRequired: "Accept the Terms and Privacy Policy to create an account.",
+    authOffline: "You are offline. Continue after your connection is restored.",
+    authRateLimited: "Too many attempts. Wait a moment and try again.",
+    authDeviceLimit: "Your device limit has been reached. Disconnect an old device or change your plan.",
+    authServerUnavailable: "Locoris Cloud is unavailable right now. Check your connection and try again later.",
+    authNotConfigured: "The Locoris Cloud endpoint is not configured for this web build."
   },
   mobile: {
     vault: "Vault",
@@ -92,12 +245,16 @@ const en = {
     deleteBlocked: "Delete child folders first.",
     thisFolder: "this folder",
     deleteCascadeConfirm:
-      "Delete {{name}}? Nested folders will be removed and {{noteCount}} note(s) will be moved to Trash."
+      "Delete {{name}}? Nested folders will be removed and {{noteSummary}} will be moved to Trash.",
+    deleteCascadeConfirm_one:
+      "Delete {{name}}? Nested folders will be removed and {{noteSummary}} will be moved to Trash.",
+    deleteCascadeConfirm_other:
+      "Delete {{name}}? Nested folders will be removed and {{noteSummary}} will be moved to Trash."
   },
   project: {
     delete: "Delete project",
     deleteConfirm:
-      "Delete project {{name}} permanently? {{folderCount}} folder(s), {{noteCount}} document(s), and {{assetCount}} file(s) will be removed. This cannot be undone."
+      "Delete project {{name}} permanently? {{folderSummary}}, {{documentSummary}}, and {{fileSummary}} will be removed. This cannot be undone."
   },
   tags: {
     add: "Add tag",
@@ -123,8 +280,17 @@ const en = {
     filteredByFolder: "Folder",
     filteredByTag: "Tag"
   },
+  trashPanel: {
+    all: "All",
+    close: "Close",
+    filteredEmptyTitle: "Nothing here",
+    filteredEmptyDescription: "Choose another section to keep reviewing deleted content.",
+    recovery: "Recovery",
+    subtitle: "Review deleted notes and canvases before permanent removal."
+  },
   note: {
     untitled: "Untitled note",
+    emptyPreview: "No content yet",
     titlePlaceholder: "Note title",
     folder: "Folder",
     color: "Note color",
@@ -272,6 +438,8 @@ const en = {
     aiPreviewBefore: "Current",
     aiPreviewAfter: "After AI",
     aiPreviewBlocksCount: "{{count}} blocks",
+    aiPreviewBlocksCount_one: "{{count}} block",
+    aiPreviewBlocksCount_other: "{{count}} blocks",
     aiPreviewEmptyBefore: "No new text yet.",
     aiPreviewEmptyAfter: "AI did not return visible text.",
     aiPreviewCancel: "Cancel",
@@ -425,6 +593,8 @@ const en = {
     aiSourceNoNotes: "No matching notes.",
     aiPreviewChip: "Diagram",
     aiPreviewSummary: "{{count}} elements ready to insert",
+    aiPreviewSummary_one: "{{count}} element ready to insert",
+    aiPreviewSummary_other: "{{count}} elements ready to insert",
     aiPreviewReady: "The diagram is ready. Review changes and insert it on the canvas.",
     aiPreviewKicker: "AI preview",
     aiPreviewTitle: "Review diagram",
@@ -513,6 +683,13 @@ const en = {
     connectionDelete: "Delete connection",
     connectionDeleteConfirm:
       "Delete this connection and remove {{count}} vault bindings that depend on it?",
+    connectionDeleteConfirm_one:
+      "Delete this connection and remove {{count}} vault binding that depends on it?",
+    connectionDeleteConfirm_other:
+      "Delete this connection and remove {{count}} vault bindings that depend on it?",
+    googleDriveRevoke: "Revoke Google access",
+    googleDriveRevokeConfirm:
+      "Locoris will lose access to its Google Drive app data on every device. The connection stays in the list so you can sign in again.",
     connectionLabel: "Connection label",
     connectionLabelPlaceholder: "Connection label",
     managementToken: "Management token",
@@ -589,6 +766,8 @@ const en = {
     hostedSyncReady: "Hosted sync is ready",
     hostedSyncNeedsBinding: "Choose a hosted vault to start syncing.",
     completed: "Sync completed. Conflicts: {{count}}",
+    completed_one: "Sync completed. Conflict: {{count}}",
+    completed_other: "Sync completed. Conflicts: {{count}}",
     statusLocalOnly: "Local only",
     statusReady: "Ready to sync",
     statusSyncing: "Syncing…",
@@ -626,7 +805,23 @@ const en = {
     googleDriveOAuthFailed:
       "Google Drive authorization did not complete. Check the OAuth consent screen, test users, Google Drive API, and try connecting Google Drive again.",
     googleDriveAuthRequired:
-      "Google Drive session expired. Refresh the authorization to continue loading remote vaults.",
+      "Google Drive session expired. Choose “Sign in again”; your vault data stays in place.",
+    googleDriveInteractionRequired:
+      "Google needs you to confirm the sign-in. Choose “Sign in again”; your vault data stays in place.",
+    googleDriveStorageQuotaExceeded:
+      "Google Drive is out of storage. Free up space, then retry sync.",
+    googleDriveRateLimited:
+      "Google Drive temporarily limited requests. Locoris will retry sync later.",
+    googleDrivePermissionRequired:
+      "Google Drive denied access to Locoris app data. Reconnect the account and grant access again.",
+    googleDriveRequestTimeout:
+      "Google Drive is taking too long to respond. Check your connection and retry sync.",
+    googleDriveDataCorrupt:
+      "Locoris found damaged Google Drive metadata and stopped writing to protect your vault.",
+    googleDriveUploadFailed:
+      "The protected Google Drive upload could not finish. Retry sync on a stable connection.",
+    googleDriveRevokeFailed:
+      "Google did not confirm access revocation. Check your connection and try again.",
     googleDriveConnected: "Google Drive connected.",
     googleDrivePopupClosed: "Google authorization was canceled before access was granted.",
     googleDrivePopupFailed: "The system browser could not be opened for Google authorization.",
@@ -642,7 +837,7 @@ const en = {
     googleDriveAuthInProgress:
       "Google authorization is already in progress. Finish the browser step or cancel it before starting again.",
     googleDriveEncryptedPending:
-      "This Google Drive vault is encrypted, but encrypted sync import is not enabled in the app yet.",
+      "This private vault is encrypted. Unlock it with its passphrase to continue syncing.",
     unauthorized: "The server rejected the token.",
     hostedUnauthorized: "The hosted vault token was rejected. Bind the vault again.",
     hostedSessionExpired: "Your hosted session expired. Sign in again.",
@@ -664,12 +859,16 @@ const en = {
     hostedConnectionNotReady: "The connection was created but is not ready yet. Close this window and open sync again.",
     cloudPlanRequired: "An active Locoris Cloud plan is required for this action.",
     cloudTrialExpired: "Your Locoris Cloud trial has expired. Sign in and update the plan to continue syncing.",
+    cloudTrialRetentionExpired:
+      "The post-trial data retention period has ended. Sign in to check available recovery or plan options.",
     cloudSubscriptionPastDue: "Cloud payment is past due. Update the plan to resume sync.",
     cloudReadOnly: "Cloud sync is read-only until the subscription is restored.",
+    cloudAccountBlocked: "Cloud access for this account is blocked. Check the account status or contact support.",
     cloudStorageLimit: "Cloud storage limit reached. Free space or upgrade the plan.",
     cloudVaultLimit: "Cloud vault limit reached for the current plan.",
     cloudDeviceLimit: "Cloud device limit reached. Disconnect an old device or upgrade the plan.",
     cloudPayloadTooLarge: "This sync payload is larger than the current plan allows.",
+    cloudRateLimited: "Too many Cloud requests. Wait a moment and try again.",
     selfHostedVaultCreated: "Remote vault created on the self-hosted server.",
     selfHostedVaultBound: "Local vault bound to the self-hosted remote vault.",
     selfHostedManageFailed:
@@ -701,10 +900,59 @@ const en = {
     bindingCleared: "Vault binding removed.",
     bindingMissing: "Bind the active vault to a connection before running sync.",
     vaultNotFound: "The selected vault does not exist on the server.",
+    selfHostedVaultAccessDenied: "This device no longer has access to the selected server vault.",
+    selfHostedVaultReadOnly: "This server vault is view-only for the current device.",
     revisionConflict: "The server changed during sync. Please run it again.",
     serverNotFound: "The sync server could not be reached at this URL.",
     failedGeneric: "Sync failed. Check the server URL, token, and availability.",
     hostedFailedGeneric: "Hosted sync action failed. Check the server URL and account state."
+  },
+  plannerCore: {
+    quickAdd: {
+      today: "today",
+      tomorrow: "tomorrow",
+      dayAfterTomorrow: "day after tomorrow,after tomorrow",
+      minutes: "m,min,mins,minute,minutes",
+      hours: "h,hr,hrs,hour,hours"
+    },
+    noDate: "No date",
+    noTime: "No time",
+    views: {
+      inbox: "Inbox", today: "Today", overdue: "Overdue", upcoming: "Upcoming",
+      projects: "Projects", habits: "Habits", review: "Review"
+    },
+    priorities: {
+      none: "No priority", low: "Low", medium: "Medium", high: "High", urgent: "Urgent"
+    },
+    statuses: {
+      inbox: "Inbox", todo: "To do", scheduled: "Scheduled", inProgress: "In focus",
+      waiting: "Waiting", done: "Done", canceled: "Canceled"
+    },
+    habitCadence: {
+      daily: "Daily", weekdays: "Weekdays", weekly: "Weekly", customDaily: "Every {{count}} days",
+      customDaily_one: "Every {{count}} day",
+      customDaily_other: "Every {{count}} days"
+    },
+    recurrence: {
+      daily: "Daily", weekly: "Weekly", monthly: "Monthly", yearly: "Yearly",
+      everyDays: "Every {{count}} days", everyWeeks: "Every {{count}} weeks",
+      everyMonths: "Every {{count}} months", everyYears: "Every {{count}} years",
+      everyDays_one: "Every {{count}} day", everyDays_other: "Every {{count}} days",
+      everyWeeks_one: "Every {{count}} week", everyWeeks_other: "Every {{count}} weeks",
+      everyMonths_one: "Every {{count}} month", everyMonths_other: "Every {{count}} months",
+      everyYears_one: "Every {{count}} year", everyYears_other: "Every {{count}} years"
+    },
+    reviewFilters: { all: "All", overdue: "Overdue", inbox: "Inbox", waiting: "Waiting", unscheduled: "Unscheduled", moved: "Moved", projects: "Projects", habits: "Habits" },
+    habitHealth: { new: "New", steady: "Steady", attention: "Attention", watch: "Watch", risk: "At risk", paused: "Paused" },
+    decisionBadges: { overdue: "Due", inbox: "Inbox", waiting: "Waiting", unscheduled: "Date", moved: "Moved", projects: "Project", habits: "Habit" },
+    backlinkKinds: { project: "Project", folder: "Folder", note: "Note", tag: "Tag", canvas: "Canvas", block: "Block", canvasElement: "Element", url: "Link" },
+    reminders: { none: "None", atTime: "At time", min10: "10 min before", min15: "15 min", min30: "30 min before", hour1: "1 hour", day1: "1 day" },
+    habitFilters: { today: "Today", all: "All" },
+    habitCadenceShort: { daily: "Daily", weekdays: "Weekdays", weekly: "Weekly", customDaily: "Every N days" },
+    habitLegend: { complete: "Done", missed: "Missed", skipped: "Skipped", today: "Today", paused: "Paused" },
+    repeats: { none: "No repeat", daily: "Daily", weekly: "Weekly", monthly: "Monthly", yearly: "Yearly", customDaily: "Every N days" },
+    repeatRangeLimited: "The repeat will be limited to the selected range.",
+    repeatRangeHint: "Choose a range if the repeat should end on a specific date."
   },
   settings: {
     kicker: "Preferences",
@@ -720,6 +968,40 @@ const en = {
       "Detected automatically on first launch, but you can switch it manually whenever you want.",
     languageEnglish: "English",
     languageRussian: "Russian",
+    localePreferencesTitle: "Language and regional formats",
+    localePreferencesDescription:
+      "Interface text, dates, time, week layout, and spellcheck are independent device settings.",
+    localeSystemLanguage: "System · {{language}}",
+    localeSystemFormat: "System regional format",
+    localeFormatTitle: "Regional formats",
+    localeFormatDescription: "Controls dates, numbers, file sizes, and sorting without changing the interface language.",
+    localeWeekTitle: "First day of week",
+    localeWeekDescription: "Use the regional convention or choose a fixed day for calendars on this device.",
+    localeWeekRegion: "Regional default",
+    localeWeekMonday: "Monday",
+    localeWeekSaturday: "Saturday",
+    localeWeekSunday: "Sunday",
+    localeTimeTitle: "Time format",
+    localeTimeDescription: "Use the regional convention or keep a fixed 12- or 24-hour clock.",
+    localeTimeRegion: "Regional default",
+    localeTime24: "24-hour",
+    localeTime12: "12-hour",
+    localeSpellcheckTitle: "Spellcheck",
+    localeSpellcheckDescription: "Choose one or more browser or operating-system dictionaries for editing notes.",
+    localeSpellcheckSystem: "System dictionary",
+    localeSpellcheckLanguage: "Selected languages",
+    localeSpellcheckLanguageLabel: "Spellcheck languages",
+    localeSpellcheckOff: "Off",
+    localeSpellcheckCapabilityWeb:
+      "The browser checks each text block with the matching selected language. Languages using the same script follow the primary browser dictionary.",
+    localeSpellcheckCapabilityDesktop:
+      "Locoris passes language hints for each text block to the desktop operating-system spellchecker.",
+    localeSpellcheckCapabilityAndroid:
+      "Locoris passes language hints for each text block to the Android keyboard and system spellchecker.",
+    localeChangeFailed:
+      "Couldn’t switch to {{language}}. Locoris kept {{previousLanguage}}. Check the connection and try again.",
+    localeChangeNoticeClose: "Dismiss language error",
+    localeEffectiveSummary: "Active format: {{locale}} · week day {{weekDay}} · {{time}}-hour clock.",
     accountCloudTitle: "Account & Cloud",
     accountCloudCaption:
       "Locoris Cloud sign-in, plan, devices, and the vaults that sync through your cloud account.",
@@ -731,6 +1013,15 @@ const en = {
     accountCloudProfileKicker: "Profile",
     accountCloudProfileDescription:
       "This account is used only for Locoris Cloud and the vaults connected to it.",
+    accountCloudProfileFallbackName: "Locoris Cloud",
+    accountCloudProfileFallbackDescription:
+      "No profile name is set, so the interface shows {{fallback}}.",
+    accountCloudProfileNameLabel: "User name",
+    accountCloudProfileNamePlaceholder: "For example: Alex",
+    accountCloudProfileSave: "Save name",
+    accountCloudProfileSaved: "Profile name updated.",
+    accountCloudProfileSavedLocally:
+      "Name applied in the app. The Cloud profile API is unavailable right now, so save it again after updating or restarting the server.",
     accountCloudNoAccountTitle: "Locoris Cloud is not connected",
     accountCloudNoAccountDescription:
       "Sign in or create an account to connect local vaults to cloud sync.",
@@ -738,19 +1029,43 @@ const en = {
     accountCloudManage: "Manage",
     accountCloudStatusTitle: "Locoris Cloud status",
     accountCloudPlan: "Plan",
+    accountCloudPeriod: "Period",
+    accountCloudPeriodUntil: "Until {{date}}",
+    accountCloudPeriodNoExpiry: "No expiry",
+    accountCloudTrialExpiredOn: "Trial ended {{date}}",
+    accountCloudReadOnlyUntil: "Read-only until {{date}}",
+    accountCloudArchivedUntil: "Archived until {{date}}",
+    accountCloudRetentionEndedOn: "Retention ended {{date}}",
+    accountCloudUnlimited: "unlimited",
+    accountCloudTrialNotice:
+      "Trial is active until {{date}}. After that Locoris stays local, while Cloud writes and web access move to the limited free mode.",
+    accountCloudTrialReadOnlyNotice:
+      "Trial has ended. Cloud remains readable and exportable until {{date}}, but writing changes requires an active plan.",
+    accountCloudTrialArchiveNotice:
+      "The read-only period has ended. Cloud data is archived until {{date}} and no longer accepts new changes.",
+    accountCloudTrialRetentionExpiredNotice:
+      "Post-trial retention has ended. Cloud sync is disabled and cloud data may be deleted under the retention policy.",
+    accountCloudFreeNotice:
+      "Free local mode is active: local data remains available, but Cloud writes and web access require an active plan.",
+    accountCloudGraceNotice:
+      "Cloud is in grace until {{date}}. Restore billing to keep sync from becoming read-only.",
     accountCloudVaults: "Vaults",
     accountCloudDevices: "Devices",
     accountCloudStorage: "Data",
     accountCloudDuplicateTitle: "Extra cloud connections found",
     accountCloudDuplicateDescription:
       "There are {{count}} additional cloud connections. The newest one is treated as primary; remove the others after checking them.",
+    accountCloudDuplicateDescription_one:
+      "There is {{count}} additional cloud connection. The newest one is treated as primary; remove the other one after checking it.",
+    accountCloudDuplicateDescription_other:
+      "There are {{count}} additional cloud connections. The newest one is treated as primary; remove the others after checking them.",
     accountCloudReadOnlyTitle: "Cloud is read-only",
     accountCloudReadOnlyDescription:
       "This account cannot write changes right now. Check the plan, billing, or server status.",
-    accountCloudVaultsKicker: "Cloud vaults",
-    accountCloudVaultsTitle: "Choose what syncs through Locoris Cloud",
+    accountCloudVaultsKicker: "Vaults",
+    accountCloudVaultsTitle: "Local and Cloud vaults",
     accountCloudVaultsDescription:
-      "Each local vault can be connected to a cloud vault, disconnected, or imported from an existing cloud vault.",
+      "Open, rename, and delete local or server copies with a clear view of which data remains on each device.",
     accountCloudImportFromCloud: "Import from Cloud",
     accountCloudConnected: "Cloud",
     accountCloudNotConnected: "Local",
@@ -758,17 +1073,105 @@ const en = {
     accountCloudConnectVault: "Connect",
     accountCloudDisconnect: "Disconnect",
     accountCloudVaultConnected: "“{{vault}}” is connected to Locoris Cloud.",
+    accountCloudBindingsRestored_one:
+      "Cloud was reconnected for {{count}} vault. Sync has already started.",
+    accountCloudBindingsRestored_other:
+      "Cloud was reconnected for {{count}} vaults. Sync has already started.",
+    accountCloudBindingsRestorePartial:
+      "Restored automatically: {{restored}}. Could not restore: {{failed}}. Other vaults were left untouched.",
     accountCloudVaultDisconnected: "Vault disconnected from Locoris Cloud.",
     accountCloudRemoteImported: "“{{vault}}” was added from Locoris Cloud.",
     accountCloudRefreshed: "Locoris Cloud status refreshed.",
-    accountCloudDevicesKicker: "Device",
-    accountCloudDevicesTitle: "This device",
+    accountCloudDevicesKicker: "Access",
+    accountCloudDevicesTitle: "Account devices",
     accountCloudDevicesDescription:
-      "Devices are managed in the Account Portal. The app shows which device identity is used for sync.",
+      "Manage every account device here. Revoking access ends its sessions and disconnects its Cloud sync credentials.",
+    accountCloudCurrentDevice: "This device",
+    accountCloudDeviceActive: "Active",
+    accountCloudDeviceInactive: "Inactive",
+    accountCloudDeviceLastUsed: "Last active {{date}}",
+    accountCloudDeviceNeverUsed: "No activity recorded",
+    accountCloudDeviceVaultCount_one: "{{count}} vault",
+    accountCloudDeviceVaultCount_other: "{{count}} vaults",
+    accountCloudDevicesUnavailable: "The device list is temporarily unavailable. Refresh Cloud status or try again later.",
     accountCloudImportKicker: "Cloud vaults",
     accountCloudImportTitle: "Choose a cloud vault",
     accountCloudNoRemoteVaults: "There are no cloud vaults in this account yet.",
+    accountCloudImportEmptyDescription:
+      "Create a cloud vault from a local vault or refresh the list if it was added on another device.",
     accountCloudImportAction: "Import",
+    accountCloudImportLoading: "Refreshing cloud vaults...",
+    accountCloudImportOffline: "No network connection. Import will be available after the connection is restored.",
+    accountCloudImportRefresh: "Refresh list",
+    accountCloudImportOpenLocal: "Open",
+    accountCloudVaultScopeLabel: "Vault location",
+    accountCloudLocalVaultsTab: "Local",
+    accountCloudCloudVaultsTab: "Cloud",
+    accountCloudVaultNameRequired: "Enter a vault name.",
+    accountCloudRenameLocalVault: "New local vault name",
+    accountCloudRenameRemoteVault: "New cloud vault name",
+    accountCloudRenameVaultLabel: "Rename “{{vault}}”",
+    accountCloudOpenVault: "Open vault",
+    accountCloudOpenVaultLabel: "Open “{{vault}}”",
+    accountCloudDeleteLocalVault: "Delete locally",
+    accountCloudDeleteLocalVaultLabel: "Delete local vault “{{vault}}”",
+    accountCloudDeleteRemoteVault: "Delete from Cloud",
+    accountCloudDeleteRemoteVaultLabel: "Delete cloud vault “{{vault}}”",
+    accountCloudLocalVaultOnlyDescription: "This data exists only on this device.",
+    accountCloudLocalVaultConnectedTo: "Cloud: “{{vault}}” · synced {{date}}",
+    accountCloudNeverSynced: "Not synced yet",
+    accountCloudImportedOnDevice: "Local copy available",
+    accountCloudOnly: "Cloud only",
+    accountCloudRemoteVaultLocalCopy: "Local copy: “{{vault}}”",
+    accountCloudRemoteVaultActivity: "Last activity {{date}}",
+    accountCloudCloudVaultsSignedOutTitle: "Connect Locoris Cloud",
+    accountCloudCloudVaultsSignedOutDescription:
+      "Sign in to see server vaults, their connections, and safe management actions here.",
+    accountCloudLocalVaultRenamed: "Local vault renamed to “{{vault}}”.",
+    accountCloudRemoteVaultRenamed: "Cloud vault renamed to “{{vault}}”.",
+    accountCloudLocalVaultDeleted: "Local vault “{{vault}}” was deleted from this device.",
+    accountCloudRemoteVaultDeleted: "Cloud vault “{{vault}}” was deleted from the server.",
+    accountCloudRemoteVaultAlreadyDeleted:
+      "“{{vault}}” was already absent from Cloud. Its local connection was cleared.",
+    accountCloudLocalVaultDangerKicker: "Local data",
+    accountCloudDeleteLocalVaultTitle: "Delete “{{vault}}” from this device?",
+    accountCloudDeleteLocalVaultMessage:
+      "The local database and all of its data will be deleted without moving to Trash.",
+    accountCloudDeleteLocalVaultCloudRemains:
+      "The Cloud copy “{{vault}}” will remain on the server and can be imported again later.",
+    accountCloudDeleteLocalVaultNoCloud: "This vault has no connected Cloud copy.",
+    accountCloudDeleteActiveLocalVaultDetail: "Locoris will switch to another local vault automatically.",
+    accountCloudDeleteLocalVaultPermanentDetail: "This action cannot be undone inside the app.",
+    accountCloudRemoteVaultDangerKicker: "Locoris Cloud data",
+    accountCloudDeleteRemoteVaultTitle: "Delete “{{vault}}” from Cloud?",
+    accountCloudDeleteRemoteVaultMessage:
+      "The encrypted server copy and sync history will be permanently deleted.",
+    accountCloudDeleteRemoteVaultLocalRemains:
+      "The local vault “{{vault}}” will remain on this device and become standalone.",
+    accountCloudDeleteRemoteVaultNoLocal:
+      "This device has no linked local copy. Check your other devices before deleting it.",
+    accountCloudDeleteRemoteVaultDevicesRevoked:
+      "Devices losing access to this vault: {{count}}.",
+    accountCloudDeleteRemoteVaultDevicesRevoked_one:
+      "Device losing access to this vault: {{count}}.",
+    accountCloudDeleteRemoteVaultDevicesRevoked_other:
+      "Devices losing access to this vault: {{count}}.",
+    accountCloudDeviceDangerKicker: "Account security",
+    accountCloudRevokeDevice: "Revoke access",
+    accountCloudDeviceRevoking: "Disconnecting...",
+    accountCloudSignOutThisDevice: "Sign out here",
+    accountCloudRevokeDeviceTitle: "Disconnect “{{device}}”?",
+    accountCloudRevokeDeviceMessage:
+      "This device will lose access to Locoris Cloud and will no longer be able to sync changes.",
+    accountCloudSignOutThisDeviceTitle: "Sign out of Cloud on this device?",
+    accountCloudSignOutThisDeviceMessage:
+      "The current session will end and local vault Cloud connections will be disconnected.",
+    accountCloudRevokeDeviceSessionsDetail: "All sessions and sync credentials for this device will be revoked.",
+    accountCloudRevokeDeviceLocalDataDetail:
+      "Local data is not deleted from the device and remains available offline.",
+    accountCloudDeviceRevoked: "Access for “{{device}}” was revoked.",
+    accountCloudDeviceAlreadyRevoked: "“{{device}}” no longer has access.",
+    accountCloudCurrentDeviceSignedOut: "This device was signed out of Locoris Cloud.",
     interfaceTitle: "Interface",
     interfaceRootDescription:
       "Language, themes, map motion, and planner visual signals.",
@@ -857,6 +1260,8 @@ const en = {
       "Deletes tasks, habits, habit logs, goals, and calendar blocks in the current vault.",
     plannerClearDataStatsLabel: "Planner data",
     plannerClearDataTotal: "{{count}} items",
+    plannerClearDataTotal_one: "{{count}} item",
+    plannerClearDataTotal_other: "{{count}} items",
     plannerClearDataEmpty: "No data",
     plannerClearDataTasks: "Tasks",
     plannerClearDataHabits: "Habits",
@@ -871,6 +1276,10 @@ const en = {
     plannerClearDataError: "Could not clear Planner data.",
     plannerClearDataConfirmTitle: "Clear Planner and calendar?",
     plannerClearDataConfirmMessage:
+      "{{count}} Planner items in the current vault will be deleted. This cannot be undone.",
+    plannerClearDataConfirmMessage_one:
+      "{{count}} Planner item in the current vault will be deleted. This cannot be undone.",
+    plannerClearDataConfirmMessage_other:
       "{{count}} Planner items in the current vault will be deleted. This cannot be undone.",
     plannerClearDataConfirm: "Clear",
     plannerClearDataConfirmBoundary: "Notes, projects, folders, and Planner preferences are not deleted.",
@@ -900,6 +1309,8 @@ const en = {
     aiModelPickerCaption:
       "The main page stays focused on the active model. Compare profiles here, pick a preset, or verify an advanced model id.",
     aiModelPresetGroup: "Available models",
+    aiModelPresetTab: "Standard",
+    aiModelAdvancedTab: "Advanced",
     aiModelCustomActive: "advanced ID",
     aiModelCustomDescription:
       "A custom model selected through the advanced availability check. Locoris sends it the same editor text tasks.",
@@ -1134,7 +1545,6 @@ const en = {
     syncManagerIntro:
       "Google Drive, self-hosted, and legacy connections live here. Locoris Cloud is configured separately in Account & Cloud.",
     back: "Back",
-    footnote: "",
     vaultsTitle: "Local vaults",
     vaultsDescription:
       "Create vaults here, rename them, remove them, and connect each one to a single sync method.",
@@ -1228,9 +1638,98 @@ const en = {
     selfHostedConnectAction: "Check and connect",
     selfHostedValidationHint:
       "Locoris verifies the server URL and management token first. The connection is only saved after the server accepts them.",
+    selfHostedConnectMethod: "Connection method",
+    selfHostedConnectLink: "Invitation",
+    selfHostedConnectCode: "Server and code",
+    selfHostedConnectionPackage: "Invitation link or connection package",
+    selfHostedConnectionPackagePlaceholder: "Paste the invitation link or lcrs1_ package",
+    selfHostedConnectionPackageHint:
+      "The same invitation works as a link, short code, or optional QR. No camera is required.",
+    selfHostedPairingCode: "One-time code",
+    selfHostedPairingCodeHint: "Enter the eight characters shown by the server owner or installer.",
+    selfHostedLabelPlaceholder: "Home server, Studio NAS…",
+    selfHostedDeviceCredentialHint:
+      "This device receives its own revocable credential. Locoris stores it securely.",
+    selfHostedUseLegacy: "Connect an existing legacy server with a recovery token",
+    selfHostedUseInvite: "Use a one-time invitation instead",
+    selfHostedLegacyHint:
+      "Compatibility mode for existing installations. New devices should use a one-time invitation.",
+    selfHostedPairingPendingKicker: "Owner approval",
+    selfHostedPairingPendingTitle: "Connection request sent",
+    selfHostedPairingPendingDescription:
+      "Ask the server owner to compare the confirmation phrase and approve this device. This screen updates automatically.",
+    selfHostedPairingConfirmation: "Confirmation phrase",
+    selfHostedPairingWaiting: "Waiting securely for the owner",
+    selfHostedPairingContinueLater: "Continue later",
+    selfHostedPairingDenied: "The server owner denied this device request.",
+    selfHostedPairingExpired: "This invitation expired. Ask the owner for a new one.",
+    selfHostedPairingInvalid: "This invitation or code is invalid, expired, or has already been used.",
+    selfHostedPairingUnsupported: "This invitation was created by an unsupported server version.",
+    selfHostedPairingRateLimited: "Too many attempts. Wait a few minutes before trying again.",
+    selfHostedPairingServerUrlInvalid:
+      "Enter a valid HTTP or HTTPS server address without account details.",
+    selfHostedOwnerRequired: "Only a server owner can manage devices and invitations.",
+    selfHostedCurrentDeviceRevokeForbidden: "You cannot revoke the device currently managing the server.",
+    selfHostedLastOwnerRequired: "Connect another owner device before revoking the last owner.",
+    selfHostedTrustedDeviceAccess: "Trusted device credential",
+    selfHostedGuestDeviceAccess: "Scoped guest device access",
+    selfHostedLegacyAccess: "Legacy recovery access",
+    selfHostedManageAccess: "Devices and access",
+    selfHostedAccessKicker: "Self-hosted access",
+    selfHostedAccessTitle: "Devices and invitations",
+    selfHostedAccessServer: "Personal server",
+    selfHostedOwnerRole: "Owner",
+    selfHostedGuestRole: "Guest",
+    selfHostedDevices: "Devices",
+    selfHostedInvites: "Invitations",
+    selfHostedDevicesTitle: "Trusted devices",
+    selfHostedDevicesDescription:
+      "Each device has an independent credential that can be revoked without changing access elsewhere.",
+    selfHostedInvitesTitle: "Invitations and approvals",
+    selfHostedInvitesDescription:
+      "Add your own device instantly or grant a guest access only to selected vaults.",
+    selfHostedInviteGuest: "Invite guest",
+    selfHostedInviteDevice: "Add my device",
+    selfHostedGuestKicker: "Scoped access",
+    selfHostedGuestTitle: "Invite another person",
+    selfHostedDeviceKicker: "Trusted device",
+    selfHostedDeviceInviteTitle: "Connect another device",
+    selfHostedInviteLabel: "Invitation name",
+    selfHostedInviteLabelPlaceholder: "Work laptop, Alex…",
+    selfHostedInviteServerAddress: "Address available to the new device",
+    selfHostedInviteServerAddressHint:
+      "Use the LAN or HTTPS address that the invited device can actually reach. localhost only works on this computer.",
+    selfHostedInviteVaults: "Available vaults",
+    selfHostedInviteVaultRequired: "Choose at least one vault for this guest.",
+    selfHostedInvitePermission: "Permission",
+    selfHostedPermissionRead: "View only",
+    selfHostedPermissionWrite: "View and edit",
+    selfHostedOwnerInviteWarning:
+      "An owner device can manage every vault, invitation, and connected device on this server.",
+    selfHostedInviteCreate: "Create invitation",
+    selfHostedInviteShareHint:
+      "Send the copied package through a trusted channel. The recipient can paste it into Locoris; the QR is optional.",
+    selfHostedInviteCopy: "Copy connection package",
+    selfHostedInviteCopied: "Copied",
+    selfHostedInviteCopyFailed: "Could not copy automatically. Try again or use the short code.",
+    selfHostedInviteExpires: "Expires {{date}}",
+    selfHostedInviteQrAlt: "QR code containing the Locoris server invitation",
+    selfHostedInviteQrOptional: "Optional shortcut for a phone camera",
+    selfHostedCurrentDevice: "This device",
+    selfHostedLastSeen: "Last active {{date}}",
+    selfHostedNeverUsed: "Not used for sync yet",
+    selfHostedRevoke: "Revoke",
+    selfHostedRevokeConfirm: "Confirm revoke",
+    selfHostedApprovalRequired: "Approval required",
+    selfHostedDeny: "Deny",
+    selfHostedApprove: "Approve",
+    selfHostedInviteCodeEnding: "Code ending {{code}}",
+    selfHostedNoInvites: "No active invitations or pending requests.",
     googleDriveConnectionTitle: "Connect Google Drive",
     googleDriveConnectionDescription: "Hidden appDataFolder sync inside your Google account.",
-    googleDriveReconnect: "Refresh Google Drive auth",
+    googleDriveReconnect: "Sign in again",
+    googleDriveReconnectSuccess:
+      "Google Drive sign-in was refreshed. Connected vaults are syncing now.",
     googleDriveClientMissing:
       "Set the desktop Google OAuth client ID first for native builds, or the web client ID for browser builds.",
     googleDriveModalDescription:
@@ -1310,7 +1809,11 @@ const en = {
     connectionUpdated: "Sync method updated.",
     boundToConnection: "Bound to {{connection}}",
     linkedVaultCount: "{{count}} linked vaults",
+    linkedVaultCount_one: "{{count}} linked vault",
+    linkedVaultCount_other: "{{count}} linked vaults",
     remoteVaultCount: "{{count}} remote vaults",
+    remoteVaultCount_one: "{{count}} remote vault",
+    remoteVaultCount_other: "{{count}} remote vaults",
     linkVault: "Connect vault",
     disconnectVault: "Disconnect vault",
     remoteVaultsTitle: "Remote vault catalog",
@@ -1321,6 +1824,8 @@ const en = {
     remoteVaultExpand: "Show remote vaults",
     remoteVaultLoading: "Loading remote vaults…",
     remoteVaultAvailableCount: "{{count}} available on this sync method",
+    remoteVaultAvailableCount_one: "{{count}} vault available on this sync method",
+    remoteVaultAvailableCount_other: "{{count}} vaults available on this sync method",
     remoteVaultLoadFailed: "Could not load remote vaults",
     remoteVaultLinkedHere: "Linked here",
     remoteVaultOnDevice: "On this device",
@@ -1343,9 +1848,19 @@ const en = {
       "Some remote vaults already exist locally and are linked elsewhere. Choose how you want to continue with “{{connection}}”.",
     remoteImportAllDetailReconnect:
       "{{count}} vaults would be reconnected from another sync method.",
+    remoteImportAllDetailReconnect_one:
+      "{{count}} vault would be reconnected from another sync method.",
+    remoteImportAllDetailReconnect_other:
+      "{{count}} vaults would be reconnected from another sync method.",
     remoteImportAllDetailSafe:
       "{{count}} vaults can be imported safely without changing existing links.",
+    remoteImportAllDetailSafe_one:
+      "{{count}} vault can be imported safely without changing existing links.",
+    remoteImportAllDetailSafe_other:
+      "{{count}} vaults can be imported safely without changing existing links.",
     remoteImportAllDetailTotal: "{{count}} vaults are ready to import in total.",
+    remoteImportAllDetailTotal_one: "{{count}} vault is ready to import in total.",
+    remoteImportAllDetailTotal_other: "{{count}} vaults are ready to import in total.",
     remoteImportCreated: "Remote vault imported as “{{vault}}”.",
     remoteImportAdjusted: "Remote vault imported as “{{vault}}” to avoid a local name collision.",
     remoteImportLinked: "Existing local vault “{{vault}}” linked to this sync method.",
@@ -1400,7 +1915,11 @@ const en = {
     cancelBindingAction: "Cancel",
     mobileSyncTabsLabel: "Sync sections",
     mobileVaultCount: "{{count}} vaults",
+    mobileVaultCount_one: "{{count}} vault",
+    mobileVaultCount_other: "{{count}} vaults",
     mobileConnectionCount: "{{count}} methods",
+    mobileConnectionCount_one: "{{count}} method",
+    mobileConnectionCount_other: "{{count}} methods",
     mobileVaultsHint: "Manage local vaults and their bindings.",
     mobileConnectionsHint: "Review sync methods, remote catalog, and imports.",
     mobileConnectionDetails: "Open",
@@ -1414,8 +1933,14 @@ const en = {
     rebindConfirm: "Reconnect",
     bindAllVaults: "Bind all vaults",
     bindAllCompleted: "{{count}} vaults connected to this sync method.",
+    bindAllCompleted_one: "{{count}} vault connected to this sync method.",
+    bindAllCompleted_other: "{{count}} vaults connected to this sync method.",
     bindAllConfirmTitle: "Reconnect several vaults",
     bindAllConfirmDescription:
+      "{{count}} vaults are already bound elsewhere. Reconnect them all to “{{connection}}”?",
+    bindAllConfirmDescription_one:
+      "{{count}} vault is already bound elsewhere. Reconnect it to “{{connection}}”?",
+    bindAllConfirmDescription_other:
       "{{count}} vaults are already bound elsewhere. Reconnect them all to “{{connection}}”?"
   },
   orbit: {
@@ -1528,9 +2053,12 @@ const en = {
     mobileNavigation: "Mobile navigation",
     mobileFoldersNav: "Folders",
     mobileStorageNav: "Vault",
+    mobileAccountNav: "Account",
     mobileMap: "Map",
     mobileMenu: "Menu",
     mobileMoreNav: "More",
+    mobileAccountKicker: "Account & Cloud",
+    mobileAccountTitle: "Account",
     mobileMoreKicker: "Vault and service",
     mobileMoreTitle: "More",
     mobileMoreSubtitle: "Vault, cloud, sync, and trash in one place.",
@@ -1554,14 +2082,18 @@ const en = {
     mobileNothingSelected: "Nothing selected",
     mobileMoveChooseDestination: "Choose a destination folder or project.",
     mobileMoveDestinationHint: "Tap a folder or project to move the selection.",
-    mobileMoveActive: "Move {{count}} item(s)",
+    mobileMoveActive: "Move {{count}} items",
+    mobileMoveActive_one: "Move {{count}} item",
+    mobileMoveActive_other: "Move {{count}} items",
     mobileMoveTitle: "Choose a new place",
     mobileMovePickDestination: "Tap a folder or project in the hierarchy, review the destination, then confirm the move.",
     mobileMoveDestination: "Move to",
     mobileMoveNoDestination: "No destination selected yet",
     mobileMoveConfirm: "Move",
     mobileMoveConflictTitle: "Name conflicts",
-    mobileMoveConflictDescription: "{{count}} item(s) already use these names in the chosen location.",
+    mobileMoveConflictDescription: "{{count}} items already use these names in the chosen location.",
+    mobileMoveConflictDescription_one: "{{count}} item already uses this name in the chosen location.",
+    mobileMoveConflictDescription_other: "{{count}} items already use these names in the chosen location.",
     mobileMoveRename: "Rename and move",
     mobileMoveCopy: "Create copy",
     mobilePreviewAction: "Preview",
@@ -1578,7 +2110,11 @@ const en = {
     clearTrashAction: "Empty trash",
     clearTrashTitle: "Empty trash",
     clearTrashMessage:
-      "Delete {{count}} note(s) from Trash permanently? This action cannot be undone."
+      "Delete {{count}} notes from Trash permanently? This action cannot be undone.",
+    clearTrashMessage_one:
+      "Delete {{count}} note from Trash permanently? This action cannot be undone.",
+    clearTrashMessage_other:
+      "Delete {{count}} notes from Trash permanently? This action cannot be undone."
   },
   palette: {
     rose: "Rose",
@@ -1600,11 +2136,33 @@ const en = {
     assets: "Assets",
     pinned: "Favorites"
   },
+  counts: {
+    notes_one: "{{count}} note",
+    notes_other: "{{count}} notes",
+    folders_one: "{{count}} folder",
+    folders_other: "{{count}} folders",
+    documents_one: "{{count}} document",
+    documents_other: "{{count}} documents",
+    files_one: "{{count}} file",
+    files_other: "{{count}} files",
+    items_one: "{{count}} item",
+    items_other: "{{count}} items"
+  },
   saveState: {
     idle: "Idle",
     saving: "Saving",
     saved: "Saved"
   }
 };
+
+const en = defineLocalePack({
+  meta: {
+    code: "en",
+    nativeName: "English",
+    direction: "ltr"
+  },
+  messages,
+  blockNoteDictionary: async () => (await import("@blocknote/core/locales")).en
+});
 
 export default en;

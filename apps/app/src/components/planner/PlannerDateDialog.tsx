@@ -1,3 +1,4 @@
+import { translateInline } from "../../localization/translateInline";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
@@ -48,7 +49,7 @@ export default function PlannerDateDialog({
         type="button"
         className="planner-date-dialog-backdrop"
         onClick={onClose}
-        aria-label={language === "ru" ? "Закрыть выбор даты" : "Close date picker"}
+        aria-label={translateInline(language, "plannerDateDialog.closeDatePicker")}
       />
       <div className="planner-date-dialog-sheet">
         <PlannerDateSelector

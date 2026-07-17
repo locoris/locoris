@@ -1,13 +1,171 @@
-const ru = {
+import inline from "./inline/ru";
+import type { AppLocaleMessages } from "../localization/localeSchema";
+import { defineLocalePack } from "../localization/localePack";
+
+const messages = {
+  inline,
   app: {
     name: "Locoris",
     tagline: "Орбитальная карта знаний",
+    demoVaultName: "Демо-хранилище Locoris",
     newNote: "Новая заметка",
     localVault: "Локальное хранилище",
     syncReady: "Синхронизация готова",
     networkOnline: "Сеть доступна",
     networkOffline: "Оффлайн режим",
     booting: "Загрузка локального хранилища..."
+  },
+  webAccess: {
+    statusLabel: "Статус web-доступа",
+    welcomeKicker: "Web-версия",
+    welcomeTitle: "Войди в Locoris Cloud",
+    welcomeDescription:
+      "Web-версия работает как отдельное устройство Cloud-аккаунта. Так данные, лимиты и восстановление остаются понятными и управляемыми.",
+    tryBrowserTitle: "Попробовать локально",
+    tryBrowserDescription:
+      "Данные хранятся в этом браузере. Подходит для знакомства, быстрых заметок и безопасного экспорта.",
+    signInTitle: "Войти в Cloud",
+    signInDescription:
+      "Подключи аккаунт, чтобы открыть web-доступ, cloud-хранилища, trial или активный тариф.",
+    exportDemo: "Экспортировать демо",
+    downloadApp: "Скачать приложение",
+    localTitle: "Локально в браузере",
+    localDescription: "«{{vault}}» хранится в IndexedDB этого браузера. Экспортируй данные перед очисткой браузера.",
+    cloudTitle: "Cloud Web",
+    cloudDescription: "{{account}}. Это хранилище синхронизируется через Locoris Cloud.",
+    cloudAccountFallback: "Аккаунт Cloud",
+    cloudPlanFallback: "Cloud",
+    pendingTitle: "Хранилище не в Locoris Cloud",
+    pendingLocalDescription:
+      "«{{vault}}» хранится только в этом браузере. Подключи Locoris Cloud, чтобы web-версия синхронизировалась между устройствами и не зависела от очистки браузера.",
+    pendingExternalDescription:
+      "«{{vault}}» сейчас синхронизируется через {{provider}}. Locoris Cloud добавит web-устройство, аккаунт, лимиты и восстановление в одном управляемом контуре.",
+    readOnlyTitle: "Cloud только для чтения",
+    readOnlyDescription:
+      "Тариф или trial не позволяют запись. Данные можно открыть и экспортировать, но для синхронизации изменений нужен активный Cloud.",
+    unavailableTitle: "Web-доступ не входит в тариф",
+    unavailableDescription: "Для Cloud Web нужен активный trial или тариф с web-доступом.",
+    unavailableActionDescription:
+      "Открой аккаунт, чтобы восстановить тариф, экспортировать данные или перейти на приложение.",
+    trialExpiredKicker: "Пробный период завершён",
+    trialExpiredTitle: "Trial закончился. Данные остались с тобой",
+    trialExpiredDescription:
+      "Locoris сохранил cloud-хранилища и локальные данные. Оформи Cloud, чтобы сразу вернуть web-доступ и продолжить синхронизацию без повторной настройки.",
+    trialRetentionExpiredTitle: "Срок хранения Cloud закончился",
+    trialRetentionExpiredDescription:
+      "Локальные хранилища остались на устройствах, но доступность старой cloud-копии больше не гарантируется. Новый тариф снова включит Cloud для доступных данных.",
+    trialExpiredPanelTitle: "Продолжи с того же места",
+    trialExpiredPanelDescription:
+      "Подписка восстановит запись в Cloud, web-версию и синхронизацию уже подключённых устройств.",
+    trialRetentionExpiredPanelDescription:
+      "Оформи тариф, чтобы снова использовать Cloud. Если серверная копия уже удалена, подключи сохранившееся локальное хранилище как новое.",
+    trialTimelineLabel: "Сроки пробного периода и хранения",
+    trialEndedOn: "Trial завершён {{date}}",
+    trialReadOnlyUntil: "Чтение и экспорт до {{date}}",
+    trialArchiveUntil: "Восстановление доступно до {{date}}",
+    trialDataSafeTitle: "Сейчас данные не удаляются",
+    trialDataSafeDescription:
+      "Cloud-копия доступна согласно сроку хранения, а локальные хранилища остаются на устройствах независимо от подписки.",
+    localDataSafeTitle: "Локальные данные остаются у тебя",
+    localDataSafeDescription:
+      "Подписка не влияет на локальные хранилища. Доступность cloud-копии после завершения retention-периода нужно проверить отдельно.",
+    recommendedPlan: "Рекомендуемый тариф",
+    perMonth: "в месяц",
+    subscribeAction: "Оформить подписку",
+    upgradeNote: "Переход откроет Billing с тарифами и деталями оплаты. Локальная версия Locoris остаётся бесплатной.",
+    upgradeSyncTitle: "Синхронизация без пауз",
+    upgradeSyncDescription: "Изменения снова передаются между подключёнными устройствами автоматически.",
+    upgradeWebTitle: "Полная web-версия",
+    upgradeWebDescription: "Работай с хранилищами из браузера, desktop и Android в одном аккаунте.",
+    upgradeHistoryTitle: "История и восстановление",
+    upgradeHistoryDescription: "Cloud хранит версии синхронизации и даёт время вернуть нужное состояние.",
+    unlimited: "без лимита",
+    planVaultLimit: "Cloud-хранилища: {{count}}",
+    planVaultLimit_one: "Cloud-хранилище: {{count}}",
+    planVaultLimit_few: "Cloud-хранилища: {{count}}",
+    planVaultLimit_many: "Cloud-хранилищ: {{count}}",
+    planVaultLimit_other: "Cloud-хранилища: {{count}}",
+    planDeviceLimit: "Устройства: {{count}}",
+    planDeviceLimit_one: "Устройство: {{count}}",
+    planDeviceLimit_few: "Устройства: {{count}}",
+    planDeviceLimit_many: "Устройств: {{count}}",
+    planDeviceLimit_other: "Устройства: {{count}}",
+    planStorageLimit: "Cloud: {{storage}}",
+    planHistoryLimit: "История: {{history}}",
+    planHistoryDays: "{{days}} дней",
+    attentionTitle: "Cloud требует внимания",
+    openCloud: "Войти в Cloud",
+    manageCloud: "Аккаунт и Cloud",
+    connecting: "Подключаем…",
+    connectCurrentVault: "Подключить хранилище",
+    exportVault: "Экспорт",
+    exportSuccess: "Бэкап хранилища скачан.",
+    connectSuccess: "«{{vault}}» подключено к Cloud Web и поставлено на синхронизацию.",
+    localVaultLimit:
+      "В web-версии без активной Cloud-записи доступно одно локальное хранилище. Подключи Cloud или экспортируй данные перед созданием нового.",
+    authHomeLabel: "Открыть сайт Locoris",
+    authContextLabel: "О веб-версии Locoris",
+    authKicker: "Locoris Cloud Web",
+    authTitle: "Продолжи работу в браузере",
+    authDescription:
+      "Войди или создай аккаунт, чтобы открыть свои cloud-хранилища и использовать web-версию как защищённое устройство Locoris.",
+    authCheckingTitle: "Проверяем защищённый доступ",
+    authCheckingDescription: "Locoris безопасно обновляет сессию браузера. Локальное состояние останется на месте.",
+    authReauthTitle: "Подтверди, что это всё ещё ты",
+    authReauthDescription:
+      "Доступ Cloud был отозван или больше не обновляется автоматически. Войди снова без повторной привязки хранилищ.",
+    authReauthPanelTitle: "Войти снова",
+    authReauthPanelDescription: "Email уже указан. Введи пароль, чтобы вернуть Cloud-доступ и продолжить синхронизацию.",
+    authCloudBenefitTitle: "Один Cloud-контур",
+    authCloudBenefitDescription: "Хранилища, синхронизация, лимиты и восстановление управляются из одного аккаунта.",
+    authAppsBenefitTitle: "Все устройства",
+    authAppsBenefitDescription: "Web, desktop и Android видят одни и те же подключённые cloud-хранилища.",
+    authSecurityBenefitTitle: "Контролируемый доступ",
+    authSecurityBenefitDescription: "Каждый браузер регистрируется как отдельное устройство и может быть отозван в аккаунте.",
+    authNoAccountTitle: "Регистрация нужна только для Cloud Web",
+    authNoAccountDescription: "Desktop- и Android-приложения остаются local-first и работают без аккаунта.",
+    authDownloadApps: "Скачать приложения",
+    authPanelLabel: "Вход и регистрация",
+    authAccountStatus: "Доступ к аккаунту",
+    authOpenAccountPortal: "Открыть аккаунт",
+    authSecureAccess: "Защищённый вход",
+    authLoginTitle: "С возвращением",
+    authLoginDescription: "Войди в Locoris Cloud, чтобы продолжить в web-версии.",
+    authRegisterTitle: "Создай аккаунт",
+    authRegisterDescription: "Новый аккаунт получит пробный Cloud-доступ согласно текущим условиям тарифа.",
+    authModeLabel: "Режим авторизации",
+    authLoginTab: "Вход",
+    authRegisterTab: "Регистрация",
+    authEmailLabel: "Email",
+    authPasswordLabel: "Пароль",
+    authPasswordPlaceholder: "Не менее 8 символов",
+    authPasswordConfirmationLabel: "Повтори пароль",
+    authPasswordConfirmationPlaceholder: "Тот же пароль ещё раз",
+    authPasswordStrength: "Надёжность пароля",
+    authShowPassword: "Показать пароль",
+    authHidePassword: "Скрыть пароль",
+    authCapsLock: "Включён Caps Lock.",
+    authLegalPrefix: "Я принимаю",
+    authTerms: "Условия использования",
+    authLegalJoin: "и",
+    authPrivacy: "Политику конфиденциальности",
+    authLoginAction: "Войти в Locoris",
+    authRegisterAction: "Создать аккаунт",
+    authSubmitting: "Проверяем…",
+    authAccessHelp: "Не получается войти?",
+    authFooterSecurity: "Сессия привязана к этому браузеру и устройству.",
+    authLegalNavigation: "Юридическая информация",
+    authInvalidEmail: "Проверь формат email.",
+    authInvalidCredentials: "Не удалось войти. Проверь email и пароль и попробуй снова.",
+    authRegistrationFailed: "Не удалось создать аккаунт. Проверь данные или попробуй войти с этим email.",
+    authPasswordHint: "Пароль должен содержать не менее 8 символов.",
+    authPasswordsMismatch: "Пароли не совпадают.",
+    authLegalRequired: "Чтобы создать аккаунт, прими условия и политику конфиденциальности.",
+    authOffline: "Нет соединения с интернетом. После восстановления сети можно продолжить.",
+    authRateLimited: "Слишком много попыток. Подожди немного и попробуй снова.",
+    authDeviceLimit: "Достигнут лимит устройств. Отключи старое устройство в аккаунте или измени тариф.",
+    authServerUnavailable: "Locoris Cloud сейчас недоступен. Проверь соединение и попробуй позже.",
+    authNotConfigured: "Адрес Locoris Cloud не настроен для этой web-сборки."
   },
   mobile: {
     vault: "Хранилище",
@@ -92,12 +250,20 @@ const ru = {
     deleteBlocked: "Сначала удалите вложенные папки.",
     thisFolder: "эту папку",
     deleteCascadeConfirm:
-      "Удалить {{name}}? Вложенные папки исчезнут, а {{noteCount}} заметок будет перемещено в корзину."
+      "Удалить {{name}}? Вложенные папки исчезнут, а {{noteSummary}} будет перемещено в корзину.",
+    deleteCascadeConfirm_one:
+      "Удалить {{name}}? Вложенные папки исчезнут, а {{noteSummary}} будет перемещена в корзину.",
+    deleteCascadeConfirm_few:
+      "Удалить {{name}}? Вложенные папки исчезнут, а {{noteSummary}} будут перемещены в корзину.",
+    deleteCascadeConfirm_many:
+      "Удалить {{name}}? Вложенные папки исчезнут, а {{noteSummary}} будут перемещены в корзину.",
+    deleteCascadeConfirm_other:
+      "Удалить {{name}}? Вложенные папки исчезнут, а {{noteSummary}} будут перемещены в корзину."
   },
   project: {
     delete: "Удалить проект",
     deleteConfirm:
-      "Удалить проект {{name}} навсегда? Будут удалены {{folderCount}} папок, {{noteCount}} документов и {{assetCount}} файлов. Это действие нельзя отменить."
+      "Удалить проект {{name}} навсегда? Будут удалены {{folderSummary}}, {{documentSummary}} и {{fileSummary}}. Это действие нельзя отменить."
   },
   tags: {
     add: "Добавить тег",
@@ -123,8 +289,17 @@ const ru = {
     filteredByFolder: "Папка",
     filteredByTag: "Тег"
   },
+  trashPanel: {
+    all: "Все",
+    close: "Закрыть",
+    filteredEmptyTitle: "Здесь пусто",
+    filteredEmptyDescription: "Выбери другой раздел, чтобы продолжить разбор удаленных материалов.",
+    recovery: "Восстановление",
+    subtitle: "Проверь удаленные заметки и холсты перед окончательным удалением."
+  },
   note: {
     untitled: "Новая заметка",
+    emptyPreview: "Пока пусто",
     titlePlaceholder: "Заголовок заметки",
     folder: "Папка",
     color: "Цвет заметки",
@@ -272,6 +447,10 @@ const ru = {
     aiPreviewBefore: "Сейчас",
     aiPreviewAfter: "После AI",
     aiPreviewBlocksCount: "{{count}} блоков",
+    aiPreviewBlocksCount_one: "{{count}} блок",
+    aiPreviewBlocksCount_few: "{{count}} блока",
+    aiPreviewBlocksCount_many: "{{count}} блоков",
+    aiPreviewBlocksCount_other: "{{count}} блока",
     aiPreviewEmptyBefore: "Нового текста пока нет.",
     aiPreviewEmptyAfter: "AI не вернул видимый текст.",
     aiPreviewCancel: "Отменить",
@@ -425,6 +604,10 @@ const ru = {
     aiSourceNoNotes: "Подходящих заметок нет.",
     aiPreviewChip: "Диаграмма",
     aiPreviewSummary: "{{count}} элементов готово к вставке",
+    aiPreviewSummary_one: "{{count}} элемент готов к вставке",
+    aiPreviewSummary_few: "{{count}} элемента готовы к вставке",
+    aiPreviewSummary_many: "{{count}} элементов готово к вставке",
+    aiPreviewSummary_other: "{{count}} элемента готовы к вставке",
     aiPreviewReady: "Диаграмма готова. Проверь изменения и вставь на холст.",
     aiPreviewKicker: "AI preview",
     aiPreviewTitle: "Проверить схему",
@@ -513,6 +696,17 @@ const ru = {
     connectionDelete: "Удалить подключение",
     connectionDeleteConfirm:
       "Удалить это подключение и снять {{count}} привязок хранилищ, которые от него зависят?",
+    connectionDeleteConfirm_one:
+      "Удалить это подключение и снять {{count}} привязку хранилища, которая от него зависит?",
+    connectionDeleteConfirm_few:
+      "Удалить это подключение и снять {{count}} привязки хранилищ, которые от него зависят?",
+    connectionDeleteConfirm_many:
+      "Удалить это подключение и снять {{count}} привязок хранилищ, которые от него зависят?",
+    connectionDeleteConfirm_other:
+      "Удалить это подключение и снять {{count}} привязки хранилищ, которые от него зависят?",
+    googleDriveRevoke: "Отозвать доступ Google",
+    googleDriveRevokeConfirm:
+      "Locoris потеряет доступ к данным приложения в Google Drive на всех устройствах. Подключение останется в списке, чтобы можно было войти снова.",
     connectionLabel: "Имя подключения",
     connectionLabelPlaceholder: "Имя подключения",
     managementToken: "Management token",
@@ -591,6 +785,10 @@ const ru = {
     hostedSyncReady: "Облачная синхронизация готова",
     hostedSyncNeedsBinding: "Выбери облачное хранилище, чтобы начать синхронизацию.",
     completed: "Синхронизация завершена. Конфликтов: {{count}}",
+    completed_one: "Синхронизация завершена. Конфликт: {{count}}",
+    completed_few: "Синхронизация завершена. Конфликта: {{count}}",
+    completed_many: "Синхронизация завершена. Конфликтов: {{count}}",
+    completed_other: "Синхронизация завершена. Конфликта: {{count}}",
     statusLocalOnly: "Только локально",
     statusReady: "Готово к синхронизации",
     statusSyncing: "Синхронизация…",
@@ -628,7 +826,23 @@ const ru = {
     googleDriveOAuthFailed:
       "Google Drive авторизация не завершилась. Проверь OAuth consent screen, тестовых пользователей, Google Drive API и попробуй подключить Google Drive снова.",
     googleDriveAuthRequired:
-      "Сессия Google Drive истекла. Обнови авторизацию, чтобы снова загружать удаленные хранилища.",
+      "Сессия Google Drive истекла. Нажми «Войти снова» — данные хранилища останутся на месте.",
+    googleDriveInteractionRequired:
+      "Google просит подтвердить вход. Нажми «Войти снова» — данные хранилища останутся на месте.",
+    googleDriveStorageQuotaExceeded:
+      "В Google Drive закончилось свободное место. Освободи место и повтори синхронизацию.",
+    googleDriveRateLimited:
+      "Google Drive временно ограничил частоту запросов. Locoris повторит синхронизацию позже.",
+    googleDrivePermissionRequired:
+      "Google Drive не разрешил доступ к данным Locoris. Подключи аккаунт заново и подтверди доступ.",
+    googleDriveRequestTimeout:
+      "Google Drive отвечает слишком долго. Проверь сеть и повтори синхронизацию.",
+    googleDriveDataCorrupt:
+      "Locoris обнаружил поврежденные служебные данные Google Drive и остановил запись, чтобы не потерять хранилище.",
+    googleDriveUploadFailed:
+      "Не удалось завершить защищенную загрузку в Google Drive. Повтори синхронизацию при стабильной сети.",
+    googleDriveRevokeFailed:
+      "Google не подтвердил отзыв доступа. Проверь сеть и попробуй ещё раз.",
     googleDriveConnected: "Google Drive подключен.",
     googleDrivePopupClosed: "Авторизация Google была отменена до выдачи доступа.",
     googleDrivePopupFailed: "Не удалось открыть системный браузер для авторизации Google.",
@@ -644,7 +858,7 @@ const ru = {
     googleDriveAuthInProgress:
       "Авторизация Google уже идёт. Сначала заверши или закрой текущий шаг в браузере.",
     googleDriveEncryptedPending:
-      "Это хранилище в Google Drive зашифровано, но импорт зашифрованной оболочки синхронизации пока не включен в приложении.",
+      "Это приватное хранилище зашифровано. Разблокируй его парольной фразой для продолжения синхронизации.",
     unauthorized: "Сервер отклонил токен.",
     hostedUnauthorized: "Облачное хранилище отклонило токен. Привяжи хранилище заново.",
     hostedSessionExpired: "Сессия облачного аккаунта истекла. Войди снова.",
@@ -666,12 +880,16 @@ const ru = {
     hostedConnectionNotReady: "Подключение создано, но еще не готово. Закрой окно и открой синхронизацию снова.",
     cloudPlanRequired: "Для этого действия нужен активный тариф Locoris Cloud.",
     cloudTrialExpired: "Пробный период Locoris Cloud закончился. Войди и обнови тариф, чтобы продолжить синхронизацию.",
+    cloudTrialRetentionExpired:
+      "Срок хранения данных после trial закончился. Войди в аккаунт, чтобы проверить доступные варианты восстановления или тарифа.",
     cloudSubscriptionPastDue: "Оплата облака просрочена. Обнови тариф, чтобы возобновить синхронизацию.",
     cloudReadOnly: "Облачная синхронизация работает только на чтение, пока подписка не восстановлена.",
+    cloudAccountBlocked: "Доступ к Cloud для этого аккаунта заблокирован. Проверь статус аккаунта или обратись в поддержку.",
     cloudStorageLimit: "Лимит облачного хранилища исчерпан. Освободи место или обнови тариф.",
     cloudVaultLimit: "Лимит облачных хранилищ на текущем тарифе исчерпан.",
     cloudDeviceLimit: "Лимит устройств исчерпан. Отключи старое устройство или обнови тариф.",
     cloudPayloadTooLarge: "Этот пакет синхронизации больше, чем разрешает текущий тариф.",
+    cloudRateLimited: "Слишком много запросов к Cloud. Подожди немного и попробуй снова.",
     selfHostedVaultCreated: "Удаленное хранилище создано на своем сервере.",
     selfHostedVaultBound: "Локальное хранилище привязано к удаленному хранилищу на своем сервере.",
     selfHostedManageFailed:
@@ -703,10 +921,65 @@ const ru = {
     bindingCleared: "Привязка хранилища удалена.",
     bindingMissing: "Сначала привяжи активное хранилище к подключению, а потом запускай синхронизацию.",
     vaultNotFound: "Выбранное хранилище не существует на сервере.",
+    selfHostedVaultAccessDenied: "У этого устройства больше нет доступа к выбранному хранилищу сервера.",
+    selfHostedVaultReadOnly: "Для текущего устройства это хранилище сервера доступно только для чтения.",
     revisionConflict: "Состояние сервера изменилось во время sync. Запусти его еще раз.",
     serverNotFound: "Не удалось связаться с sync сервером по этому URL.",
     failedGeneric: "Sync не удался. Проверь URL, токен и доступность сервера.",
     hostedFailedGeneric: "Операция hosted sync не удалась. Проверь URL сервера и состояние аккаунта."
+  },
+  plannerCore: {
+    quickAdd: {
+      today: "сегодня,today",
+      tomorrow: "завтра,tomorrow",
+      dayAfterTomorrow: "послезавтра,day after tomorrow,after tomorrow",
+      minutes: "м,мин,минута,минуты,минут,m,min,mins,minute,minutes",
+      hours: "ч,час,часа,часов,h,hr,hrs,hour,hours"
+    },
+    noDate: "Без даты",
+    noTime: "Без времени",
+    views: {
+      inbox: "Inbox", today: "Сегодня", overdue: "Просрочено", upcoming: "Ближайшее",
+      projects: "Проекты", habits: "Привычки", review: "Review"
+    },
+    priorities: {
+      none: "Без приоритета", low: "Низкий", medium: "Средний", high: "Высокий", urgent: "Срочно"
+    },
+    statuses: {
+      inbox: "Inbox", todo: "К работе", scheduled: "Запланировано", inProgress: "В фокусе",
+      waiting: "Ожидает", done: "Готово", canceled: "Отменено"
+    },
+    habitCadence: {
+      daily: "Каждый день", weekdays: "По будням", weekly: "Раз в неделю", customDaily: "Каждые {{count}} дн.",
+      customDaily_one: "Каждый {{count}} день",
+      customDaily_few: "Каждые {{count}} дня",
+      customDaily_many: "Каждые {{count}} дней",
+      customDaily_other: "Каждые {{count}} дня"
+    },
+    recurrence: {
+      daily: "Каждый день", weekly: "Каждую неделю", monthly: "Каждый месяц", yearly: "Каждый год",
+      everyDays: "Каждые {{count}} дн.", everyWeeks: "Каждые {{count}} нед.",
+      everyMonths: "Каждые {{count}} мес.", everyYears: "Каждые {{count}} г.",
+      everyDays_one: "Каждый {{count}} день", everyDays_few: "Каждые {{count}} дня",
+      everyDays_many: "Каждые {{count}} дней", everyDays_other: "Каждые {{count}} дня",
+      everyWeeks_one: "Каждую {{count}} неделю", everyWeeks_few: "Каждые {{count}} недели",
+      everyWeeks_many: "Каждые {{count}} недель", everyWeeks_other: "Каждые {{count}} недели",
+      everyMonths_one: "Каждый {{count}} месяц", everyMonths_few: "Каждые {{count}} месяца",
+      everyMonths_many: "Каждые {{count}} месяцев", everyMonths_other: "Каждые {{count}} месяца",
+      everyYears_one: "Каждый {{count}} год", everyYears_few: "Каждые {{count}} года",
+      everyYears_many: "Каждые {{count}} лет", everyYears_other: "Каждые {{count}} года"
+    },
+    reviewFilters: { all: "Все", overdue: "Просрочено", inbox: "Inbox", waiting: "Ожидание", unscheduled: "Без даты", moved: "Перенесено", projects: "Проекты", habits: "Привычки" },
+    habitHealth: { new: "Новая", steady: "Стабильно", attention: "Внимание", watch: "Внимание", risk: "Риск", paused: "Пауза" },
+    decisionBadges: { overdue: "Срок", inbox: "Inbox", waiting: "Ожидание", unscheduled: "Дата", moved: "Перен.", projects: "Проект", habits: "Ритм" },
+    backlinkKinds: { project: "Проект", folder: "Папка", note: "Заметка", tag: "Тег", canvas: "Холст", block: "Блок", canvasElement: "Элемент", url: "Ссылка" },
+    reminders: { none: "Нет", atTime: "В момент", min10: "За 10 минут", min15: "За 15 мин", min30: "За 30 минут", hour1: "За час", day1: "За день" },
+    habitFilters: { today: "Сегодня", all: "Все" },
+    habitCadenceShort: { daily: "Каждый день", weekdays: "Будни", weekly: "Раз в неделю", customDaily: "Каждые N дней" },
+    habitLegend: { complete: "Сделано", missed: "Пропущено", skipped: "Пропуск", today: "Сегодня", paused: "Пауза" },
+    repeats: { none: "Не повторять", daily: "Каждый день", weekly: "Каждую неделю", monthly: "Каждый месяц", yearly: "Каждый год", customDaily: "Каждые N дней" },
+    repeatRangeLimited: "Повтор будет ограничен выбранным диапазоном.",
+    repeatRangeHint: "Выбери диапазон, если повтор должен закончиться в конкретную дату."
   },
   settings: {
     kicker: "Настройки",
@@ -722,6 +995,40 @@ const ru = {
       "При первом запуске язык определяется автоматически, но в любой момент его можно переключить вручную.",
     languageEnglish: "Английский",
     languageRussian: "Русский",
+    localePreferencesTitle: "Язык и региональные форматы",
+    localePreferencesDescription:
+      "Текст интерфейса, даты, время, устройство недели и проверка орфографии настраиваются независимо для этого устройства.",
+    localeSystemLanguage: "Системный · {{language}}",
+    localeSystemFormat: "Системный региональный формат",
+    localeFormatTitle: "Региональные форматы",
+    localeFormatDescription: "Определяет даты, числа, размеры файлов и сортировку, не меняя язык интерфейса.",
+    localeWeekTitle: "Первый день недели",
+    localeWeekDescription: "Используй региональное правило или выбери постоянный первый день для календарей на этом устройстве.",
+    localeWeekRegion: "По региону",
+    localeWeekMonday: "Понедельник",
+    localeWeekSaturday: "Суббота",
+    localeWeekSunday: "Воскресенье",
+    localeTimeTitle: "Формат времени",
+    localeTimeDescription: "Используй региональное правило или постоянный 12- либо 24-часовой формат.",
+    localeTimeRegion: "По региону",
+    localeTime24: "24 часа",
+    localeTime12: "12 часов",
+    localeSpellcheckTitle: "Проверка орфографии",
+    localeSpellcheckDescription: "Выбери один или несколько словарей браузера или операционной системы для редактирования заметок.",
+    localeSpellcheckSystem: "Системный словарь",
+    localeSpellcheckLanguage: "Выбранные языки",
+    localeSpellcheckLanguageLabel: "Языки проверки",
+    localeSpellcheckOff: "Выключена",
+    localeSpellcheckCapabilityWeb:
+      "Браузер проверяет каждый текстовый блок на подходящем выбранном языке. Языки с одинаковой письменностью используют основной словарь браузера.",
+    localeSpellcheckCapabilityDesktop:
+      "Locoris передаёт язык каждого текстового блока системной проверке орфографии настольной ОС.",
+    localeSpellcheckCapabilityAndroid:
+      "Locoris передаёт язык каждого текстового блока клавиатуре и системной проверке орфографии Android.",
+    localeChangeFailed:
+      "Не удалось переключиться на {{language}}. Locoris сохранил {{previousLanguage}}. Проверь подключение и повтори попытку.",
+    localeChangeNoticeClose: "Закрыть сообщение об ошибке языка",
+    localeEffectiveSummary: "Сейчас: {{locale}} · первый день {{weekDay}} · {{time}}-часовой формат.",
     accountCloudTitle: "Аккаунт и Cloud",
     accountCloudCaption:
       "Вход в Locoris Cloud, тариф, устройства и выбор хранилищ, которые синхронизируются через облако.",
@@ -733,6 +1040,15 @@ const ru = {
     accountCloudProfileKicker: "Профиль",
     accountCloudProfileDescription:
       "Этот аккаунт используется только для Locoris Cloud и подключенных к нему хранилищ.",
+    accountCloudProfileFallbackName: "Locoris Cloud",
+    accountCloudProfileFallbackDescription:
+      "Имя профиля не задано, поэтому в интерфейсе показывается {{fallback}}.",
+    accountCloudProfileNameLabel: "Имя пользователя",
+    accountCloudProfileNamePlaceholder: "Например: Дзен",
+    accountCloudProfileSave: "Сохранить имя",
+    accountCloudProfileSaved: "Имя профиля обновлено.",
+    accountCloudProfileSavedLocally:
+      "Имя применено в приложении. Cloud API профиля сейчас недоступен, поэтому после обновления или перезапуска сервера сохрани имя еще раз.",
     accountCloudNoAccountTitle: "Locoris Cloud не подключен",
     accountCloudNoAccountDescription:
       "Войди или создай аккаунт, чтобы подключать локальные хранилища к облачной синхронизации.",
@@ -740,19 +1056,47 @@ const ru = {
     accountCloudManage: "Управлять",
     accountCloudStatusTitle: "Статус Locoris Cloud",
     accountCloudPlan: "Тариф",
+    accountCloudPeriod: "Период",
+    accountCloudPeriodUntil: "До {{date}}",
+    accountCloudPeriodNoExpiry: "Без срока",
+    accountCloudTrialExpiredOn: "Trial истек {{date}}",
+    accountCloudReadOnlyUntil: "Только чтение до {{date}}",
+    accountCloudArchivedUntil: "Архив до {{date}}",
+    accountCloudRetentionEndedOn: "Хранение закончилось {{date}}",
+    accountCloudUnlimited: "без лимита",
+    accountCloudTrialNotice:
+      "Trial активен до {{date}}. После окончания Locoris останется локальным, а Cloud-запись и веб-доступ перейдут в бесплатный ограниченный режим.",
+    accountCloudTrialReadOnlyNotice:
+      "Trial закончился. До {{date}} Cloud остается доступен для чтения и экспорта, но запись изменений требует активного тарифа.",
+    accountCloudTrialArchiveNotice:
+      "Период чтения закончился. Данные Cloud хранятся в архиве до {{date}} и не принимают новые изменения.",
+    accountCloudTrialRetentionExpiredNotice:
+      "Срок хранения после trial закончился. Cloud-синхронизация отключена, а данные могут быть удалены по политике хранения.",
+    accountCloudFreeNotice:
+      "Сейчас действует бесплатный локальный режим: локальные данные доступны, но Cloud-запись и веб-доступ требуют активного тарифа.",
+    accountCloudGraceNotice:
+      "Cloud работает в льготном периоде до {{date}}. Проверь оплату, чтобы синхронизация не стала только для чтения.",
     accountCloudVaults: "Хранилища",
     accountCloudDevices: "Устройства",
     accountCloudStorage: "Данные",
     accountCloudDuplicateTitle: "Найдены лишние cloud-подключения",
     accountCloudDuplicateDescription:
       "Есть {{count}} дополнительных cloud-подключений. Основным считается самое свежее, остальные лучше удалить после проверки.",
+    accountCloudDuplicateDescription_one:
+      "Есть {{count}} дополнительное cloud-подключение. Основным считается самое свежее, второе лучше удалить после проверки.",
+    accountCloudDuplicateDescription_few:
+      "Есть {{count}} дополнительных cloud-подключения. Основным считается самое свежее, остальные лучше удалить после проверки.",
+    accountCloudDuplicateDescription_many:
+      "Есть {{count}} дополнительных cloud-подключений. Основным считается самое свежее, остальные лучше удалить после проверки.",
+    accountCloudDuplicateDescription_other:
+      "Есть {{count}} дополнительных cloud-подключения. Основным считается самое свежее, остальные лучше удалить после проверки.",
     accountCloudReadOnlyTitle: "Cloud в режиме чтения",
     accountCloudReadOnlyDescription:
       "Аккаунт не может записывать изменения. Проверь тариф, оплату или статус сервера.",
-    accountCloudVaultsKicker: "Cloud-хранилища",
-    accountCloudVaultsTitle: "Что синхронизировать через Locoris Cloud",
+    accountCloudVaultsKicker: "Хранилища",
+    accountCloudVaultsTitle: "Локальные и Cloud-хранилища",
     accountCloudVaultsDescription:
-      "Каждое локальное хранилище можно подключить к cloud vault, отключить или импортировать существующее cloud-хранилище как локальное.",
+      "Открывай, переименовывай и удаляй локальные и серверные копии с ясным контролем того, какие данные останутся на каждом устройстве.",
     accountCloudImportFromCloud: "Импорт из Cloud",
     accountCloudConnected: "Cloud",
     accountCloudNotConnected: "Локально",
@@ -760,17 +1104,116 @@ const ru = {
     accountCloudConnectVault: "Подключить",
     accountCloudDisconnect: "Отключить",
     accountCloudVaultConnected: "«{{vault}}» подключено к Locoris Cloud.",
+    accountCloudBindingsRestored_one:
+      "Связь с Cloud восстановлена для {{count}} хранилища. Синхронизация уже запущена.",
+    accountCloudBindingsRestored_few:
+      "Связь с Cloud восстановлена для {{count}} хранилищ. Синхронизация уже запущена.",
+    accountCloudBindingsRestored_many:
+      "Связь с Cloud восстановлена для {{count}} хранилищ. Синхронизация уже запущена.",
+    accountCloudBindingsRestored_other:
+      "Связь с Cloud восстановлена для {{count}} хранилищ. Синхронизация уже запущена.",
+    accountCloudBindingsRestorePartial:
+      "Автоматически восстановлено: {{restored}}. Не удалось восстановить: {{failed}}. Остальные хранилища не затронуты.",
     accountCloudVaultDisconnected: "Хранилище отключено от Locoris Cloud.",
     accountCloudRemoteImported: "«{{vault}}» добавлено из Locoris Cloud.",
     accountCloudRefreshed: "Статус Locoris Cloud обновлен.",
-    accountCloudDevicesKicker: "Устройство",
-    accountCloudDevicesTitle: "Это устройство",
+    accountCloudDevicesKicker: "Доступ",
+    accountCloudDevicesTitle: "Устройства аккаунта",
     accountCloudDevicesDescription:
-      "Устройства управляются в Account Portal. В приложении показано, под каким устройством выполняется синхронизация.",
-    accountCloudImportKicker: "Cloud vaults",
+      "Управляй всеми устройствами аккаунта прямо здесь. Отзыв доступа завершает его сессии и отключает ключи Cloud-синхронизации.",
+    accountCloudCurrentDevice: "Это устройство",
+    accountCloudDeviceActive: "Активно",
+    accountCloudDeviceInactive: "Неактивно",
+    accountCloudDeviceLastUsed: "Было в сети {{date}}",
+    accountCloudDeviceNeverUsed: "Активность не зафиксирована",
+    accountCloudDeviceVaultCount_one: "{{count}} хранилище",
+    accountCloudDeviceVaultCount_few: "{{count}} хранилища",
+    accountCloudDeviceVaultCount_many: "{{count}} хранилищ",
+    accountCloudDeviceVaultCount_other: "{{count}} хранилища",
+    accountCloudDevicesUnavailable: "Список устройств временно недоступен. Обнови статус Cloud или попробуй позже.",
+    accountCloudImportKicker: "Cloud-хранилища",
     accountCloudImportTitle: "Выбери cloud-хранилище",
     accountCloudNoRemoteVaults: "В аккаунте пока нет cloud-хранилищ.",
+    accountCloudImportEmptyDescription:
+      "Создай cloud-хранилище из локального хранилища или обнови список, если оно было добавлено на другом устройстве.",
     accountCloudImportAction: "Импортировать",
+    accountCloudImportLoading: "Обновляем список cloud-хранилищ...",
+    accountCloudImportOffline: "Нет подключения к сети. Импорт станет доступен после восстановления связи.",
+    accountCloudImportRefresh: "Обновить список",
+    accountCloudImportOpenLocal: "Открыть",
+    accountCloudVaultScopeLabel: "Расположение хранилищ",
+    accountCloudLocalVaultsTab: "Локальные",
+    accountCloudCloudVaultsTab: "Cloud",
+    accountCloudVaultNameRequired: "Укажи название хранилища.",
+    accountCloudRenameLocalVault: "Новое имя локального хранилища",
+    accountCloudRenameRemoteVault: "Новое имя cloud-хранилища",
+    accountCloudRenameVaultLabel: "Переименовать «{{vault}}»",
+    accountCloudOpenVault: "Открыть хранилище",
+    accountCloudOpenVaultLabel: "Открыть «{{vault}}»",
+    accountCloudDeleteLocalVault: "Удалить локально",
+    accountCloudDeleteLocalVaultLabel: "Удалить локальное хранилище «{{vault}}»",
+    accountCloudDeleteRemoteVault: "Удалить из Cloud",
+    accountCloudDeleteRemoteVaultLabel: "Удалить cloud-хранилище «{{vault}}»",
+    accountCloudLocalVaultOnlyDescription: "Данные находятся только на этом устройстве.",
+    accountCloudLocalVaultConnectedTo: "Cloud: «{{vault}}» · синхронизация {{date}}",
+    accountCloudNeverSynced: "Еще не синхронизировалось",
+    accountCloudImportedOnDevice: "Есть локальная копия",
+    accountCloudOnly: "Только в Cloud",
+    accountCloudRemoteVaultLocalCopy: "Локальная копия: «{{vault}}»",
+    accountCloudRemoteVaultActivity: "Последняя активность {{date}}",
+    accountCloudCloudVaultsSignedOutTitle: "Подключи Locoris Cloud",
+    accountCloudCloudVaultsSignedOutDescription:
+      "После входа здесь появятся серверные хранилища, их подключения и безопасные действия управления.",
+    accountCloudLocalVaultRenamed: "Локальное хранилище переименовано в «{{vault}}».",
+    accountCloudRemoteVaultRenamed: "Cloud-хранилище переименовано в «{{vault}}».",
+    accountCloudLocalVaultDeleted: "Локальное хранилище «{{vault}}» удалено с этого устройства.",
+    accountCloudRemoteVaultDeleted: "Cloud-хранилище «{{vault}}» удалено с сервера.",
+    accountCloudRemoteVaultAlreadyDeleted:
+      "«{{vault}}» уже отсутствовало в Cloud. Локальная связь очищена.",
+    accountCloudLocalVaultDangerKicker: "Локальные данные",
+    accountCloudDeleteLocalVaultTitle: "Удалить «{{vault}}» с устройства?",
+    accountCloudDeleteLocalVaultMessage:
+      "Локальная база и все ее данные будут удалены без перемещения в корзину.",
+    accountCloudDeleteLocalVaultCloudRemains:
+      "Cloud-копия «{{vault}}» останется на сервере и позже сможет быть импортирована снова.",
+    accountCloudDeleteLocalVaultNoCloud: "У этого хранилища нет подключенной Cloud-копии.",
+    accountCloudDeleteActiveLocalVaultDetail:
+      "Locoris автоматически переключится на другое локальное хранилище.",
+    accountCloudDeleteLocalVaultPermanentDetail: "Это действие нельзя отменить внутри приложения.",
+    accountCloudRemoteVaultDangerKicker: "Данные Locoris Cloud",
+    accountCloudDeleteRemoteVaultTitle: "Удалить «{{vault}}» из Cloud?",
+    accountCloudDeleteRemoteVaultMessage:
+      "Зашифрованная серверная копия и история синхронизации будут удалены безвозвратно.",
+    accountCloudDeleteRemoteVaultLocalRemains:
+      "Локальное хранилище «{{vault}}» останется на этом устройстве и станет автономным.",
+    accountCloudDeleteRemoteVaultNoLocal:
+      "На этом устройстве нет связанной локальной копии. Проверь другие устройства перед удалением.",
+    accountCloudDeleteRemoteVaultDevicesRevoked:
+      "Доступ к этому хранилищу будет отозван у устройств: {{count}}.",
+    accountCloudDeleteRemoteVaultDevicesRevoked_one:
+      "Доступ к этому хранилищу будет отозван у {{count}} устройства.",
+    accountCloudDeleteRemoteVaultDevicesRevoked_few:
+      "Доступ к этому хранилищу будет отозван у {{count}} устройств.",
+    accountCloudDeleteRemoteVaultDevicesRevoked_many:
+      "Доступ к этому хранилищу будет отозван у {{count}} устройств.",
+    accountCloudDeleteRemoteVaultDevicesRevoked_other:
+      "Доступ к этому хранилищу будет отозван у {{count}} устройства.",
+    accountCloudDeviceDangerKicker: "Безопасность аккаунта",
+    accountCloudRevokeDevice: "Отозвать доступ",
+    accountCloudDeviceRevoking: "Отключаем...",
+    accountCloudSignOutThisDevice: "Выйти здесь",
+    accountCloudRevokeDeviceTitle: "Отключить «{{device}}»?",
+    accountCloudRevokeDeviceMessage:
+      "Устройство потеряет доступ к аккаунту Locoris Cloud и больше не сможет синхронизировать изменения.",
+    accountCloudSignOutThisDeviceTitle: "Выйти из Cloud на этом устройстве?",
+    accountCloudSignOutThisDeviceMessage:
+      "Текущая сессия будет завершена, а cloud-подключения локальных хранилищ отключены.",
+    accountCloudRevokeDeviceSessionsDetail: "Все сессии и ключи синхронизации этого устройства будут отозваны.",
+    accountCloudRevokeDeviceLocalDataDetail:
+      "Локальные данные на устройстве не удаляются и останутся доступны офлайн.",
+    accountCloudDeviceRevoked: "Доступ устройства «{{device}}» отозван.",
+    accountCloudDeviceAlreadyRevoked: "Устройство «{{device}}» уже не имеет доступа.",
+    accountCloudCurrentDeviceSignedOut: "На этом устройстве выполнен выход из Locoris Cloud.",
     interfaceTitle: "Интерфейс",
     interfaceRootDescription:
       "Язык, темы, движение карты и визуальные сигналы планера.",
@@ -859,6 +1302,10 @@ const ru = {
       "Удаляет задачи, привычки, отметки привычек, цели и календарные блоки текущего хранилища.",
     plannerClearDataStatsLabel: "Данные планера",
     plannerClearDataTotal: "{{count}} объектов",
+    plannerClearDataTotal_one: "{{count}} объект",
+    plannerClearDataTotal_few: "{{count}} объекта",
+    plannerClearDataTotal_many: "{{count}} объектов",
+    plannerClearDataTotal_other: "{{count}} объекта",
     plannerClearDataEmpty: "Данных нет",
     plannerClearDataTasks: "Задачи",
     plannerClearDataHabits: "Привычки",
@@ -874,6 +1321,14 @@ const ru = {
     plannerClearDataConfirmTitle: "Очистить планер и календарь?",
     plannerClearDataConfirmMessage:
       "Будет удалено {{count}} объектов планера в текущем хранилище. Это действие нельзя отменить.",
+    plannerClearDataConfirmMessage_one:
+      "Будет удалён {{count}} объект планера в текущем хранилище. Это действие нельзя отменить.",
+    plannerClearDataConfirmMessage_few:
+      "Будут удалены {{count}} объекта планера в текущем хранилище. Это действие нельзя отменить.",
+    plannerClearDataConfirmMessage_many:
+      "Будет удалено {{count}} объектов планера в текущем хранилище. Это действие нельзя отменить.",
+    plannerClearDataConfirmMessage_other:
+      "Будут удалены {{count}} объекта планера в текущем хранилище. Это действие нельзя отменить.",
     plannerClearDataConfirm: "Очистить",
     plannerClearDataConfirmBoundary: "Заметки, проекты, папки и настройки планера не удаляются.",
     plannerClearDataDetailTasks: "Задачи: {{count}}",
@@ -902,6 +1357,8 @@ const ru = {
     aiModelPickerCaption:
       "На основной странице остается только активная модель. Здесь можно спокойно сравнить профили, выбрать пресет или проверить продвинутый model id.",
     aiModelPresetGroup: "Доступные модели",
+    aiModelPresetTab: "Стандартные",
+    aiModelAdvancedTab: "Расширенный выбор",
     aiModelCustomActive: "advanced ID",
     aiModelCustomDescription:
       "Пользовательская модель, выбранная через продвинутую проверку. Locoris отправляет в нее те же текстовые задачи редактора.",
@@ -1137,7 +1594,6 @@ const ru = {
     syncManagerIntro:
       "Google Drive, self-hosted и legacy-подключения живут здесь. Locoris Cloud настраивается отдельно в разделе «Аккаунт и Cloud».",
     back: "Назад",
-    footnote: "",
     vaultsTitle: "Локальные хранилища",
     vaultsDescription:
       "Здесь можно создавать хранилища, переименовывать их, удалять и подключать каждое к одному способу синхронизации.",
@@ -1231,9 +1687,98 @@ const ru = {
     selfHostedConnectAction: "Проверить и подключить",
     selfHostedValidationHint:
       "Locoris сначала проверит адрес сервера и management token. Если сервер их примет, подключение сразу сохранится.",
+    selfHostedConnectMethod: "Способ подключения",
+    selfHostedConnectLink: "Приглашение",
+    selfHostedConnectCode: "Сервер и код",
+    selfHostedConnectionPackage: "Ссылка-приглашение или пакет подключения",
+    selfHostedConnectionPackagePlaceholder: "Вставь ссылку или пакет, начинающийся с lcrs1_",
+    selfHostedConnectionPackageHint:
+      "Одно приглашение работает как ссылка, короткий код или необязательный QR. Камера не требуется.",
+    selfHostedPairingCode: "Одноразовый код",
+    selfHostedPairingCodeHint: "Введи восемь символов, которые показал владелец или установщик сервера.",
+    selfHostedLabelPlaceholder: "Домашний сервер, NAS студии…",
+    selfHostedDeviceCredentialHint:
+      "Это устройство получит отдельный отзываемый доступ. Locoris сохранит его безопасно.",
+    selfHostedUseLegacy: "Подключить старый сервер через recovery token",
+    selfHostedUseInvite: "Использовать одноразовое приглашение",
+    selfHostedLegacyHint:
+      "Режим совместимости для существующих установок. Новые устройства лучше подключать приглашением.",
+    selfHostedPairingPendingKicker: "Подтверждение владельца",
+    selfHostedPairingPendingTitle: "Запрос на подключение отправлен",
+    selfHostedPairingPendingDescription:
+      "Попроси владельца сервера сверить контрольную фразу и разрешить это устройство. Экран обновится автоматически.",
+    selfHostedPairingConfirmation: "Контрольная фраза",
+    selfHostedPairingWaiting: "Безопасно ждем владельца",
+    selfHostedPairingContinueLater: "Продолжить позже",
+    selfHostedPairingDenied: "Владелец сервера отклонил запрос этого устройства.",
+    selfHostedPairingExpired: "Срок приглашения истек. Попроси владельца создать новое.",
+    selfHostedPairingInvalid: "Приглашение или код неверны, истекли либо уже были использованы.",
+    selfHostedPairingUnsupported: "Это приглашение создано неподдерживаемой версией сервера.",
+    selfHostedPairingRateLimited: "Слишком много попыток. Подожди несколько минут и попробуй снова.",
+    selfHostedPairingServerUrlInvalid:
+      "Укажи корректный HTTP- или HTTPS-адрес сервера без данных аккаунта.",
+    selfHostedOwnerRequired: "Управлять устройствами и приглашениями может только владелец сервера.",
+    selfHostedCurrentDeviceRevokeForbidden: "Нельзя отозвать устройство, с которого сейчас управляют сервером.",
+    selfHostedLastOwnerRequired: "Сначала подключи еще одно устройство владельца.",
+    selfHostedTrustedDeviceAccess: "Доступ доверенного устройства",
+    selfHostedGuestDeviceAccess: "Ограниченный гостевой доступ",
+    selfHostedLegacyAccess: "Доступ через recovery token",
+    selfHostedManageAccess: "Устройства и доступ",
+    selfHostedAccessKicker: "Доступ к своему серверу",
+    selfHostedAccessTitle: "Устройства и приглашения",
+    selfHostedAccessServer: "Персональный сервер",
+    selfHostedOwnerRole: "Владелец",
+    selfHostedGuestRole: "Гость",
+    selfHostedDevices: "Устройства",
+    selfHostedInvites: "Приглашения",
+    selfHostedDevicesTitle: "Доверенные устройства",
+    selfHostedDevicesDescription:
+      "У каждого устройства отдельный доступ: его можно отозвать, не затрагивая остальные подключения.",
+    selfHostedInvitesTitle: "Приглашения и подтверждения",
+    selfHostedInvitesDescription:
+      "Свое устройство подключается сразу, а гостю можно открыть только выбранные хранилища.",
+    selfHostedInviteGuest: "Пригласить гостя",
+    selfHostedInviteDevice: "Добавить свое устройство",
+    selfHostedGuestKicker: "Ограниченный доступ",
+    selfHostedGuestTitle: "Пригласить другого человека",
+    selfHostedDeviceKicker: "Доверенное устройство",
+    selfHostedDeviceInviteTitle: "Подключить еще одно устройство",
+    selfHostedInviteLabel: "Название приглашения",
+    selfHostedInviteLabelPlaceholder: "Рабочий ноутбук, Алексей…",
+    selfHostedInviteServerAddress: "Адрес, доступный новому устройству",
+    selfHostedInviteServerAddressHint:
+      "Укажи LAN- или HTTPS-адрес, который действительно откроется на приглашенном устройстве. localhost работает только на этом компьютере.",
+    selfHostedInviteVaults: "Доступные хранилища",
+    selfHostedInviteVaultRequired: "Выбери хотя бы одно хранилище для гостя.",
+    selfHostedInvitePermission: "Разрешение",
+    selfHostedPermissionRead: "Только просмотр",
+    selfHostedPermissionWrite: "Просмотр и изменение",
+    selfHostedOwnerInviteWarning:
+      "Устройство владельца сможет управлять всеми хранилищами, приглашениями и устройствами сервера.",
+    selfHostedInviteCreate: "Создать приглашение",
+    selfHostedInviteShareHint:
+      "Передай скопированный пакет по надежному каналу. Получатель вставит его в Locoris; QR использовать необязательно.",
+    selfHostedInviteCopy: "Скопировать пакет подключения",
+    selfHostedInviteCopied: "Скопировано",
+    selfHostedInviteCopyFailed: "Не удалось скопировать автоматически. Повтори или используй короткий код.",
+    selfHostedInviteExpires: "Действует до {{date}}",
+    selfHostedInviteQrAlt: "QR-код с приглашением на сервер Locoris",
+    selfHostedInviteQrOptional: "Необязательный быстрый способ для камеры телефона",
+    selfHostedCurrentDevice: "Это устройство",
+    selfHostedLastSeen: "Последняя активность {{date}}",
+    selfHostedNeverUsed: "Еще не использовалось для синхронизации",
+    selfHostedRevoke: "Отозвать",
+    selfHostedRevokeConfirm: "Подтвердить отзыв",
+    selfHostedApprovalRequired: "Нужно подтверждение",
+    selfHostedDeny: "Отклонить",
+    selfHostedApprove: "Разрешить",
+    selfHostedInviteCodeEnding: "Код заканчивается на {{code}}",
+    selfHostedNoInvites: "Нет активных приглашений и запросов на подтверждение.",
     googleDriveConnectionTitle: "Подключить Google Drive",
     googleDriveConnectionDescription: "Синхронизация через скрытую appDataFolder внутри твоего Google-аккаунта.",
-    googleDriveReconnect: "Обновить Google Drive auth",
+    googleDriveReconnect: "Войти снова",
+    googleDriveReconnectSuccess:
+      "Вход в Google Drive обновлен. Связанные хранилища синхронизируются.",
     googleDriveClientMissing:
       "Сначала задай desktop Google OAuth client ID для нативной сборки или web client ID для браузерной версии.",
     googleDriveModalDescription:
@@ -1313,7 +1858,15 @@ const ru = {
     connectionUpdated: "Способ синхронизации обновлен.",
     boundToConnection: "Привязан к {{connection}}",
     linkedVaultCount: "{{count}} связанных хранилищ",
+    linkedVaultCount_one: "{{count}} связанное хранилище",
+    linkedVaultCount_few: "{{count}} связанных хранилища",
+    linkedVaultCount_many: "{{count}} связанных хранилищ",
+    linkedVaultCount_other: "{{count}} связанных хранилища",
     remoteVaultCount: "{{count}} удаленных хранилищ",
+    remoteVaultCount_one: "{{count}} удалённое хранилище",
+    remoteVaultCount_few: "{{count}} удалённых хранилища",
+    remoteVaultCount_many: "{{count}} удалённых хранилищ",
+    remoteVaultCount_other: "{{count}} удалённых хранилища",
     linkVault: "Подключить хранилище",
     disconnectVault: "Отключить хранилище",
     remoteVaultsTitle: "Каталог удаленных хранилищ",
@@ -1324,6 +1877,10 @@ const ru = {
     remoteVaultExpand: "Показать удаленные хранилища",
     remoteVaultLoading: "Загружаем удаленные хранилища…",
     remoteVaultAvailableCount: "Доступно {{count}} на этом способе синхронизации",
+    remoteVaultAvailableCount_one: "Доступно {{count}} хранилище на этом способе синхронизации",
+    remoteVaultAvailableCount_few: "Доступно {{count}} хранилища на этом способе синхронизации",
+    remoteVaultAvailableCount_many: "Доступно {{count}} хранилищ на этом способе синхронизации",
+    remoteVaultAvailableCount_other: "Доступно {{count}} хранилища на этом способе синхронизации",
     remoteVaultLoadFailed: "Не удалось загрузить удаленные хранилища",
     remoteVaultLinkedHere: "Привязан здесь",
     remoteVaultOnDevice: "Есть на устройстве",
@@ -1346,9 +1903,29 @@ const ru = {
       "Часть удаленных хранилищ уже существуют локально и привязаны в другом месте. Выбери, как продолжить импорт в “{{connection}}”.",
     remoteImportAllDetailReconnect:
       "{{count}} хранилищ будут переподключены с другого способа синхронизации.",
+    remoteImportAllDetailReconnect_one:
+      "{{count}} хранилище будет переподключено с другого способа синхронизации.",
+    remoteImportAllDetailReconnect_few:
+      "{{count}} хранилища будут переподключены с другого способа синхронизации.",
+    remoteImportAllDetailReconnect_many:
+      "{{count}} хранилищ будут переподключены с другого способа синхронизации.",
+    remoteImportAllDetailReconnect_other:
+      "{{count}} хранилища будут переподключены с другого способа синхронизации.",
     remoteImportAllDetailSafe:
       "{{count}} хранилищ можно импортировать безопасно, не меняя существующие связи.",
+    remoteImportAllDetailSafe_one:
+      "{{count}} хранилище можно импортировать безопасно, не меняя существующие связи.",
+    remoteImportAllDetailSafe_few:
+      "{{count}} хранилища можно импортировать безопасно, не меняя существующие связи.",
+    remoteImportAllDetailSafe_many:
+      "{{count}} хранилищ можно импортировать безопасно, не меняя существующие связи.",
+    remoteImportAllDetailSafe_other:
+      "{{count}} хранилища можно импортировать безопасно, не меняя существующие связи.",
     remoteImportAllDetailTotal: "Всего к импорту готово {{count}} хранилищ.",
+    remoteImportAllDetailTotal_one: "Всего к импорту готово {{count}} хранилище.",
+    remoteImportAllDetailTotal_few: "Всего к импорту готовы {{count}} хранилища.",
+    remoteImportAllDetailTotal_many: "Всего к импорту готово {{count}} хранилищ.",
+    remoteImportAllDetailTotal_other: "Всего к импорту готовы {{count}} хранилища.",
     remoteImportCreated: "Удаленное хранилище импортировано как “{{vault}}”.",
     remoteImportAdjusted: "Удаленное хранилище импортировано как “{{vault}}”, чтобы избежать локальной коллизии имени.",
     remoteImportLinked: "Существующее локальное хранилище “{{vault}}” привязано к этому способу синхронизации.",
@@ -1403,7 +1980,15 @@ const ru = {
     cancelBindingAction: "Отменить",
     mobileSyncTabsLabel: "Разделы синхронизации",
     mobileVaultCount: "{{count}} хранилищ",
+    mobileVaultCount_one: "{{count}} хранилище",
+    mobileVaultCount_few: "{{count}} хранилища",
+    mobileVaultCount_many: "{{count}} хранилищ",
+    mobileVaultCount_other: "{{count}} хранилища",
     mobileConnectionCount: "{{count}} способов",
+    mobileConnectionCount_one: "{{count}} способ",
+    mobileConnectionCount_few: "{{count}} способа",
+    mobileConnectionCount_many: "{{count}} способов",
+    mobileConnectionCount_other: "{{count}} способа",
     mobileVaultsHint: "Управляй локальными хранилищами и их привязками.",
     mobileConnectionsHint: "Проверяй способы синхронизации, каталог и импорт.",
     mobileConnectionDetails: "Открыть",
@@ -1417,9 +2002,21 @@ const ru = {
     rebindConfirm: "Переподключить",
     bindAllVaults: "Привязать все хранилища",
     bindAllCompleted: "{{count}} хранилищ подключено к этому способу синхронизации.",
+    bindAllCompleted_one: "{{count}} хранилище подключено к этому способу синхронизации.",
+    bindAllCompleted_few: "{{count}} хранилища подключены к этому способу синхронизации.",
+    bindAllCompleted_many: "{{count}} хранилищ подключено к этому способу синхронизации.",
+    bindAllCompleted_other: "{{count}} хранилища подключены к этому способу синхронизации.",
     bindAllConfirmTitle: "Переподключить несколько хранилищ",
     bindAllConfirmDescription:
-      "{{count}} хранилищ уже куда-то привязаны. Переподключить их все к “{{connection}}”?"
+      "{{count}} хранилищ уже куда-то привязаны. Переподключить их все к “{{connection}}”?",
+    bindAllConfirmDescription_one:
+      "{{count}} хранилище уже привязано. Переподключить его к “{{connection}}”?",
+    bindAllConfirmDescription_few:
+      "{{count}} хранилища уже привязаны. Переподключить их к “{{connection}}”?",
+    bindAllConfirmDescription_many:
+      "{{count}} хранилищ уже привязаны. Переподключить их все к “{{connection}}”?",
+    bindAllConfirmDescription_other:
+      "{{count}} хранилища уже привязаны. Переподключить их к “{{connection}}”?"
   },
   orbit: {
     open: "Открыть Locoris",
@@ -1531,9 +2128,12 @@ const ru = {
     mobileNavigation: "Мобильная навигация",
     mobileFoldersNav: "Папки",
     mobileStorageNav: "Хранилище",
+    mobileAccountNav: "Аккаунт",
     mobileMap: "Карта",
     mobileMenu: "Меню",
     mobileMoreNav: "Ещё",
+    mobileAccountKicker: "Аккаунт и Cloud",
+    mobileAccountTitle: "Аккаунт",
     mobileMoreKicker: "Хранилище и сервис",
     mobileMoreTitle: "Ещё",
     mobileMoreSubtitle: "Хранилище, облако, синхронизация и корзина в одном месте.",
@@ -1558,13 +2158,21 @@ const ru = {
     mobileMoveChooseDestination: "Выбери папку или проект, куда переместить элементы.",
     mobileMoveDestinationHint: "Нажми на папку или проект, чтобы переместить выбранное.",
     mobileMoveActive: "Перемещение: {{count}}",
+    mobileMoveActive_one: "Переместить {{count}} элемент",
+    mobileMoveActive_few: "Переместить {{count}} элемента",
+    mobileMoveActive_many: "Переместить {{count}} элементов",
+    mobileMoveActive_other: "Переместить {{count}} элемента",
     mobileMoveTitle: "Выбери новое место",
     mobileMovePickDestination: "Нажми на папку или проект в иерархии, проверь назначение и подтверди перенос.",
     mobileMoveDestination: "Куда переместить",
     mobileMoveNoDestination: "Место еще не выбрано",
     mobileMoveConfirm: "Переместить",
     mobileMoveConflictTitle: "Есть совпадения имен",
-    mobileMoveConflictDescription: "В выбранном месте уже есть {{count}} элемент(ов) с такими именами.",
+    mobileMoveConflictDescription: "В выбранном месте уже есть элементы с такими именами: {{count}}.",
+    mobileMoveConflictDescription_one: "В выбранном месте уже есть {{count}} элемент с таким именем.",
+    mobileMoveConflictDescription_few: "В выбранном месте уже есть {{count}} элемента с такими именами.",
+    mobileMoveConflictDescription_many: "В выбранном месте уже есть {{count}} элементов с такими именами.",
+    mobileMoveConflictDescription_other: "В выбранном месте уже есть {{count}} элемента с такими именами.",
     mobileMoveRename: "Переименовать и переместить",
     mobileMoveCopy: "Создать копию",
     mobilePreviewAction: "Предпросмотр",
@@ -1581,7 +2189,15 @@ const ru = {
     clearTrashAction: "Очистить корзину",
     clearTrashTitle: "Очистить корзину",
     clearTrashMessage:
-      "Удалить из корзины {{count}} заметок навсегда? Это действие нельзя отменить."
+      "Удалить заметки из корзины навсегда: {{count}}? Это действие нельзя отменить.",
+    clearTrashMessage_one:
+      "Удалить из корзины {{count}} заметку навсегда? Это действие нельзя отменить.",
+    clearTrashMessage_few:
+      "Удалить из корзины {{count}} заметки навсегда? Это действие нельзя отменить.",
+    clearTrashMessage_many:
+      "Удалить из корзины {{count}} заметок навсегда? Это действие нельзя отменить.",
+    clearTrashMessage_other:
+      "Удалить из корзины {{count}} заметки навсегда? Это действие нельзя отменить."
   },
   palette: {
     rose: "Роза",
@@ -1603,11 +2219,43 @@ const ru = {
     assets: "Файлы",
     pinned: "Избранное"
   },
+  counts: {
+    notes_one: "{{count}} заметка",
+    notes_few: "{{count}} заметки",
+    notes_many: "{{count}} заметок",
+    notes_other: "{{count}} заметки",
+    folders_one: "{{count}} папка",
+    folders_few: "{{count}} папки",
+    folders_many: "{{count}} папок",
+    folders_other: "{{count}} папки",
+    documents_one: "{{count}} документ",
+    documents_few: "{{count}} документа",
+    documents_many: "{{count}} документов",
+    documents_other: "{{count}} документа",
+    files_one: "{{count}} файл",
+    files_few: "{{count}} файла",
+    files_many: "{{count}} файлов",
+    files_other: "{{count}} файла",
+    items_one: "{{count}} элемент",
+    items_few: "{{count}} элемента",
+    items_many: "{{count}} элементов",
+    items_other: "{{count}} элемента"
+  },
   saveState: {
     idle: "Ожидание",
     saving: "Сохранение",
     saved: "Сохранено"
   }
-};
+} satisfies AppLocaleMessages;
+
+const ru = defineLocalePack({
+  meta: {
+    code: "ru",
+    nativeName: "Русский",
+    direction: "ltr"
+  },
+  messages,
+  blockNoteDictionary: async () => (await import("@blocknote/core/locales")).ru
+});
 
 export default ru;

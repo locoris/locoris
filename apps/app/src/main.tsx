@@ -58,7 +58,18 @@ import "@fontsource/ibm-plex-serif/cyrillic-700-italic.css";
 import App from "./App";
 import "./styles/scrollbars.css";
 import "./styles.css";
-import "./i18n";
+import "./styles/motion.css";
+import { initializeI18n } from "./i18n";
+import { LocaleProvider } from "./localization/LocaleProvider";
+import {
+  queueLocaleFailureNotice,
+  readLastWorkingInterfaceLocale,
+  readLocalePreferences,
+  writeLastWorkingInterfaceLocale,
+  writeLocalePreferences
+} from "./localization/localePreferences";
+import { preloadLocaleResources, resolveSupportedLocale } from "./localization/localePacks";
+import { initializeLocaleWithRecovery } from "./localization/localeTransition";
 import {
   flushPendingLocalVaultStorage,
   sanitizePersistedLocalVaultSecrets
@@ -74,6 +85,7 @@ import {
   preloadSecureSecrets
 } from "./lib/secureSecretStore";
 import { initializeSecureSyncRegistryState } from "./lib/syncRegistry";
+import { initializeSelfHostedDeepLinks } from "./lib/selfHostedDeepLinks";
 
 const LEGACY_PWA_RETIREMENT_STORAGE_KEY = "locoris:legacy-pwa-retired:v1";
 
@@ -120,7 +132,21 @@ async function resetLegacyServiceWorkerState() {
 
 async function bootstrap() {
   await initializePersistentClientStorage();
+  const localePreferences = readLocalePreferences();
+  await initializeLocaleWithRecovery({
+    preferences: localePreferences,
+    lastWorkingLocale: readLastWorkingInterfaceLocale(),
+    fallbackLocale: resolveSupportedLocale("en"),
+    dependencies: {
+      preload: preloadLocaleResources,
+      initialize: initializeI18n,
+      persist: writeLocalePreferences,
+      markWorking: writeLastWorkingInterfaceLocale,
+      queueFailureNotice: queueLocaleFailureNotice
+    }
+  });
   await bootstrapDesktopRuntimeState();
+  await initializeSelfHostedDeepLinks();
   const localVaultIds = listLocalVaultProfiles().map((vault) => vault.id);
   await sanitizePersistedLocalVaultSecrets(localVaultIds);
   await initializeSecureSyncRegistryState();
@@ -160,7 +186,9 @@ async function bootstrap() {
   ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
       <MantineProvider>
-        <App />
+        <LocaleProvider>
+          <App />
+        </LocaleProvider>
       </MantineProvider>
     </React.StrictMode>
   );

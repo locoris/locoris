@@ -16,6 +16,9 @@ import {
 } from "../lib/nativeFileIntegration";
 import type { LocalVaultKind } from "../lib/localVaults";
 import type { AppLanguage } from "../types";
+import { createDateTimeFormatter, getCurrentLocaleRuntime } from "../localization";
+import useAutoDismissNotice from "../lib/useAutoDismissNotice";
+import ActionFeedbackToast, { useActionFeedbackAnchor } from "./ActionFeedbackToast";
 import ConfirmDialog from "./ConfirmDialog";
 import {
   usePrivateVaultWarning,
@@ -50,8 +53,10 @@ export default function BackupSettingsPanel({
     blob: Blob;
     parsed: VaultBackupParseResult;
   } | null>(null);
+  const feedbackAnchor = useActionFeedbackAnchor([".backup-settings-layout", ".confirm-dialog"]);
+  useAutoDismissNotice(feedback, setFeedback);
   const readableDate = useMemo(
-    () => new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", {
+    () => createDateTimeFormatter(getCurrentLocaleRuntime(), {
       dateStyle: "medium",
       timeStyle: "short"
     }),
@@ -239,11 +244,19 @@ export default function BackupSettingsPanel({
         <section className="settings-panel-block backup-settings-note">
           <span>{t("settings.backupSafetyTitle")}</span>
           <p>{t("settings.backupSafetyDescription")}</p>
-          {feedback ? (
-            <p className={`backup-settings-feedback is-${feedback.tone}`}>{feedback.text}</p>
-          ) : null}
         </section>
       </div>
+
+      {feedback ? (
+        <ActionFeedbackToast
+          anchor={feedbackAnchor}
+          tone={feedback.tone}
+          dismissLabel={t("orbit.closeModal")}
+          onDismiss={() => setFeedback(null)}
+        >
+          {feedback.text}
+        </ActionFeedbackToast>
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(pendingRestore)}

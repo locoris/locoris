@@ -20,7 +20,7 @@ import {
   type PlannerTaskCreateInput,
   type PlannerTaskUpdateInput
 } from "../data/db";
-import type { AppLanguage, PlannerTaskPriority, Project, Tag, Task, TimeBlock } from "../types";
+import type { PlannerTaskPriority, Project, Tag, Task, TimeBlock } from "../types";
 import {
   getPlannerTaskOccurrenceForDay,
   getPlannerTaskOverdueOccurrence,
@@ -73,76 +73,6 @@ const PRIORITY_WEIGHT: Record<PlannerTaskPriority, number> = {
   low: 2,
   none: 1
 };
-
-export function getPlannerViewLabels(language: AppLanguage): Record<PlannerViewId, string> {
-  if (language === "ru") {
-    return {
-      inbox: "Inbox",
-      today: "Сегодня",
-      overdue: "Просрочено",
-      upcoming: "Ближайшее",
-      projects: "Проекты",
-      habits: "Привычки",
-      review: "Review"
-    };
-  }
-
-  return {
-    inbox: "Inbox",
-    today: "Today",
-    overdue: "Overdue",
-    upcoming: "Upcoming",
-    projects: "Projects",
-    habits: "Habits",
-    review: "Review"
-  };
-}
-
-export function getPlannerPriorityLabel(priority: PlannerTaskPriority, language: AppLanguage) {
-  const labels =
-    language === "ru"
-      ? {
-          none: "Без приоритета",
-          low: "Низкий",
-          medium: "Средний",
-          high: "Высокий",
-          urgent: "Срочно"
-        }
-      : {
-          none: "No priority",
-          low: "Low",
-          medium: "Medium",
-          high: "High",
-          urgent: "Urgent"
-        };
-
-  return labels[priority];
-}
-
-export function getPlannerStatusLabel(status: Task["status"], language: AppLanguage) {
-  const labels =
-    language === "ru"
-      ? {
-          inbox: "Inbox",
-          todo: "К работе",
-          scheduled: "Запланировано",
-          inProgress: "В фокусе",
-          waiting: "Ожидает",
-          done: "Готово",
-          canceled: "Отменено"
-        }
-      : {
-          inbox: "Inbox",
-          todo: "To do",
-          scheduled: "Scheduled",
-          inProgress: "In focus",
-          waiting: "Waiting",
-          done: "Done",
-          canceled: "Canceled"
-        };
-
-  return labels[status];
-}
 
 export function getStartOfLocalDay(value = Date.now()) {
   const date = new Date(value);
@@ -240,55 +170,6 @@ export function parsePlannerDateInput(value: string) {
   }
 
   return new Date(year, month - 1, day, 12, 0, 0, 0).getTime();
-}
-
-export function formatPlannerDate(value: number | null | undefined, language: AppLanguage) {
-  if (!value) {
-    return language === "ru" ? "Без даты" : "No date";
-  }
-
-  return new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", {
-    day: "numeric",
-    month: "short"
-  }).format(value);
-}
-
-export function formatPlannerTime(value: number | null | undefined, language: AppLanguage) {
-  if (!value) {
-    return "--:--";
-  }
-
-  return new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", {
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(value);
-}
-
-export function formatPlannerDateTime(value: number | null | undefined, language: AppLanguage) {
-  if (!value) {
-    return language === "ru" ? "Без времени" : "No time";
-  }
-
-  return new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(value);
-}
-
-export function formatPlannerFullDateTime(value: number | null | undefined, language: AppLanguage) {
-  if (!value) {
-    return language === "ru" ? "Без времени" : "No time";
-  }
-
-  return new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(value);
 }
 
 export function formatPlannerDateTimeInput(value: number | null | undefined) {

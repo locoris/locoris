@@ -17,6 +17,7 @@ import {
   writePersistentString
 } from "./persistentClientStorage";
 import { isWebRuntime } from "./runtime";
+import { getNativeLocaleName, resolveSupportedLocale } from "../localization";
 
 export type GeminiAiAction = "beautify" | "improve" | "fix" | "translate" | "custom";
 export type GeminiAiScope = "note" | "selection";
@@ -1035,11 +1036,13 @@ function buildStructuredActionInstruction(input: GenerateGeminiStructuredEditInp
   ].join("\n");
 }
 
+function buildAiInterfaceLanguageInstruction(language: AppLanguage) {
+  const locale = resolveSupportedLocale(language);
+  return `The Locoris interface language is ${getNativeLocaleName(locale)} (${locale}). Use it for user-facing output unless the request explicitly names another target language.`;
+}
+
 function buildGeminiPrompt(input: GenerateGeminiMarkdownInput) {
-  const uiLanguage =
-    input.appLanguage === "ru"
-      ? "The Locoris interface language is Russian."
-      : "The Locoris interface language is English.";
+  const uiLanguage = buildAiInterfaceLanguageInstruction(input.appLanguage);
   const title = input.noteTitle?.trim()
     ? `Note title: ${input.noteTitle.trim()}`
     : "Note title: untitled";
@@ -1083,10 +1086,7 @@ function buildGeminiPrompt(input: GenerateGeminiMarkdownInput) {
 }
 
 function buildGeminiStructuredPrompt(input: GenerateGeminiStructuredEditInput) {
-  const uiLanguage =
-    input.appLanguage === "ru"
-      ? "The Locoris interface language is Russian."
-      : "The Locoris interface language is English.";
+  const uiLanguage = buildAiInterfaceLanguageInstruction(input.appLanguage);
   const title = input.noteTitle?.trim()
     ? `Note title: ${input.noteTitle.trim()}`
     : "Note title: untitled";
@@ -1148,10 +1148,7 @@ function buildGeminiStructuredPrompt(input: GenerateGeminiStructuredEditInput) {
 }
 
 function buildGeminiCanvasMermaidPrompt(input: GenerateGeminiCanvasMermaidInput) {
-  const uiLanguage =
-    input.appLanguage === "ru"
-      ? "The Locoris interface language is Russian."
-      : "The Locoris interface language is English.";
+  const uiLanguage = buildAiInterfaceLanguageInstruction(input.appLanguage);
   const title = input.canvasTitle?.trim()
     ? `Canvas title: ${input.canvasTitle.trim()}`
     : "Canvas title: untitled";
@@ -1272,10 +1269,7 @@ function buildGeminiCanvasMermaidPrompt(input: GenerateGeminiCanvasMermaidInput)
 }
 
 function buildGeminiCanvasSpecPrompt(input: GenerateGeminiCanvasSpecInput) {
-  const uiLanguage =
-    input.appLanguage === "ru"
-      ? "The Locoris interface language is Russian."
-      : "The Locoris interface language is English.";
+  const uiLanguage = buildAiInterfaceLanguageInstruction(input.appLanguage);
   const title = input.canvasTitle?.trim()
     ? `Canvas title: ${input.canvasTitle.trim()}`
     : "Canvas title: untitled";

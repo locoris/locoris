@@ -1,7 +1,10 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import type { AppLanguage, Note } from "../types";
-import { getDisplayNotePreview, getDisplayNoteTitle } from "../lib/displayNames";
+import { getDisplayNotePreview, getDisplayNoteTitle } from "../localization/displayNames";
 import { formatTimestamp } from "../lib/notes";
+import MobileGlassHeader from "./MobileGlassHeader";
+import SettingsSurface from "./SettingsSurface";
 import "./TrashPanel.css";
 
 interface TrashPanelProps {
@@ -17,7 +20,6 @@ interface TrashPanelProps {
     clearTrash: string;
     emptyTitle: string;
     emptyDescription: string;
-    noteCount: string;
     allNotes: string;
     noteType: string;
     canvasType: string;
@@ -30,37 +32,12 @@ interface TrashPanelProps {
 
 type TrashFilter = "all" | "note" | "canvas";
 
-const TRASH_TEXT: Record<
-  AppLanguage,
-  {
-    all: string;
-    close: string;
-    filteredEmptyTitle: string;
-    filteredEmptyDescription: string;
-    recovery: string;
-    subtitle: string;
-  }
-> = {
-  en: {
-    all: "All",
-    close: "Close",
-    filteredEmptyTitle: "Nothing here",
-    filteredEmptyDescription: "Choose another section to keep reviewing deleted content.",
-    recovery: "Recovery",
-    subtitle: "Review deleted notes and canvases before permanent removal."
-  },
-  ru: {
-    all: "Все",
-    close: "Закрыть",
-    filteredEmptyTitle: "Здесь пусто",
-    filteredEmptyDescription: "Выбери другой раздел, чтобы продолжить разбор удаленных материалов.",
-    recovery: "Восстановление",
-    subtitle: "Проверь удаленные заметки и холсты перед окончательным удалением."
-  }
-};
-
 function CloseGlyph() {
-  return <span aria-hidden="true">×</span>;
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="m7 7 10 10M17 7 7 17" />
+    </svg>
+  );
 }
 
 function TrashGlyph() {
@@ -153,7 +130,15 @@ export default function TrashPanel({
   onClear,
   onClose
 }: TrashPanelProps) {
-  const text = TRASH_TEXT[language];
+  const { t } = useTranslation();
+  const text = {
+    all: t("trashPanel.all"),
+    close: t("trashPanel.close"),
+    filteredEmptyTitle: t("trashPanel.filteredEmptyTitle"),
+    filteredEmptyDescription: t("trashPanel.filteredEmptyDescription"),
+    recovery: t("trashPanel.recovery"),
+    subtitle: t("trashPanel.subtitle")
+  };
   const [activeFilter, setActiveFilter] = useState<TrashFilter>("all");
   const counts = useMemo(
     () => ({
@@ -179,36 +164,14 @@ export default function TrashPanel({
   const activeTabLabel = tabs.find((tab) => tab.id === resolvedFilter)?.label ?? labels.title;
 
   return (
-    <section className="trash-recovery-shell" aria-label={labels.title}>
-      <header className="trash-recovery-header">
-        <span className="trash-recovery-header-icon" aria-hidden="true">
-          <TrashGlyph />
-        </span>
-
-        <div className="trash-recovery-heading">
-          <p className="trash-recovery-kicker">{text.recovery}</p>
-          <h2 className="panel-title trash-recovery-title">{labels.title}</h2>
-          <p className="trash-recovery-caption">
-            {notes.length === 0 ? labels.emptyDescription : text.subtitle}
-          </p>
-        </div>
-
-        <div className="trash-recovery-header-actions">
-          {onClose ? (
-            <button
-              type="button"
-              className="trash-recovery-close"
-              onClick={onClose}
-              aria-label={text.close}
-              title={text.close}
-            >
-              <span className="trash-recovery-close-icon">
-                <CloseGlyph />
-              </span>
-            </button>
-          ) : null}
-        </div>
-      </header>
+    <SettingsSurface className="trash-recovery-shell" aria-label={labels.title}>
+      <MobileGlassHeader
+        className="settings-panel-header trash-recovery-header is-root-action"
+        title={labels.title}
+        closeLabel={text.close}
+        closeIcon={<CloseGlyph />}
+        onClose={onClose}
+      />
 
       {notes.length === 0 ? (
         <div className="trash-recovery-empty">
@@ -269,7 +232,7 @@ export default function TrashPanel({
                   const title = getDisplayNoteTitle(note, language);
                   const preview = getDisplayNotePreview(note, language);
                   const typeLabel = isCanvas ? labels.canvasType : labels.noteType;
-                  const deletedAt = formatTimestamp(note.trashedAt ?? note.updatedAt, language);
+                  const deletedAt = formatTimestamp(note.trashedAt ?? note.updatedAt);
                   const folderLabel = note.folderId
                     ? folderPathMap.get(note.folderId) ?? labels.allNotes
                     : labels.allNotes;
@@ -343,6 +306,6 @@ export default function TrashPanel({
           </div>
         </div>
       )}
-    </section>
+    </SettingsSurface>
   );
 }

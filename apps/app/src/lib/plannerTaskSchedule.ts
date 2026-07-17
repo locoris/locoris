@@ -1,15 +1,8 @@
-import type { AppLanguage, Task } from "../types";
-import {
-  formatPlannerDate,
-  formatPlannerDateTime,
-  formatPlannerTime,
-  getEndOfLocalDay,
-  getStartOfLocalDay
-} from "./planner";
+import type { Task } from "../types";
+import { getResolvedTimeZone } from "../localization/formatters";
+import { getEndOfLocalDay, getStartOfLocalDay } from "./planner";
 import {
   buildPlannerRRule,
-  getPlannerTaskPrimaryOccurrence,
-  summarizePlannerRecurrence,
   type PlannerRecurrenceFrequency
 } from "./plannerRecurrence";
 
@@ -225,7 +218,7 @@ export function buildPlannerTaskScheduleFields(
     scheduledStartAt,
     scheduledEndAt,
     recurrenceRule,
-    recurrenceTimezone: recurrenceRule ? Intl.DateTimeFormat().resolvedOptions().timeZone : null,
+    recurrenceTimezone: recurrenceRule ? getResolvedTimeZone() : null,
     recurrenceAnchorAt,
     recurrenceUntilAt: recurrenceRule ? draft.repeatUntilAt ?? (draft.endDateAt ? getEndOfLocalDay(draft.endDateAt) : null) : null,
     recurrenceExceptionDates: [],
@@ -243,59 +236,4 @@ export function formatPlannerTimeMinutes(minutes: number) {
   const hours = Math.floor(clampTimeMinutes(minutes) / 60);
   const mins = clampTimeMinutes(minutes) % 60;
   return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
-}
-
-export function getPlannerTaskScheduleSummary(task: Task, language: AppLanguage) {
-  if (task.recurrenceRule) {
-    const anchor = task.scheduledStartAt ?? task.dueAt ?? task.recurrenceAnchorAt;
-    const recurrence = summarizePlannerRecurrence(task.recurrenceRule, language);
-    const primaryOccurrence = getPlannerTaskPrimaryOccurrence(task);
-
-    if (primaryOccurrence) {
-      const dateLabel = primaryOccurrence.scheduledStartAt
-        ? formatPlannerDateTime(primaryOccurrence.startAt, language)
-        : formatPlannerDate(primaryOccurrence.startAt, language);
-      return `${recurrence} · ${dateLabel}`;
-    }
-
-    if (anchor) {
-      const dateLabel = task.scheduledStartAt ? formatPlannerDateTime(anchor, language) : formatPlannerDate(anchor, language);
-      return `${recurrence} · ${dateLabel}`;
-    }
-
-    return recurrence;
-  }
-
-  if (task.scheduledStartAt) {
-    if (task.scheduledEndAt && getStartOfLocalDay(task.scheduledEndAt) !== getStartOfLocalDay(task.scheduledStartAt)) {
-      return `${formatPlannerDateTime(task.scheduledStartAt, language)} - ${formatPlannerDateTime(task.scheduledEndAt, language)}`;
-    }
-
-    if (task.scheduledEndAt) {
-      return `${formatPlannerDate(task.scheduledStartAt, language)} · ${formatPlannerTime(task.scheduledStartAt, language)}-${formatPlannerTime(task.scheduledEndAt, language)}`;
-    }
-
-    return formatPlannerDateTime(task.scheduledStartAt, language);
-  }
-
-  if (task.dueAt) {
-    return formatPlannerDate(task.dueAt, language);
-  }
-
-  return language === "ru" ? "Без даты" : "No date";
-}
-
-export function getPlannerTaskDateDraftSummary(draft: PlannerTaskDateDraft, language: AppLanguage) {
-  const scheduleFields = buildPlannerTaskScheduleFields(draft);
-
-  return getPlannerTaskScheduleSummary(
-    {
-      recurrenceRule: scheduleFields.recurrenceRule ?? null,
-      recurrenceAnchorAt: scheduleFields.recurrenceAnchorAt ?? null,
-      scheduledStartAt: scheduleFields.scheduledStartAt ?? null,
-      scheduledEndAt: scheduleFields.scheduledEndAt ?? null,
-      dueAt: scheduleFields.dueAt ?? null
-    } as Task,
-    language
-  );
 }

@@ -133,8 +133,7 @@
 }
 
 .ai-settings-hero-copy h3,
-.ai-settings-section-head h3,
-.ai-settings-modal-head h3 {
+.ai-settings-section-head h3 {
   margin: 0;
   color: #fff;
   font-weight: 820;
@@ -149,7 +148,6 @@
 .ai-settings-hero-copy p:not(.panel-kicker),
 .ai-settings-section-head p,
 .ai-settings-note p,
-.ai-settings-modal-head p:not(.panel-kicker),
 .ai-settings-model-note {
   margin: 0;
   color: rgba(196, 206, 236, 0.74);
@@ -567,6 +565,121 @@
   color: color-mix(in srgb, var(--text) 78%, #ff9bad 22%);
 }
 
+.ai-settings-model-layer,
+.ai-settings-guide-layer {
+  --ai-settings-accent: var(--accent-theme-primary, var(--gold));
+  --ai-settings-accent-soft: color-mix(in srgb, var(--ai-settings-accent) 16%, transparent);
+  --ai-settings-cyan: var(--accent-theme-secondary, var(--cyan));
+  --ai-settings-modal-base: color-mix(in srgb, #08080f 92%, var(--ai-settings-accent) 8%);
+  --ai-settings-modal-base-soft: color-mix(in srgb, #141420 90%, var(--ai-settings-accent) 10%);
+}
+
+.ai-settings-model-subpage-content {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  overflow: hidden;
+}
+
+.ai-settings-model-tabs {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid color-mix(in srgb, var(--ai-settings-accent) 16%, rgba(255, 255, 255, 0.1));
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012)),
+    rgb(var(--surface-deep-rgb) / 0.34);
+}
+
+.ai-settings-model-tabs button {
+  min-width: 0;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  background: transparent;
+  color: rgba(205, 214, 243, 0.76);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 840;
+  line-height: 1.15;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.ai-settings-model-tabs button.is-active {
+  border-color: color-mix(in srgb, var(--ai-settings-accent) 34%, rgba(255, 255, 255, 0.15));
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--ai-settings-accent) 18%, transparent), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.026)),
+    rgba(255, 255, 255, 0.035);
+  color: color-mix(in srgb, var(--text) 82%, var(--ai-settings-accent) 18%);
+  box-shadow:
+    0 12px 28px color-mix(in srgb, var(--ai-settings-accent) 9%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.075);
+}
+
+.ai-settings-model-tabs svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ai-settings-model-tab-panel,
+.ai-settings-guide-subpage-content,
+.ai-settings-guide-body {
+  min-width: 0;
+  min-height: 0;
+}
+
+.ai-settings-model-tab-panel {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1px 3px 12px 1px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ai-settings-accent) 34%, transparent) transparent;
+}
+
+.ai-settings-model-tab-panel .ai-settings-model-list {
+  overflow: visible;
+  padding: 0;
+}
+
+.ai-settings-advanced-model.is-subpage-panel {
+  width: min(680px, 100%);
+  margin: 0 auto;
+  overflow: visible !important;
+}
+
+.ai-settings-guide-subpage-content {
+  overflow: hidden;
+}
+
+.ai-settings-guide-subpage-content .ai-settings-guide-body {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .ai-settings-layer {
   --ai-settings-accent: var(--settings-accent, var(--accent-theme-primary, var(--gold)));
   --ai-settings-accent-soft: color-mix(in srgb, var(--ai-settings-accent) 16%, transparent);
@@ -578,72 +691,51 @@
     radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--ai-settings-cyan) 9%, transparent), transparent 36%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.062), rgba(255, 255, 255, 0.018)),
     linear-gradient(180deg, var(--ai-settings-modal-base-soft), var(--ai-settings-modal-base));
-  position: fixed;
-  inset: 0;
-  z-index: 2147482000;
-  display: grid;
-  place-items: center;
-  padding: 18px;
-  overflow: hidden;
-}
-
-.ai-settings-layer-dim {
   position: absolute;
   inset: 0;
-  border: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  padding: 0;
+  overflow: hidden;
+  border-radius: inherit;
   background:
-    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--ai-settings-accent) 6%, transparent), transparent 34%),
-    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--ai-settings-cyan) 5%, transparent), transparent 30%),
-    rgba(2, 4, 12, 0.82);
-  backdrop-filter: blur(12px) saturate(108%) brightness(0.82);
-  cursor: pointer;
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--ai-settings-accent) 10%, transparent), transparent 40%),
+    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--ai-settings-cyan) 8%, transparent), transparent 38%),
+    linear-gradient(180deg, rgba(8, 10, 18, 0.42), rgba(8, 10, 18, 0.2));
+  backdrop-filter: blur(20px) saturate(126%);
+  -webkit-backdrop-filter: blur(20px) saturate(126%);
 }
 
 .ai-settings-modal {
   position: relative;
-  z-index: 1;
   min-width: 0;
   min-height: 0;
-  max-height: min(760px, calc(100dvh - 36px));
+  width: 100%;
+  height: 100%;
+  max-height: none;
   display: grid;
-  gap: 15px;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  gap: 12px;
   overflow: hidden;
-  padding: 18px;
-  border-color: color-mix(in srgb, var(--ai-settings-accent) 22%, rgba(255, 255, 255, 0.13));
-  border-radius: 30px;
-  background: var(--ai-settings-modal-glass);
-  box-shadow:
-    0 28px 80px rgba(0, 0, 0, 0.36),
-    0 0 0 1px color-mix(in srgb, var(--ai-settings-accent) 8%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.075);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .ai-settings-model-modal {
-  width: min(980px, calc(100dvw - 44px));
   grid-template-rows: auto minmax(0, 1fr);
 }
 
 .ai-settings-guide-modal {
-  width: min(720px, calc(100dvw - 44px));
   grid-template-rows: auto minmax(0, 1fr);
 }
 
-.ai-settings-modal-head {
-  min-width: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.ai-settings-modal-head > div {
-  min-width: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.ai-settings-modal-head h3 {
-  font-size: clamp(1.24rem, 2.5vw, 1.72rem);
+.ai-settings-modal-header {
+  flex: 0 0 auto;
 }
 
 .ai-settings-icon-button {
@@ -665,7 +757,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(270px, 0.88fr);
   gap: 14px;
-  overflow: hidden;
+  overflow: auto;
+  padding: 1px 4px 10px 1px;
   scrollbar-width: none;
 }
 
@@ -860,7 +953,7 @@
   align-content: start;
   gap: 13px;
   overflow: auto;
-  padding: 1px 3px 1px 1px;
+  padding: 1px 4px 10px 1px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--ai-settings-accent) 34%, transparent) transparent;
 }
@@ -936,24 +1029,13 @@
     grid-template-columns: 1fr;
   }
 
-  .ai-settings-layer {
-    align-items: start;
-    place-items: start center;
-    overflow: auto;
-    overscroll-behavior: contain;
-  }
-
-  .ai-settings-modal {
-    max-height: none;
-  }
-
   .ai-settings-model-modal {
-    grid-template-rows: auto auto;
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .ai-settings-model-modal-body {
-    min-height: auto;
-    overflow: visible;
+    min-height: 0;
+    overflow: auto;
     scrollbar-width: none;
   }
 
@@ -1015,32 +1097,125 @@
     justify-content: flex-start;
   }
 
-  .ai-settings-layer {
-    align-items: end;
-    place-items: end stretch;
-    padding: 10px;
-  }
-
-  .ai-settings-modal {
-    width: 100%;
-    max-height: min(84dvh, calc(100dvh - 20px));
-    border-radius: 28px 28px 22px 22px;
-    padding: 14px;
-  }
-
   .ai-settings-model-modal {
-    grid-template-rows: auto auto;
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .ai-settings-model-modal-body {
-    min-height: auto;
-    overflow: visible;
+    min-height: 0;
+    overflow: auto;
     padding-right: 0;
     scrollbar-width: none;
   }
 
   .ai-settings-guide-card-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 920px) and (orientation: portrait) {
+  .ai-settings-panel.is-layer-open {
+    visibility: hidden;
+  }
+
+  .settings-surface:has(> .ai-settings-panel.is-layer-open)
+    > .mobile-glass-header {
+    visibility: hidden;
+  }
+
+  .ai-settings-model-subpage-content,
+  .ai-settings-guide-subpage-content {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ai-settings-model-tabs {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+  }
+
+  .ai-settings-model-tab-panel,
+  .ai-settings-guide-subpage-content .ai-settings-guide-body {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ai-settings-model-tab-panel {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .ai-settings-panel.is-layer-open {
+    overflow: visible;
+  }
+
+  .ai-settings-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 140;
+    display: grid;
+    align-items: stretch;
+    justify-items: center;
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+    border-radius: 0;
+    background:
+      radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--ai-settings-accent) 13%, transparent), transparent 44%),
+      radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--ai-settings-cyan) 9%, transparent), transparent 44%),
+      rgba(4, 5, 14, 0.72);
+    backdrop-filter: blur(18px) saturate(126%);
+    -webkit-backdrop-filter: blur(18px) saturate(126%);
+  }
+
+  .ai-settings-modal {
+    width: min(var(--orbital-mobile-page-max-width, 720px), 100%);
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 12px;
+    overflow: hidden;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .ai-settings-modal-header {
+    margin: 0;
+  }
+
+  .ai-settings-model-modal-body,
+  .ai-settings-guide-body {
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 1px 2px max(14px, env(safe-area-inset-bottom));
+    scrollbar-width: thin;
+  }
+
+  .ai-settings-model-modal-body {
+    grid-template-columns: 1fr;
+    align-content: start;
+  }
+
+  .ai-settings-model-list {
+    overflow: visible;
+    padding: 0;
+  }
+
+  .ai-settings-advanced-model {
+    overflow: visible !important;
   }
 }
 
@@ -1082,6 +1257,41 @@
 .ai-settings-advanced-model {
   overflow: hidden !important;
   overflow: clip !important;
+}
+
+@media (max-width: 920px) and (orientation: portrait) {
+  .ai-settings-panel.is-layer-open {
+    overflow: visible;
+  }
+
+  .ai-settings-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 140;
+    overflow: hidden;
+    border-radius: 0;
+  }
+
+  .ai-settings-modal {
+    width: min(var(--orbital-mobile-page-max-width, 720px), 100%);
+    height: 100%;
+    min-height: 0;
+    margin: 0 auto;
+  }
+
+  .ai-settings-model-modal-body,
+  .ai-settings-guide-body {
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin !important;
+  }
+
+  .ai-settings-model-list,
+  .ai-settings-advanced-model {
+    overflow: visible !important;
+  }
 }
 
 .ai-settings-model-modal-body::-webkit-scrollbar,

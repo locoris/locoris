@@ -8,6 +8,7 @@
   width: 100%;
   height: 100%;
   min-height: 0;
+  box-sizing: border-box;
   color: rgba(247, 250, 255, 0.94);
 }
 
@@ -788,6 +789,7 @@
 }
 
 .planner-task-card {
+  position: relative;
   flex: 0 0 auto;
   width: 100%;
   max-width: 100%;
@@ -809,6 +811,22 @@
   text-align: left;
   cursor: pointer;
   transition: border-color 150ms ease, background 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+
+.planner-task-card.is-completing {
+  border-color: color-mix(in srgb, #76f2b8 62%, var(--planner-accent) 38%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #76f2b8 24%, transparent),
+    0 12px 34px color-mix(in srgb, #76f2b8 14%, transparent);
+}
+
+.planner-task-card.is-completing::after {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  pointer-events: none;
+  background: radial-gradient(circle at 10% 24%, color-mix(in srgb, #76f2b8 28%, transparent), transparent 34%);
+  animation: planner-task-completion-wash 520ms var(--motion-ease-emphasized, cubic-bezier(0.16, 1, 0.3, 1)) both;
 }
 
 .planner-task-card.has-description {
@@ -863,8 +881,36 @@
   background: linear-gradient(135deg, var(--planner-accent), var(--planner-accent-2));
 }
 
+.planner-task-card.is-completing .planner-task-check {
+  animation: planner-task-check-complete 420ms var(--motion-ease-spring, cubic-bezier(0.2, 0.92, 0.14, 1)) both;
+}
+
+.planner-task-check:disabled {
+  cursor: default;
+}
+
 .planner-task-check[aria-pressed="true"]::before {
   border-color: rgba(5, 10, 18, 0.86);
+}
+
+@keyframes planner-task-check-complete {
+  0% { transform: scale(0.88); }
+  52% { transform: scale(1.13); }
+  100% { transform: scale(1); }
+}
+
+@keyframes planner-task-completion-wash {
+  0% { opacity: 0; transform: scale(0.82); }
+  42% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planner-task-card.is-completing,
+  .planner-task-card.is-completing::after,
+  .planner-task-card.is-completing .planner-task-check {
+    animation-duration: 1ms;
+  }
 }
 
 .planner-task-content {
@@ -1116,14 +1162,18 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 10px;
+  padding: 0;
   overflow: hidden;
 }
 
 .planner-surface.is-mobile .planner-main {
   flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
   padding: 14px;
-  border-radius: 20px;
+  border-radius: var(--orbital-mobile-page-radius, 28px);
 }
 
 .planner-surface.is-mobile .planner-task-card {

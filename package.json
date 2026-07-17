@@ -1,7 +1,7 @@
 {
   "name": "locoris",
   "private": true,
-  "version": "1.0.42",
+  "version": "1.0.43",
   "workspaces": [
     "apps/app",
     "apps/personal-server",
@@ -18,6 +18,8 @@
     "build": "npm run build --workspace @locoris/app",
     "preview": "npm run preview --workspace @locoris/app",
     "typecheck": "npm run typecheck --workspace @locoris/app",
+    "i18n:check": "node ./scripts/check-localization.mjs",
+    "test:google-drive": "npm run test --workspace @locoris/app",
     "desktop:dev": "npm run desktop:dev --workspace @locoris/app",
     "desktop:build": "npm run desktop:build --workspace @locoris/app",
     "desktop:build:debug": "npm run desktop:build:debug --workspace @locoris/app",

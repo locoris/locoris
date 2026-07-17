@@ -15,6 +15,8 @@ yarn-error.log*
 pnpm-debug.log*
 
 apps/**/dist/
+apps/personal-server/dist-server/
+apps/personal-server/release-server/
 apps/**/.env
 apps/**/.env.*
 apps/**/.data/

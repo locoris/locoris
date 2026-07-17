@@ -1,0 +1,332 @@
+.orbital-mobile-account-sheet {
+  --mobile-account-accent: var(--accent-theme-primary, var(--gold));
+  --mobile-account-secondary: var(--accent-theme-secondary, var(--cyan));
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  max-height: none;
+  overflow: hidden;
+}
+
+.orbital-mobile-account-sheet::-webkit-scrollbar {
+  display: none;
+}
+
+.orbital-mobile-account-header,
+.orbital-mobile-account-hero,
+.orbital-mobile-account-header-copy,
+.orbital-mobile-account-hero-copy,
+.orbital-mobile-account-meta,
+.orbital-mobile-account-meters,
+.orbital-mobile-account-actions {
+  min-width: 0;
+}
+
+.orbital-mobile-account-content {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 13px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1px 2px 16px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.orbital-mobile-account-content::-webkit-scrollbar {
+  display: none;
+}
+
+.orbital-mobile-account-sheet svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.orbital-mobile-account-sheet svg path,
+.orbital-mobile-account-sheet svg circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.orbital-mobile-account-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 13px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--mobile-account-accent) 32%, rgb(var(--line-rgb) / 0.13));
+  border-radius: 27px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--mobile-account-accent) 18%, transparent), transparent 48%),
+    radial-gradient(circle at 100% 8%, color-mix(in srgb, var(--mobile-account-secondary) 13%, transparent), transparent 45%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.066), rgba(255, 255, 255, 0.025)),
+    rgb(var(--surface-rgb) / 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 24px 62px rgba(3, 5, 16, 0.25);
+}
+
+.orbital-mobile-account-avatar {
+  width: 54px;
+  height: 54px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--mobile-account-accent) 36%, rgb(var(--line-rgb) / 0.12));
+  border-radius: 19px;
+  background:
+    radial-gradient(circle at 32% 22%, color-mix(in srgb, var(--mobile-account-accent) 28%, transparent), transparent 58%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  color: color-mix(in srgb, var(--mobile-account-accent) 82%, #ffffff 14%);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--mobile-account-accent) 12%, transparent);
+}
+
+.orbital-mobile-account-avatar svg {
+  width: 25px;
+  height: 25px;
+}
+
+.orbital-mobile-account-hero-copy {
+  display: grid;
+  gap: 7px;
+}
+
+.orbital-mobile-account-status {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--mobile-account-accent) 24%, rgb(var(--line-rgb) / 0.14));
+  border-radius: 999px;
+  padding: 0 10px;
+  color: color-mix(in srgb, var(--mobile-account-accent) 72%, rgba(246, 250, 255, 0.9));
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.orbital-mobile-account-status.is-success {
+  border-color: rgb(var(--green-rgb) / 0.28);
+  color: rgb(var(--green-rgb) / 0.92);
+}
+
+.orbital-mobile-account-status.is-warning {
+  border-color: rgb(var(--gold-rgb) / 0.28);
+  color: rgb(var(--gold-rgb) / 0.94);
+}
+
+.orbital-mobile-account-status.is-error {
+  border-color: rgba(255, 128, 141, 0.32);
+  color: rgba(255, 173, 187, 0.96);
+}
+
+.orbital-mobile-account-hero strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: rgba(250, 252, 255, 0.98);
+  font-size: clamp(1.08rem, 5.2vw, 1.46rem);
+  font-weight: 920;
+  line-height: 1.08;
+}
+
+.orbital-mobile-account-hero p,
+.orbital-mobile-account-notice {
+  margin: 0;
+  color: rgba(220, 227, 255, 0.68);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.38;
+}
+
+.orbital-mobile-account-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.orbital-mobile-account-meta-item {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  border-radius: 17px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.018)),
+    rgba(255, 255, 255, 0.026);
+}
+
+.orbital-mobile-account-meta-item.is-success {
+  border-color: rgb(var(--green-rgb) / 0.22);
+}
+
+.orbital-mobile-account-meta-item.is-warning {
+  border-color: rgb(var(--gold-rgb) / 0.24);
+}
+
+.orbital-mobile-account-meta-item.is-error {
+  border-color: rgba(255, 128, 141, 0.24);
+}
+
+.orbital-mobile-account-meta-item span,
+.orbital-mobile-account-meter-copy span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: rgba(190, 201, 231, 0.78);
+  font-size: 0.62rem;
+  font-weight: 860;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.orbital-mobile-account-meta-item strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: rgba(248, 250, 255, 0.94);
+  font-size: 0.86rem;
+  font-weight: 900;
+  line-height: 1.14;
+}
+
+.orbital-mobile-account-meters {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--mobile-account-secondary) 9%, transparent), transparent 58%),
+    rgba(255, 255, 255, 0.026);
+}
+
+.orbital-mobile-account-meter {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  --mobile-account-meter-color: color-mix(in srgb, var(--mobile-account-accent) 68%, #fff 10%);
+}
+
+.orbital-mobile-account-meter.is-success {
+  --mobile-account-meter-color: rgb(var(--green-rgb) / 0.88);
+}
+
+.orbital-mobile-account-meter.is-warning {
+  --mobile-account-meter-color: rgb(var(--gold-rgb) / 0.9);
+}
+
+.orbital-mobile-account-meter.is-error {
+  --mobile-account-meter-color: rgba(255, 128, 141, 0.9);
+}
+
+.orbital-mobile-account-meter-copy {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.orbital-mobile-account-meter-copy strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: rgba(248, 250, 255, 0.92);
+  font-size: 0.78rem;
+  font-weight: 880;
+  line-height: 1.12;
+  text-align: right;
+}
+
+.orbital-mobile-account-meter-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.orbital-mobile-account-meter-track span {
+  width: var(--mobile-account-meter-fill, 0%);
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, var(--mobile-account-meter-color), color-mix(in srgb, var(--mobile-account-meter-color) 58%, #fff 30%));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--mobile-account-meter-color) 28%, transparent);
+}
+
+.orbital-mobile-account-meter.is-unlimited .orbital-mobile-account-meter-track span {
+  opacity: 0.45;
+}
+
+.orbital-mobile-account-notice {
+  padding: 12px 13px;
+  border: 1px solid color-mix(in srgb, var(--mobile-account-accent) 20%, rgba(255, 255, 255, 0.1));
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--mobile-account-accent) 10%, transparent), transparent 62%),
+    rgba(255, 255, 255, 0.024);
+}
+
+.orbital-mobile-account-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 10px;
+}
+
+.orbital-mobile-account-actions button {
+  min-width: 0;
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid rgb(var(--line-rgb) / 0.12);
+  border-radius: 19px;
+  padding: 0 14px;
+  color: rgba(248, 250, 255, 0.96);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 920;
+  line-height: 1.08;
+}
+
+.orbital-mobile-account-actions button span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.orbital-mobile-account-actions .is-primary {
+  border-color: color-mix(in srgb, var(--mobile-account-accent) 46%, rgb(var(--line-rgb) / 0.14));
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--mobile-account-accent) 24%, transparent), transparent 58%),
+    linear-gradient(135deg, color-mix(in srgb, var(--mobile-account-accent) 24%, rgba(255, 255, 255, 0.055)), rgba(255, 255, 255, 0.034)),
+    rgba(255, 255, 255, 0.035);
+}
+
+.orbital-mobile-account-actions .is-secondary {
+  border-color: color-mix(in srgb, var(--mobile-account-secondary) 34%, rgb(var(--line-rgb) / 0.14));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--mobile-account-secondary) 18%, transparent), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.03);
+}
+
+@media (max-width: 420px) {
+  .orbital-mobile-account-hero,
+  .orbital-mobile-account-meta,
+  .orbital-mobile-account-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .orbital-mobile-account-avatar {
+    width: 48px;
+    height: 48px;
+  }
+}

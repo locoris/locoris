@@ -1,5 +1,7 @@
+import { translateInline } from "../../localization/translateInline";
 import { useEffect, useRef, useState } from "react";
 
+import { isCommitEnterKey } from "../../lib/keyboardInput";
 import type { AppLanguage } from "../../types";
 import "./PlannerTimeField.css";
 
@@ -130,7 +132,7 @@ export default function PlannerTimeField({
           }}
           onChange={(event) => setDraft(event.target.value.replace(/[^\d:.,\s]/g, ""))}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (isCommitEnterKey(event)) {
               event.preventDefault();
               commitDraft();
               event.currentTarget.blur();
@@ -145,8 +147,8 @@ export default function PlannerTimeField({
         />
         <label
           className="planner-time-field-toggle"
-          aria-label={language === "ru" ? "Выбрать время" : "Pick time"}
-          title={language === "ru" ? "Открыть системный выбор времени" : "Open system time picker"}
+          aria-label={translateInline(language, "plannerTimeField.pickTime")}
+          title={translateInline(language, "plannerTimeField.openSystemTimePicker")}
           onMouseDown={() => {
             if (document.activeElement === textInputRef.current) {
               commitDraft();
@@ -161,7 +163,7 @@ export default function PlannerTimeField({
             min={formatPlannerTimeFieldMinutes(minMinutes)}
             max={formatPlannerTimeFieldMinutes(maxMinutes)}
             value={nativeValue}
-            aria-label={language === "ru" ? "Системный выбор времени" : "System time picker"}
+            aria-label={translateInline(language, "plannerTimeField.systemTimePicker")}
             onChange={(event) => {
               const parsedMinutes = parsePlannerTimeFieldValue(event.currentTarget.value);
 

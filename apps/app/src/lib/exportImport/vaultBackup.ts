@@ -15,7 +15,7 @@ import type {
   Note,
   Project
 } from "../../types";
-import { getDisplayNoteTitle } from "../displayNames";
+import { getDisplayNoteTitle } from "../../localization/displayNames";
 import { formatExportTimestamp, sanitizeExportFileName } from "./filenames";
 import {
   blocksToMarkdown,

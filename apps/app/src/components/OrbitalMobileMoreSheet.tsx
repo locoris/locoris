@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 
 import { getErrorMessage } from "../lib/errors";
 import type { LocalVaultKind } from "../lib/localVaults";
+import MobileGlassHeader from "./MobileGlassHeader";
+import SettingsSurface from "./SettingsSurface";
 import type { LocalVaultSwitcherItem } from "./LocalVaultSwitcher";
 import "./OrbitalMobileMoreSheet.css";
 
@@ -294,39 +296,23 @@ export default function OrbitalMobileMoreSheet({
   };
 
   return (
-    <section
-      className={`orbital-mobile-menu-card orbital-mobile-more-sheet is-${view}`}
-      role="dialog"
-      aria-modal="true"
+    <SettingsSurface
+      className={`orbital-mobile-more-sheet is-${view}`}
+      role="region"
       aria-label={t("orbit.mobileMoreTitle")}
     >
-      <header className="orbital-mobile-more-header">
-        {view === "main" ? (
-          <div className="orbital-mobile-more-header-copy">
-            <p className="panel-kicker">{t("orbit.mobileMoreKicker")}</p>
-            <span>{t("orbit.mobileMoreSubtitle")}</span>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="orbital-mobile-more-back"
-            onClick={() => setView("main")}
-            aria-label={t("orbit.mobileMoreBack")}
-          >
-            <BackGlyph />
-            <span>{t("orbit.mobileMoreBack")}</span>
-          </button>
-        )}
-        <button
-          type="button"
-          className="orbital-mobile-menu-close"
-          onClick={onClose}
-          aria-label={t("dialog.cancel")}
-        >
-          <CloseGlyph />
-        </button>
-      </header>
+      <MobileGlassHeader
+        className={`settings-panel-header orbital-mobile-more-header ${view === "main" ? "is-root-action" : "has-back-action"}`}
+        title={t("orbit.mobileMoreKicker")}
+        backLabel={t("orbit.mobileMoreBack")}
+        closeLabel={t("dialog.cancel")}
+        backIcon={<BackGlyph />}
+        closeIcon={<CloseGlyph />}
+        onBack={view === "main" ? undefined : () => setView("main")}
+        onClose={onClose}
+      />
 
+      <div className="orbital-mobile-more-content">
       {view === "main" ? (
         <>
           <div className="orbital-mobile-more-vault-hero">
@@ -385,6 +371,7 @@ export default function OrbitalMobileMoreSheet({
                 </div>
               ))}
             </div>
+
           </div>
 
           {hasTrash ? (
@@ -563,6 +550,7 @@ export default function OrbitalMobileMoreSheet({
           </div>
         </form>
       ) : null}
-    </section>
+      </div>
+    </SettingsSurface>
   );
 }

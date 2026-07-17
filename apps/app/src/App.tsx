@@ -8,6 +8,10 @@ import "./components/AndroidEditorCanvas.css";
 import FolderPanel from "./components/FolderPanel";
 import KnowledgeMap from "./components/KnowledgeMap";
 import NotesPanel from "./components/NotesPanel";
+import WebAccessGate, {
+  type WebAccessMode,
+  type WebAuthInput
+} from "./components/web/WebAccessGate";
 import {
   createCanvas,
   clearTrash,
@@ -18,6 +22,7 @@ import {
   createFolder,
   createNote,
   createTag,
+  consumeLegacyLocalVaultLanguage,
   db,
   ensureLocalVaultSettingsRecord,
   ensureSeedData,
@@ -105,9 +110,9 @@ import {
 import {
   getDisplayNoteTitle,
   getDisplayProjectName,
-  getDisplayVaultName,
-  hasExplicitDisplayName
-} from "./lib/displayNames";
+  getDisplayVaultName
+} from "./localization/displayNames";
+import { hasExplicitDisplayName } from "./lib/displayNames";
 import {
   initializeAppUpdateState,
   readAppUpdateSnapshot,
@@ -117,21 +122,29 @@ import {
   type AppUpdateSnapshot
 } from "./lib/appUpdates";
 import {
+  clearGoogleDriveAccountSession,
   connectGoogleDriveAccount,
   deleteHostedVault,
   deleteGoogleDriveVault,
   deletePersonalServerVault,
   importRemoteVaultIntoLocalVault,
+  loadHostedAccountOverview,
   migrateRemoteVaultEncryption,
+  pollGoogleDriveRemoteChanges,
   primeRemoteVaultEncryptionMetadata,
   refreshGoogleDriveAccountSession,
+  GOOGLE_DRIVE_TOKEN_REFRESH_SKEW_MS,
+  revokeGoogleDriveAccountAccess,
   issueGoogleDriveVaultToken,
   issuePersonalServerVaultToken,
+  loginHostedAccount,
   registerHostedVaultDevice,
+  registerHostedAccount,
   renameGoogleDriveVault,
   renameHostedVault,
   renamePersonalServerVault,
-  runConfiguredSync
+  runConfiguredSync,
+  type HostedAccountOverview
 } from "./lib/sync";
 import { computePendingSyncSummaryFromDirtyEntries } from "./lib/syncStatus";
 import {
@@ -149,9 +162,25 @@ import {
   upsertSyncBinding
 } from "./lib/syncRegistry";
 import { subscribeSecureSecretChanges } from "./lib/secureSecretStore";
+import {
+  hasIncomingSelfHostedConnectionPackage,
+  SELF_HOSTED_INVITE_EVENT
+} from "./lib/selfHostedPairing";
 import { DEFAULT_NOTE_COLOR } from "./lib/palette";
 import { getErrorMessage } from "./lib/errors";
 import { useAdaptiveLayout } from "./lib/useAdaptiveLayout";
+import useAutoDismissNotice from "./lib/useAutoDismissNotice";
+import { planExactHostedVaultBindingRecovery } from "./lib/cloudBindingRecovery";
+import {
+  refreshHostedSessionSingleFlight,
+  shouldRefreshHostedSession
+} from "./lib/hostedSessionRefresh";
+import { getHostedDeviceIdentity } from "./lib/hostedDeviceIdentity";
+import {
+  createLocorisBackupBlob,
+  getVaultBackupFileName
+} from "./lib/exportImport/vaultBackup";
+import { saveBlobFileWithDialog } from "./lib/nativeFileIntegration";
 import { hasMeaningfulCanvasContent } from "./lib/canvas";
 import { hasMeaningfulNoteContent } from "./lib/notes";
 import {
@@ -168,16 +197,31 @@ import {
   updatePlannerTask as updatePlannerTaskRecord,
   type PlannerViewId
 } from "./lib/planner";
+
+type WebCloudAuthState =
+  | "signedOut"
+  | "checking"
+  | "authenticated"
+  | "offline"
+  | "serverUnavailable"
+  | "reauthRequired";
 import {
   buildPlannerTaskLinks,
   normalizePlannerContextTaskTitle,
   type PlannerContextTaskInput
 } from "./lib/plannerLinks";
 import { syncPlannerReminderNotifications } from "./lib/plannerReminders";
-import i18n from "./i18n";
+import {
+  formatByteValue,
+  formatDateValue,
+  formatTimeValue,
+  useLocale,
+  type LocaleRuntime
+} from "./localization";
 import type {
   AppSettings,
   AppLanguage,
+  HostedAccountVault,
   MobileSection,
   Note,
   NoteListView,
@@ -226,40 +270,112 @@ function useOnlineStatus() {
   return online;
 }
 
-function getHostedDevicePlatform() {
-  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
-
-  if (/android/i.test(userAgent)) {
-    return "Android";
-  }
-
-  if (/iphone|ipad|ipod/i.test(userAgent)) {
-    return "iOS";
-  }
-
-  if (/macintosh|mac os x/i.test(userAgent)) {
-    return "macOS";
-  }
-
-  if (/windows/i.test(userAgent)) {
-    return "Windows";
-  }
-
-  if (/linux/i.test(userAgent)) {
-    return "Linux";
-  }
-
-  return "Locoris app";
+function resolveLocorisCloudServerUrl(settings: AppSettings, connection?: SyncConnection | null) {
+  return (
+    connection?.serverUrl.trim() ||
+    settings.hostedUrl.trim() ||
+    import.meta.env.VITE_LOCORIS_CLOUD_URL?.trim() ||
+    (import.meta.env.DEV ? "http://localhost:8787" : "")
+  );
 }
 
-function getHostedDeviceName(settings: AppSettings) {
-  const shortDeviceId = settings.localDeviceId.replace(/^device-/, "").slice(0, 6);
+function buildLocorisCloudAccountUrl(serverUrl: string, view?: "overview" | "vaults" | "devices" | "billing") {
+  if (!serverUrl) {
+    return null;
+  }
 
-  return `${getHostedDevicePlatform()} · ${shortDeviceId || "device"}`;
+  try {
+    const accountUrl = new URL("/account", `${serverUrl.replace(/\/+$/, "")}/`);
+
+    if (view) {
+      accountUrl.searchParams.set("view", view);
+    }
+
+    return accountUrl.toString();
+  } catch {
+    return null;
+  }
+}
+
+function formatCloudBytes(value: number | null | undefined, runtime: LocaleRuntime) {
+  return formatByteValue(Number(value ?? 0), runtime);
+}
+
+function formatCloudDate(timestamp: number | null | undefined, runtime: LocaleRuntime) {
+  if (!timestamp) {
+    return "";
+  }
+
+  return formatDateValue(timestamp, runtime, {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  });
+}
+
+function getLimitRatio(value: number, limit: number | null | undefined) {
+  if (limit === null || limit === undefined) {
+    return null;
+  }
+
+  if (limit <= 0) {
+    return value > 0 ? 1 : 0;
+  }
+
+  return value / limit;
+}
+
+function getLimitTone(value: number, limit: number | null | undefined) {
+  if (limit === null || limit === undefined || limit <= 0) {
+    return "default" as const;
+  }
+
+  const ratio = value / limit;
+
+  if (ratio >= 1) {
+    return "error" as const;
+  }
+
+  if (ratio >= 0.8) {
+    return "warning" as const;
+  }
+
+  return "success" as const;
+}
+
+function getEntitlementTone(entitlement: HostedAccountOverview["entitlement"] | null | undefined) {
+  const status = entitlement?.status ?? entitlement?.subscriptionStatus ?? entitlement?.accountStatus;
+
+  if (status === "blocked") {
+    return "error" as const;
+  }
+
+  if (
+    status === "read_only" ||
+    status === "past_due" ||
+    status === "expired" ||
+    status === "archived" ||
+    status === "trialing" ||
+    status === "grace"
+  ) {
+    return "warning" as const;
+  }
+
+  if (status === "active" || status === "manual_comp") {
+    return "success" as const;
+  }
+
+  return "default" as const;
 }
 
 export default function App() {
   const { t } = useTranslation();
+  const {
+    preferences: localePreferences,
+    runtime: localeRuntime,
+    updatePreferences: updateLocalePreferences,
+    migrateLegacyLanguage
+  } = useLocale();
   const adaptiveLayout = useAdaptiveLayout();
   const online = useOnlineStatus();
   const [activeLocalVaultId, setActiveLocalVaultId] = useState(() => getStoredActiveLocalVaultId());
@@ -275,6 +391,44 @@ export default function App() {
   const [syncConnections, setSyncConnections] = useState(() => listSyncConnections());
   const [syncBindings, setSyncBindings] = useState(() => listSyncBindings());
   const [vaultEncryptionById, setVaultEncryptionById] = useState<Record<string, VaultEncryptionSummary>>({});
+  const [settingsOpenRequest, setSettingsOpenRequest] = useState<{
+    view: "accountCloud" | "sync";
+    requestId: number;
+  } | null>(() =>
+    hasIncomingSelfHostedConnectionPackage()
+      ? { view: "sync", requestId: 1 }
+      : null
+  );
+  const [webCloudOverview, setWebCloudOverview] = useState<HostedAccountOverview | null>(null);
+  const [webCloudAuthState, setWebCloudAuthState] = useState<WebCloudAuthState>("checking");
+  const [webCloudInitialCheckComplete, setWebCloudInitialCheckComplete] = useState(
+    () => adaptiveLayout.runtimeKind !== "web"
+  );
+  const [webCloudRetryTick, setWebCloudRetryTick] = useState(0);
+  const [webCloudBusy, setWebCloudBusy] = useState(false);
+  const [webAccessFeedback, setWebAccessFeedback] = useState<{
+    tone: "success" | "error";
+    text: string;
+  } | null>(null);
+  const openAccountCloudSettings = useCallback(() => {
+    setSettingsOpenRequest((current) => ({
+      view: "accountCloud",
+      requestId: (current?.requestId ?? 0) + 1
+    }));
+  }, []);
+  const handleSettingsOpenRequestHandled = useCallback(() => {
+    setSettingsOpenRequest(null);
+  }, []);
+  useEffect(() => {
+    const openSelfHostedInvite = () => {
+      setSettingsOpenRequest((current) => ({
+        view: "sync",
+        requestId: (current?.requestId ?? 0) + 1
+      }));
+    };
+    window.addEventListener(SELF_HOSTED_INVITE_EVENT, openSelfHostedInvite);
+    return () => window.removeEventListener(SELF_HOSTED_INVITE_EVENT, openSelfHostedInvite);
+  }, []);
   const [vaultBooting, setVaultBooting] = useState(true);
   const projects = useLiveQuery(() => db.projects.toArray(), [activeLocalVaultId], []);
   const folders = useLiveQuery(() => db.folders.toArray(), [activeLocalVaultId], []);
@@ -313,6 +467,8 @@ export default function App() {
     tone: "success" | "error";
     text: string;
   } | null>(null);
+  useAutoDismissNotice(syncFeedback, setSyncFeedback, { successMs: 5200 });
+  useAutoDismissNotice(webAccessFeedback, setWebAccessFeedback, { successMs: 5200 });
   const [syncTransportIndicator, setSyncTransportIndicator] = useState<{
     localVaultId: string;
     tone: "default" | "success" | "warning" | "error";
@@ -330,7 +486,7 @@ export default function App() {
   const [isDocumentVisible, setIsDocumentVisible] = useState(
     typeof document === "undefined" ? true : document.visibilityState !== "hidden"
   );
-  const currentAppLanguage = (settings?.language ?? "en") as AppLanguage;
+  const currentAppLanguage = localeRuntime.interfaceLocale as AppLanguage;
 
   useEffect(() => {
     void syncPlannerReminderNotifications(tasks, currentAppLanguage);
@@ -644,15 +800,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!settings) {
-      return;
-    }
+    let active = true;
 
-    if (i18n.language !== settings.language) {
-      void i18n.changeLanguage(settings.language);
-      document.documentElement.lang = settings.language;
-    }
-  }, [settings]);
+    void consumeLegacyLocalVaultLanguage(activeLocalVaultId).then((legacyLanguage) => {
+      if (active) {
+        return migrateLegacyLanguage(legacyLanguage);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [activeLocalVaultId, migrateLegacyLanguage]);
 
   useEffect(() => {
     if (!online || !supportsAppUpdates()) {
@@ -763,6 +922,24 @@ export default function App() {
     () => new Map(syncConnections.map((connection) => [connection.id, connection])),
     [syncConnections]
   );
+  const locorisCloudConnections = useMemo(
+    () =>
+      syncConnections
+        .filter((connection) => connection.provider === "hosted" && connection.role === "locorisCloud")
+        .sort((left, right) => right.updatedAt - left.updatedAt),
+    [syncConnections]
+  );
+  const locorisCloudConnection = locorisCloudConnections[0] ?? null;
+  const locorisCloudConnectionIds = useMemo(
+    () => new Set(locorisCloudConnections.map((connection) => connection.id)),
+    [locorisCloudConnections]
+  );
+  const activeLocorisCloudBinding =
+    syncBindings.find(
+      (binding) =>
+        binding.localVaultId === activeLocalVaultId &&
+        locorisCloudConnectionIds.has(binding.connectionId)
+    ) ?? null;
   const activeVaultBinding = syncBindingsByVaultId.get(activeLocalVaultId) ?? null;
   const activeVaultConnection = activeVaultBinding
     ? syncConnectionsById.get(activeVaultBinding.connectionId) ?? null
@@ -773,6 +950,132 @@ export default function App() {
     keyId: null,
     updatedAt: null
   };
+
+  const refreshHostedConnectionSession = useCallback(
+    async (connection: SyncConnection, options: { force?: boolean } = {}) => {
+      if (connection.provider !== "hosted") {
+        return connection;
+      }
+
+      if (!settings) {
+        throw new Error("APP_SETTINGS_NOT_READY");
+      }
+
+      if (!options.force && !shouldRefreshHostedSession(connection)) {
+        return connection;
+      }
+
+      const result = await refreshHostedSessionSingleFlight(
+        connection,
+        getHostedDeviceIdentity(settings.localDeviceId)
+      );
+      const nextConnection = {
+        ...connection,
+        sessionToken: result.session.token,
+        refreshToken: result.session.refreshToken ?? connection.refreshToken ?? "",
+        tokenExpiresAt: result.session.expiresAt,
+        userId: result.user.id,
+        userName: result.user.name,
+        userEmail: result.user.email ?? connection.userEmail,
+        label: result.user.email ?? result.user.name,
+        updatedAt: Date.now()
+      } satisfies SyncConnection;
+
+      await updateSyncConnection(connection.id, {
+        label: nextConnection.label,
+        sessionToken: nextConnection.sessionToken,
+        refreshToken: nextConnection.refreshToken ?? null,
+        tokenExpiresAt: nextConnection.tokenExpiresAt,
+        userId: nextConnection.userId,
+        userName: nextConnection.userName,
+        userEmail: nextConnection.userEmail
+      });
+      refreshSyncRegistryState();
+      return nextConnection;
+    },
+    [settings]
+  );
+
+  useEffect(() => {
+    if (!online || !settings) {
+      return;
+    }
+
+    const hostedConnections = syncConnections.filter(
+      (connection) => connection.provider === "hosted" && Boolean(connection.refreshToken?.trim())
+    );
+
+    if (hostedConnections.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+    let timer: number | null = null;
+
+    const refreshDueSessions = async () => {
+      for (const connection of hostedConnections) {
+        if (cancelled || !shouldRefreshHostedSession(connection)) {
+          continue;
+        }
+
+        try {
+          await refreshHostedConnectionSession(connection, { force: true });
+        } catch (error) {
+          const message = getErrorMessage(error);
+
+          if (
+            connection.role === "locorisCloud" &&
+            [
+              "CLOUD_REAUTH_REQUIRED",
+              "REFRESH_TOKEN_INVALID",
+              "REFRESH_TOKEN_REVOKED",
+              "REFRESH_TOKEN_EXPIRED",
+              "REFRESH_TOKEN_REUSED",
+              "REFRESH_TOKEN_DEVICE_MISMATCH"
+            ].includes(message)
+          ) {
+            setWebCloudAuthState("reauthRequired");
+          }
+        }
+      }
+    };
+
+    const nextExpiry = hostedConnections.reduce<number | null>((earliest, connection) => {
+      if (!connection.tokenExpiresAt) {
+        return earliest;
+      }
+
+      return earliest === null ? connection.tokenExpiresAt : Math.min(earliest, connection.tokenExpiresAt);
+    }, null);
+    const delay = nextExpiry
+      ? Math.max(1_000, Math.min(60_000, nextExpiry - Date.now() - 120_000))
+      : 60_000;
+
+    const scheduleNextRefresh = () => {
+      timer = window.setTimeout(async () => {
+        await refreshDueSessions();
+        if (!cancelled) {
+          scheduleNextRefresh();
+        }
+      }, delay);
+    };
+
+    void refreshDueSessions();
+    scheduleNextRefresh();
+
+    const handleResume = () => void refreshDueSessions();
+    window.addEventListener("online", handleResume);
+    document.addEventListener("visibilitychange", handleResume);
+
+    return () => {
+      cancelled = true;
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
+      window.removeEventListener("online", handleResume);
+      document.removeEventListener("visibilitychange", handleResume);
+    };
+  }, [online, refreshHostedConnectionSession, settings, syncConnections]);
   const translateSyncError = useCallback(
     (
       error: unknown,
@@ -795,6 +1098,25 @@ export default function App() {
           return t("sync.hostedVaultRequired");
         case "GOOGLE_DRIVE_AUTH_REQUIRED":
           return t("sync.googleDriveAuthRequired");
+        case "GOOGLE_DRIVE_INTERACTION_REQUIRED":
+          return t("sync.googleDriveInteractionRequired");
+        case "GOOGLE_DRIVE_STORAGE_QUOTA_EXCEEDED":
+          return t("sync.googleDriveStorageQuotaExceeded");
+        case "GOOGLE_DRIVE_RATE_LIMITED":
+          return t("sync.googleDriveRateLimited");
+        case "GOOGLE_DRIVE_PERMISSION_REQUIRED":
+          return t("sync.googleDrivePermissionRequired");
+        case "GOOGLE_DRIVE_REQUEST_TIMEOUT":
+          return t("sync.googleDriveRequestTimeout");
+        case "GOOGLE_DRIVE_INVALID_PAYLOAD":
+        case "GOOGLE_DRIVE_MANIFEST_CORRUPT":
+        case "GOOGLE_DRIVE_JOURNAL_CORRUPT":
+        case "GOOGLE_DRIVE_V2_DATA_CORRUPT":
+          return t("sync.googleDriveDataCorrupt");
+        case "GOOGLE_DRIVE_RESUMABLE_UPLOAD_FAILED":
+          return t("sync.googleDriveUploadFailed");
+        case "GOOGLE_OAUTH_REVOKE_FAILED":
+          return t("sync.googleDriveRevokeFailed");
         case "GOOGLE_DRIVE_CLIENT_ID_REQUIRED":
           return t("sync.googleDriveClientIdRequired");
         case "GOOGLE_OAUTH_ANDROID_CONFIG_INVALID":
@@ -833,14 +1155,27 @@ export default function App() {
           return provider === "hosted"
             ? t("sync.hostedUnauthorized")
             : t("sync.unauthorized");
+        case "CLOUD_REAUTH_REQUIRED":
+        case "REFRESH_TOKEN_INVALID":
+        case "REFRESH_TOKEN_REVOKED":
+        case "REFRESH_TOKEN_EXPIRED":
+        case "REFRESH_TOKEN_REUSED":
+        case "REFRESH_TOKEN_DEVICE_MISMATCH":
+          return t("sync.hostedSessionExpired");
         case "PLAN_REQUIRED":
           return t("sync.cloudPlanRequired");
         case "TRIAL_EXPIRED":
+        case "TRIAL_EXPIRED_READ_ONLY":
+        case "TRIAL_ARCHIVED":
           return t("sync.cloudTrialExpired");
+        case "TRIAL_RETENTION_EXPIRED":
+          return t("sync.cloudTrialRetentionExpired");
         case "SUBSCRIPTION_PAST_DUE":
           return t("sync.cloudSubscriptionPastDue");
         case "SUBSCRIPTION_EXPIRED_READ_ONLY":
           return t("sync.cloudReadOnly");
+        case "SUBSCRIPTION_BLOCKED":
+          return t("sync.cloudAccountBlocked");
         case "OVER_STORAGE_LIMIT":
           return t("sync.cloudStorageLimit");
         case "OVER_VAULT_LIMIT":
@@ -849,8 +1184,16 @@ export default function App() {
           return t("sync.cloudDeviceLimit");
         case "PAYLOAD_TOO_LARGE":
           return t("sync.cloudPayloadTooLarge");
+        case "RATE_LIMITED":
+          return t("sync.cloudRateLimited");
+        case "WEB_APP_NOT_INCLUDED":
+          return t("webAccess.unavailableDescription");
         case "VAULT_NOT_FOUND":
           return t("sync.vaultNotFound");
+        case "VAULT_ACCESS_DENIED":
+          return t("sync.selfHostedVaultAccessDenied");
+        case "VAULT_READ_ONLY":
+          return t("sync.selfHostedVaultReadOnly");
         case "LAST_VAULT_REQUIRED":
           return t("sync.lastRemoteVaultRequired");
         case "SYNC_REVISION_CONFLICT":
@@ -864,17 +1207,124 @@ export default function App() {
     },
     [t]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    let retryTimer: number | null = null;
+
+    if (adaptiveLayout.runtimeKind !== "web") {
+      setWebCloudInitialCheckComplete(true);
+      return;
+    }
+
+    if (!settings) {
+      return;
+    }
+
+    if (!locorisCloudConnection) {
+      setWebCloudAuthState("signedOut");
+      setWebCloudOverview(null);
+      setWebCloudInitialCheckComplete(true);
+      return;
+    }
+
+    if (!online) {
+      setWebCloudAuthState("offline");
+      setWebCloudInitialCheckComplete(true);
+      return;
+    }
+
+    setWebCloudAuthState("checking");
+
+    const loadOverview = async () => {
+      let connection = locorisCloudConnection;
+
+      if (shouldRefreshHostedSession(connection)) {
+        connection = await refreshHostedConnectionSession(connection, { force: true });
+      }
+
+      try {
+        return await loadHostedAccountOverview(connection.serverUrl, connection.sessionToken);
+      } catch (error) {
+        if (getErrorMessage(error) !== "UNAUTHORIZED") {
+          throw error;
+        }
+
+        connection = await refreshHostedConnectionSession(connection, { force: true });
+        return loadHostedAccountOverview(connection.serverUrl, connection.sessionToken);
+      }
+    };
+
+    void loadOverview()
+      .then((overview) => {
+        if (cancelled) {
+          return;
+        }
+
+        setWebCloudOverview(overview);
+        setWebCloudAuthState("authenticated");
+        setWebCloudInitialCheckComplete(true);
+        setWebAccessFeedback(null);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        const message = getErrorMessage(error);
+        const reauthRequired = [
+          "UNAUTHORIZED",
+          "CLOUD_REAUTH_REQUIRED",
+          "REFRESH_TOKEN_INVALID",
+          "REFRESH_TOKEN_REVOKED",
+          "REFRESH_TOKEN_EXPIRED",
+          "REFRESH_TOKEN_REUSED",
+          "REFRESH_TOKEN_DEVICE_MISMATCH"
+        ].includes(message);
+
+        setWebCloudAuthState(reauthRequired ? "reauthRequired" : "serverUnavailable");
+        setWebCloudInitialCheckComplete(true);
+        setWebAccessFeedback({
+          tone: "error",
+          text: reauthRequired
+            ? t("sync.hostedSessionExpired")
+            : translateSyncError(error, "hosted")
+        });
+
+        if (!reauthRequired) {
+          retryTimer = window.setTimeout(() => {
+            setWebCloudRetryTick((current) => current + 1);
+          }, 5_000);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (retryTimer !== null) {
+        window.clearTimeout(retryTimer);
+      }
+    };
+  }, [
+    adaptiveLayout.runtimeKind,
+    locorisCloudConnection?.id,
+    locorisCloudConnection?.serverUrl,
+    locorisCloudConnection?.sessionToken,
+    locorisCloudConnection?.refreshToken,
+    locorisCloudConnection?.tokenExpiresAt,
+    online,
+    refreshHostedConnectionSession,
+    t,
+    translateSyncError,
+    webCloudRetryTick
+  ]);
+
   const activeVaultPendingSync = useMemo(
     () => computePendingSyncSummaryFromDirtyEntries(syncDirtyEntries),
     [syncDirtyEntries]
   );
   const syncChipTimestampFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(settings?.language ?? "en", {
-        hour: "2-digit",
-        minute: "2-digit"
-      }),
-    [settings?.language]
+    () => ({ format: (value: number) => formatTimeValue(value, localeRuntime) }),
+    [localeRuntime]
   );
   const activeVaultSyncChip = useMemo(() => {
     const pendingCount = activeVaultPendingSync.total;
@@ -918,6 +1368,10 @@ export default function App() {
       const isUnavailableError =
         activeVaultBinding.lastError === "SERVER_UNAVAILABLE" ||
         activeVaultBinding.lastError === "HTTP_404";
+      const translatedError = translateSyncError(
+        new Error(activeVaultBinding.lastError),
+        activeVaultConnection.provider
+      );
       let message: string;
 
       if (isAuthError) {
@@ -933,21 +1387,14 @@ export default function App() {
           message = t("sync.statusUnavailable");
         }
       } else {
-        if (pendingCount > 0) {
-          message = t("sync.statusErrorPending", { count: pendingCount });
-        } else {
-          message = t("sync.statusError");
-        }
+        message = translatedError;
       }
 
       return {
         tone: "error" as const,
         text: message,
         compactText: activeVaultBinding.lastSyncAt ? compactSyncTime : "!",
-        title: translateSyncError(
-          new Error(activeVaultBinding.lastError),
-          activeVaultConnection.provider
-        )
+        title: translatedError
       };
     }
 
@@ -1054,6 +1501,346 @@ export default function App() {
     () => localVaults.find((vault) => vault.id === activeLocalVaultId) ?? null,
     [activeLocalVaultId, localVaults]
   );
+  const activeLocalVaultDisplayName = useMemo(
+    () =>
+      activeLocalVaultProfile
+        ? getDisplayVaultName(
+            activeLocalVaultProfile,
+            currentAppLanguage,
+            localVaults.findIndex((vault) => vault.id === activeLocalVaultProfile.id)
+          )
+        : t("sync.localVault"),
+    [activeLocalVaultProfile, currentAppLanguage, localVaults, t]
+  );
+  const webAccessMode = useMemo<WebAccessMode>(() => {
+    if (adaptiveLayout.runtimeKind !== "web") {
+      return "local";
+    }
+
+    if (!locorisCloudConnection) {
+      return "local";
+    }
+
+    if (webCloudAuthState === "checking" && !webCloudOverview) {
+      return "checking";
+    }
+
+    if (webCloudAuthState === "reauthRequired") {
+      return "reauthRequired";
+    }
+
+    const entitlement = webCloudOverview?.entitlement ?? null;
+    const deviceLimit = entitlement?.limits.maxSyncTokens ?? null;
+    const deviceCount = webCloudOverview?.usage.deviceCount ?? webCloudOverview?.usage.syncTokenCount ?? 0;
+
+    if (entitlement && entitlement.capabilities.webAppEnabled === false) {
+      return "unavailable";
+    }
+
+    if (deviceLimit !== null && deviceCount > deviceLimit) {
+      return "unavailable";
+    }
+
+    if (activeLocorisCloudBinding) {
+      if (entitlement && entitlement.capabilities.canWriteSync === false) {
+        return "readOnly";
+      }
+
+      return "cloud";
+    }
+
+    if (entitlement && entitlement.capabilities.canWriteSync === false) {
+      return "unavailable";
+    }
+
+    return "cloudPending";
+  }, [
+    activeLocorisCloudBinding,
+    adaptiveLayout.runtimeKind,
+    locorisCloudConnection,
+    webCloudAuthState,
+    webCloudOverview
+  ]);
+  const webAccessStatus = useMemo(() => {
+    const accountEmailLabel =
+      webCloudOverview?.user.email ??
+      locorisCloudConnection?.userEmail ??
+      locorisCloudConnection?.label ??
+      t("webAccess.cloudAccountFallback");
+    const accountDisplayName =
+      locorisCloudConnection?.userName?.trim() ||
+      webCloudOverview?.user.name?.trim() ||
+      accountEmailLabel ||
+      t("webAccess.cloudAccountFallback");
+    const accountDescription =
+      accountDisplayName === accountEmailLabel
+        ? t("settings.accountCloudProfileDescription")
+        : `${accountEmailLabel}. ${t("settings.accountCloudProfileDescription")}`;
+    const activeExternalSyncProviderLabel =
+      activeVaultBinding && activeVaultConnection && !activeLocorisCloudBinding
+        ? activeVaultConnection.provider === "hosted"
+          ? t("sync.hosted")
+          : activeVaultConnection.provider === "googleDrive"
+            ? t("sync.googleDrive")
+            : t("sync.selfHosted")
+        : null;
+    const entitlement = webCloudOverview?.entitlement ?? null;
+    const usage = webCloudOverview?.usage ?? null;
+    const limits = entitlement?.limits ?? null;
+    const planLabel = entitlement?.plan.name ?? t("webAccess.cloudPlanFallback");
+    const entitlementTone = getEntitlementTone(entitlement);
+    const entitlementStatus = entitlement?.status ?? entitlement?.subscriptionStatus ?? entitlement?.accountStatus ?? null;
+    const effectiveUntil = entitlement?.effectiveUntil ?? entitlement?.trialEndsAt ?? null;
+    const periodDateLabel = formatCloudDate(effectiveUntil, localeRuntime);
+    const trialDateLabel = formatCloudDate(entitlement?.trialEndsAt, localeRuntime);
+    const trialReadOnlyDateLabel = formatCloudDate(entitlement?.retention?.readOnlyUntil, localeRuntime);
+    const trialArchiveDateLabel = formatCloudDate(entitlement?.retention?.archiveUntil, localeRuntime);
+    const periodLabel = (() => {
+      if (entitlement?.reason === "TRIAL_EXPIRED_READ_ONLY" && trialReadOnlyDateLabel) {
+        return t("settings.accountCloudReadOnlyUntil", { date: trialReadOnlyDateLabel });
+      }
+
+      if (entitlement?.reason === "TRIAL_ARCHIVED" && trialArchiveDateLabel) {
+        return t("settings.accountCloudArchivedUntil", { date: trialArchiveDateLabel });
+      }
+
+      if (entitlement?.reason === "TRIAL_RETENTION_EXPIRED" && trialArchiveDateLabel) {
+        return t("settings.accountCloudRetentionEndedOn", { date: trialArchiveDateLabel });
+      }
+
+      if (entitlement?.reason === "TRIAL_EXPIRED" && trialDateLabel) {
+        return t("settings.accountCloudTrialExpiredOn", { date: trialDateLabel });
+      }
+
+      return periodDateLabel
+        ? t("settings.accountCloudPeriodUntil", { date: periodDateLabel })
+        : t("settings.accountCloudPeriodNoExpiry");
+    })();
+    const vaultCount = usage?.vaultCount ?? webCloudOverview?.vaults.length ?? 0;
+    const deviceCount = usage?.deviceCount ?? usage?.syncTokenCount ?? 0;
+    const storageBytes = usage?.storageBytes ?? 0;
+    const limitLabel = (value: number | null | undefined) =>
+      value === null || value === undefined ? t("settings.accountCloudUnlimited") : String(value);
+    const storageLimitLabel = (value: number | null | undefined) =>
+      value === null || value === undefined
+        ? t("settings.accountCloudUnlimited")
+        : formatCloudBytes(value, localeRuntime);
+    const accountMetaItems = entitlement
+      ? [
+          {
+            label: t("settings.accountCloudPlan"),
+            value: planLabel,
+            tone: entitlementTone
+          },
+          {
+            label: t("settings.accountCloudPeriod"),
+            value: periodLabel,
+            tone: entitlementTone
+          }
+        ]
+      : undefined;
+    const accountMeters = limits
+      ? [
+          {
+            label: t("settings.accountCloudVaults"),
+            valueLabel: `${vaultCount} / ${limitLabel(limits.maxVaults)}`,
+            ratio: getLimitRatio(vaultCount, limits.maxVaults),
+            tone: getLimitTone(vaultCount, limits.maxVaults)
+          },
+          {
+            label: t("settings.accountCloudDevices"),
+            valueLabel: `${deviceCount} / ${limitLabel(limits.maxSyncTokens)}`,
+            ratio: getLimitRatio(deviceCount, limits.maxSyncTokens),
+            tone: getLimitTone(deviceCount, limits.maxSyncTokens)
+          },
+          {
+            label: t("settings.accountCloudStorage"),
+            valueLabel: `${formatCloudBytes(storageBytes, localeRuntime)} / ${storageLimitLabel(limits.storageBytes)}`,
+            ratio: getLimitRatio(storageBytes, limits.storageBytes),
+            tone: getLimitTone(storageBytes, limits.storageBytes)
+          }
+        ]
+      : undefined;
+    const accountNotice = (() => {
+      if (entitlementStatus === "trialing" && (periodDateLabel || trialDateLabel)) {
+        return t("settings.accountCloudTrialNotice", { date: periodDateLabel || trialDateLabel });
+      }
+
+      if (entitlement?.reason === "TRIAL_EXPIRED_READ_ONLY" && trialReadOnlyDateLabel) {
+        return t("settings.accountCloudTrialReadOnlyNotice", { date: trialReadOnlyDateLabel });
+      }
+
+      if (entitlement?.reason === "TRIAL_ARCHIVED" && trialArchiveDateLabel) {
+        return t("settings.accountCloudTrialArchiveNotice", { date: trialArchiveDateLabel });
+      }
+
+      if (entitlement?.reason === "TRIAL_RETENTION_EXPIRED") {
+        return t("settings.accountCloudTrialRetentionExpiredNotice");
+      }
+
+      if (entitlement?.reason === "TRIAL_EXPIRED" || entitlement?.plan.id === "local_free") {
+        return t("settings.accountCloudFreeNotice");
+      }
+
+      if (entitlementStatus === "grace" && periodDateLabel) {
+        return t("settings.accountCloudGraceNotice", { date: periodDateLabel });
+      }
+
+      if (entitlement && !entitlement.capabilities.canWriteSync && entitlement.capabilities.canReadSync) {
+        return t("settings.accountCloudReadOnlyDescription");
+      }
+
+      return undefined;
+    })();
+    const accountDetails = {
+      metaItems: accountMetaItems,
+      meters: accountMeters,
+      notice: accountNotice
+    };
+
+    if (adaptiveLayout.runtimeKind !== "web") {
+      if (!locorisCloudConnection) {
+        return {
+          tone: "default" as const,
+          text: t("settings.accountCloudSignedOut"),
+          compactText: t("sync.hostedLogin"),
+          title: t("settings.accountCloudNoAccountTitle"),
+          description: t("settings.accountCloudNoAccountDescription"),
+          primaryActionLabel: t("settings.accountCloudSignIn")
+        };
+      }
+
+      return {
+        tone: entitlement ? entitlementTone : ("success" as const),
+        text: t("settings.accountCloudReady"),
+        compactText: accountDisplayName,
+        title: accountDisplayName,
+        description: accountDescription,
+        primaryActionLabel: t("settings.accountCloudManage"),
+        ...accountDetails
+      };
+    }
+
+    const statusByMode = {
+      local: {
+        tone: "warning" as const,
+        text: t("webAccess.localTitle"),
+        compactText: t("sync.hostedLogin"),
+        title: t("webAccess.localTitle"),
+        description: t("webAccess.localDescription", {
+          vault: activeLocalVaultDisplayName
+        }),
+        primaryActionLabel: t("webAccess.openCloud"),
+        secondaryActionLabel: t("webAccess.exportVault")
+      },
+      cloud: {
+        tone: "success" as const,
+        text: t("webAccess.cloudTitle"),
+        compactText: accountDisplayName,
+        title: accountDisplayName,
+        description: t("webAccess.cloudDescription", {
+          account: accountEmailLabel
+        }),
+        primaryActionLabel: t("webAccess.manageCloud"),
+        secondaryActionLabel: t("webAccess.exportVault")
+      },
+      cloudPending: {
+        tone: "warning" as const,
+        text: t("webAccess.pendingTitle"),
+        compactText: accountDisplayName,
+        title: accountDisplayName,
+        description: activeExternalSyncProviderLabel
+          ? t("webAccess.pendingExternalDescription", {
+              vault: activeLocalVaultDisplayName,
+              provider: activeExternalSyncProviderLabel
+            })
+          : t("webAccess.pendingLocalDescription", {
+              vault: activeLocalVaultDisplayName
+            }),
+        primaryActionLabel: t("webAccess.manageCloud"),
+        secondaryActionLabel: t("webAccess.exportVault")
+      },
+      readOnly: {
+        tone: "warning" as const,
+        text: t("webAccess.readOnlyTitle"),
+        compactText: accountDisplayName,
+        title: accountDisplayName,
+        description: t("webAccess.readOnlyDescription"),
+        primaryActionLabel: t("webAccess.manageCloud"),
+        secondaryActionLabel: t("webAccess.exportVault")
+      },
+      unavailable: {
+        tone: "error" as const,
+        text: t("webAccess.unavailableTitle"),
+        compactText: accountDisplayName,
+        title: accountDisplayName,
+        description: t("webAccess.unavailableDescription"),
+        primaryActionLabel: t("webAccess.manageCloud"),
+        secondaryActionLabel: t("webAccess.exportVault")
+      },
+      checking: {
+        tone: "default" as const,
+        text: t("webAccess.authCheckingTitle"),
+        compactText: accountDisplayName,
+        title: t("webAccess.authCheckingTitle"),
+        description: t("webAccess.authCheckingDescription"),
+        primaryActionLabel: t("webAccess.manageCloud"),
+        secondaryActionLabel: t("webAccess.exportVault")
+      },
+      reauthRequired: {
+        tone: "error" as const,
+        text: t("webAccess.authReauthPanelTitle"),
+        compactText: accountDisplayName,
+        title: t("webAccess.authReauthPanelTitle"),
+        description: t("webAccess.authReauthPanelDescription"),
+        primaryActionLabel: t("settings.hostedReconnect"),
+        secondaryActionLabel: t("webAccess.exportVault")
+      }
+    } satisfies Record<
+      WebAccessMode,
+      {
+        tone: "default" | "success" | "warning" | "error";
+        text: string;
+        compactText: string;
+        title: string;
+        description: string;
+        primaryActionLabel: string;
+        secondaryActionLabel: string;
+      }
+    >;
+
+    const status = statusByMode[webAccessMode];
+
+    if (webAccessFeedback?.tone === "error") {
+      return {
+        ...status,
+        tone: "error" as const,
+        text: t("webAccess.attentionTitle"),
+        title: t("webAccess.attentionTitle"),
+        description: webAccessFeedback.text,
+        ...accountDetails
+      };
+    }
+
+    return {
+      ...status,
+      ...accountDetails
+    };
+  }, [
+    activeLocorisCloudBinding,
+    activeVaultBinding,
+    activeVaultConnection,
+    activeLocalVaultDisplayName,
+    adaptiveLayout.runtimeKind,
+    currentAppLanguage,
+    locorisCloudConnection?.label,
+    locorisCloudConnection?.userEmail,
+    locorisCloudConnection?.userName,
+    t,
+    webAccessFeedback,
+    webAccessMode,
+    webCloudOverview
+  ]);
   const activePrivateVaultWarningContext = useMemo(() => {
     if (!activeLocalVaultProfile) {
       return null;
@@ -1095,12 +1882,12 @@ export default function App() {
     : selectedTagName
       ? `${t("noteList.filteredByTag")}: ${selectedTagName}`
       : viewMode === "favorites"
-        ? `${favoriteCount} ${t("noteList.noteCount")}`
+        ? t("counts.notes", { count: favoriteCount })
         : viewMode === "trash"
-            ? `${trashCount} ${t("noteList.noteCount")}`
-            : `${totalVisibleNotes} ${t("noteList.noteCount")}`;
+            ? t("counts.notes", { count: trashCount })
+            : t("counts.notes", { count: totalVisibleNotes });
   const contextChips = [
-    `${filteredNotes.length} ${t("noteList.noteCount")}`,
+    t("counts.notes", { count: filteredNotes.length }),
     selectedFolderName ? `${t("note.folder")}: ${selectedFolderName}` : null,
     selectedTagName ? `${t("note.tags")}: ${selectedTagName}` : null,
     viewMode !== "all" ? viewModeLabel : null,
@@ -1196,6 +1983,21 @@ export default function App() {
           label: result.userEmail || result.userName || connection.label
         });
 
+        listSyncBindings()
+          .filter(
+            (binding) =>
+              binding.connectionId === connection.id &&
+              ["GOOGLE_DRIVE_AUTH_REQUIRED", "GOOGLE_DRIVE_INTERACTION_REQUIRED"].includes(
+                binding.lastError ?? ""
+              )
+          )
+          .forEach((binding) => {
+            updateSyncBindingState(binding.localVaultId, {
+              syncStatus: "idle",
+              lastError: null
+            });
+          });
+
         refreshSyncRegistryState();
         return nextConnection;
       } catch {
@@ -1247,7 +2049,7 @@ export default function App() {
       if (
         targetConnection.provider === "googleDrive" &&
         targetConnection.tokenExpiresAt &&
-        targetConnection.tokenExpiresAt <= Date.now() + 15_000
+        targetConnection.tokenExpiresAt <= Date.now() + GOOGLE_DRIVE_TOKEN_REFRESH_SKEW_MS
       ) {
         const refreshedConnection = await refreshGoogleDriveConnectionSilently(targetConnection);
 
@@ -1265,7 +2067,10 @@ export default function App() {
       } catch (error) {
         const errorMessage = getErrorMessage(error);
 
-        if (targetConnection.provider !== "googleDrive" || errorMessage !== "GOOGLE_DRIVE_AUTH_REQUIRED") {
+        if (
+          targetConnection.provider !== "googleDrive" ||
+          !["GOOGLE_DRIVE_AUTH_REQUIRED", "GOOGLE_DRIVE_INTERACTION_REQUIRED"].includes(errorMessage)
+        ) {
           throw error;
         }
 
@@ -1354,13 +2159,20 @@ export default function App() {
 
       try {
         let targetConnection = connection;
-        const runSyncCycle = async (candidate: SyncConnection) =>
+        let targetBinding = binding;
+        const runSyncCycle = async (
+          candidate: SyncConnection,
+          candidateBinding: SyncVaultBinding = targetBinding
+        ) =>
           runConfiguredSync(
             {
               provider: candidate.provider,
               serverUrl: candidate.serverUrl,
-              vaultId: binding.remoteVaultId,
-              token: candidate.provider === "googleDrive" ? candidate.sessionToken : binding.syncToken,
+              vaultId: candidateBinding.remoteVaultId,
+              token:
+                candidate.provider === "googleDrive"
+                  ? candidate.sessionToken
+                  : candidateBinding.syncToken,
               localVaultId
             },
             {
@@ -1378,7 +2190,7 @@ export default function App() {
         if (
           targetConnection.provider === "googleDrive" &&
           targetConnection.tokenExpiresAt &&
-          targetConnection.tokenExpiresAt <= Date.now() + 15_000
+          targetConnection.tokenExpiresAt <= Date.now() + GOOGLE_DRIVE_TOKEN_REFRESH_SKEW_MS
         ) {
           const refreshedConnection = await refreshGoogleDriveConnectionSilently(targetConnection);
 
@@ -1394,18 +2206,61 @@ export default function App() {
         } catch (error) {
           const errorMessage = getErrorMessage(error);
 
-          if (targetConnection.provider !== "googleDrive" || errorMessage !== "GOOGLE_DRIVE_AUTH_REQUIRED") {
-            throw error;
+          if (
+            targetConnection.provider === "hosted" &&
+            errorMessage === "UNAUTHORIZED" &&
+            settings
+          ) {
+            // A sync credential is scoped to one vault/device and may be revoked
+            // independently from the account session. Repair it silently when the
+            // signed-in account is still valid, then retry the interrupted sync.
+            const registerDevice = (candidate: SyncConnection) =>
+              registerHostedVaultDevice(
+                candidate.serverUrl,
+                candidate.sessionToken,
+                targetBinding.remoteVaultId,
+                getHostedDeviceIdentity(settings.localDeviceId)
+              );
+            let refreshedCredential;
+
+            try {
+              refreshedCredential = await registerDevice(targetConnection);
+            } catch (credentialError) {
+              if (getErrorMessage(credentialError) !== "UNAUTHORIZED") {
+                throw credentialError;
+              }
+
+              targetConnection = await refreshHostedConnectionSession(targetConnection, {
+                force: true
+              });
+              refreshedCredential = await registerDevice(targetConnection);
+            }
+
+            targetBinding = await upsertSyncBinding({
+              ...targetBinding,
+              syncToken: refreshedCredential.token,
+              syncStatus: "syncing",
+              lastError: null
+            });
+            refreshSyncRegistryState();
+            result = await runSyncCycle(targetConnection, targetBinding);
+          } else {
+            if (
+              targetConnection.provider !== "googleDrive" ||
+              !["GOOGLE_DRIVE_AUTH_REQUIRED", "GOOGLE_DRIVE_INTERACTION_REQUIRED"].includes(errorMessage)
+            ) {
+              throw error;
+            }
+
+            const refreshedConnection = await refreshGoogleDriveConnectionSilently(targetConnection);
+
+            if (!refreshedConnection) {
+              throw error;
+            }
+
+            targetConnection = refreshedConnection;
+            result = await runSyncCycle(targetConnection);
           }
-
-          const refreshedConnection = await refreshGoogleDriveConnectionSilently(targetConnection);
-
-          if (!refreshedConnection) {
-            throw error;
-          }
-
-          targetConnection = refreshedConnection;
-          result = await runSyncCycle(targetConnection);
         }
 
         const completedAt = Date.now();
@@ -1438,6 +2293,20 @@ export default function App() {
         return true;
       } catch (error) {
         const errorMessage = getErrorMessage(error);
+        if (
+          connection.provider === "hosted" &&
+          connection.role === "locorisCloud" &&
+          [
+            "CLOUD_REAUTH_REQUIRED",
+            "REFRESH_TOKEN_INVALID",
+            "REFRESH_TOKEN_REVOKED",
+            "REFRESH_TOKEN_EXPIRED",
+            "REFRESH_TOKEN_REUSED",
+            "REFRESH_TOKEN_DEVICE_MISMATCH"
+          ].includes(errorMessage)
+        ) {
+          setWebCloudAuthState("reauthRequired");
+        }
         updateSyncBindingState(localVaultId, {
           syncStatus: errorMessage === "VAULT_ENCRYPTION_LOCKED" ? "idle" : "error",
           lastError: errorMessage
@@ -1469,6 +2338,8 @@ export default function App() {
       clearScheduledAutoSync,
       online,
       refreshGoogleDriveConnectionSilently,
+      refreshHostedConnectionSession,
+      settings,
       showSyncTransportIndicator,
       syncBoundRemoteVaultName,
       syncBindingsByVaultId,
@@ -1603,6 +2474,99 @@ export default function App() {
   ]);
 
   useEffect(() => {
+    if (
+      !online ||
+      !isDocumentVisible ||
+      vaultBooting ||
+      activeVaultConnection?.provider !== "googleDrive" ||
+      !activeVaultBinding
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    let timerId: number | null = null;
+
+    const schedule = (delayMs: number) => {
+      if (!cancelled) {
+        timerId = window.setTimeout(() => void poll(), delayMs);
+      }
+    };
+
+    const poll = async () => {
+      let connection = activeVaultConnection;
+
+      try {
+        if (
+          connection.tokenExpiresAt &&
+          connection.tokenExpiresAt <= Date.now() + GOOGLE_DRIVE_TOKEN_REFRESH_SKEW_MS
+        ) {
+          const refreshed = await refreshGoogleDriveConnectionSilently(connection);
+
+          if (!refreshed) {
+            throw new Error("GOOGLE_DRIVE_INTERACTION_REQUIRED");
+          }
+
+          connection = refreshed;
+        }
+
+        const result = await pollGoogleDriveRemoteChanges(
+          connection.sessionToken,
+          connection.changePageToken
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        if (result.nextPageToken && result.nextPageToken !== connection.changePageToken) {
+          await updateSyncConnection(connection.id, {
+            changePageToken: result.nextPageToken
+          });
+          refreshSyncRegistryState();
+        }
+
+        if (result.changed) {
+          requestAutoSync({ delayMs: 350, force: true });
+        }
+      } catch (error) {
+        const message = getErrorMessage(error);
+
+        if (
+          message === "GOOGLE_DRIVE_AUTH_REQUIRED" ||
+          message === "GOOGLE_DRIVE_INTERACTION_REQUIRED"
+        ) {
+          updateSyncBindingState(activeVaultBinding.localVaultId, {
+            syncStatus: "error",
+            lastError: message
+          });
+          refreshSyncRegistryState();
+        }
+      } finally {
+        schedule(45_000);
+      }
+    };
+
+    schedule(2_500);
+
+    return () => {
+      cancelled = true;
+
+      if (timerId !== null) {
+        window.clearTimeout(timerId);
+      }
+    };
+  }, [
+    activeVaultBinding,
+    activeVaultConnection,
+    isDocumentVisible,
+    online,
+    refreshGoogleDriveConnectionSilently,
+    requestAutoSync,
+    vaultBooting
+  ]);
+
+  useEffect(() => {
     const previousEditorNoteId = previousOrbitalEditorNoteIdRef.current;
     previousOrbitalEditorNoteIdRef.current = orbitalEditorNoteId;
 
@@ -1644,8 +2608,7 @@ export default function App() {
     tagIds: string[] = [],
     projectId?: string
   ) => {
-    const language = (settings?.language ?? "en") as AppLanguage;
-    const note = await createNote(language, folderId, tagIds, projectId);
+    const note = await createNote(folderId, tagIds, projectId);
     newDocumentDraftIdsRef.current.add(note.id);
     setSelectedNoteId(note.id);
     setSaveState("saved");
@@ -1657,8 +2620,7 @@ export default function App() {
     tagIds: string[] = [],
     projectId?: string
   ) => {
-    const language = (settings?.language ?? "en") as AppLanguage;
-    const canvas = await createCanvas(language, folderId, tagIds, projectId);
+    const canvas = await createCanvas(folderId, tagIds, projectId);
     newDocumentDraftIdsRef.current.add(canvas.id);
     setSelectedNoteId(canvas.id);
     setSaveState("saved");
@@ -2095,16 +3057,16 @@ export default function App() {
     if (impact.folderCount > 1 || impact.noteCount > 0) {
       const confirmed = await requestConfirmation({
         title: t("folders.delete"),
-        message: t("folders.deleteCascadeConfirm", {
+      message: t("folders.deleteCascadeConfirm", {
           name: folderName,
-          folderCount: impact.folderCount,
-          noteCount: impact.noteCount
+          count: impact.noteCount,
+          noteSummary: t("counts.notes", { count: impact.noteCount })
         }),
         confirmLabel: t("folders.delete"),
         cancelLabel: t("dialog.cancel"),
         details: [
-          `${t("stats.folders")}: ${impact.folderCount}`,
-          `${t("stats.notes")}: ${impact.noteCount}`
+          t("counts.folders", { count: impact.folderCount }),
+          t("counts.notes", { count: impact.noteCount })
         ]
       });
 
@@ -2150,16 +3112,16 @@ export default function App() {
             currentAppLanguage,
             projects.findIndex((entry) => entry.id === project.id)
           ),
-        folderCount: deletedFolderIds.length,
-        noteCount: deletedNoteIds.length,
-        assetCount
+        folderSummary: t("counts.folders", { count: deletedFolderIds.length }),
+        documentSummary: t("counts.documents", { count: deletedNoteIds.length }),
+        fileSummary: t("counts.files", { count: assetCount })
       }),
       confirmLabel: t("project.delete"),
       cancelLabel: t("dialog.cancel"),
       details: [
-        `${t("stats.folders")}: ${deletedFolderIds.length}`,
-        `${t("stats.notes")}: ${deletedNoteIds.length}`,
-        `${t("stats.assets")}: ${assetCount}`
+        t("counts.folders", { count: deletedFolderIds.length }),
+        t("counts.documents", { count: deletedNoteIds.length }),
+        t("counts.files", { count: assetCount })
       ]
     });
 
@@ -2183,12 +3145,6 @@ export default function App() {
     if (orbitalEditorNoteId && deletedNoteIdSet.has(orbitalEditorNoteId)) {
       setOrbitalEditorNoteId(null);
     }
-  };
-
-  const handleChangeLanguage = async (language: AppLanguage) => {
-    await patchSettings({
-      language
-    });
   };
 
   const handleChangePlannerSettings = async (
@@ -2370,9 +3326,7 @@ export default function App() {
       const connection = binding ? syncConnectionsById.get(binding.connectionId) ?? null : null;
 
       if (binding && connection) {
-        await ensureLocalVaultSettingsRecord(input.localVaultId, {
-          language: (settings?.language ?? (i18n.language === "ru" ? "ru" : "en")) as AppLanguage
-        });
+        await ensureLocalVaultSettingsRecord(input.localVaultId);
 
         await primeRemoteVaultEncryptionMetadata({
           provider: connection.provider,
@@ -2631,9 +3585,7 @@ export default function App() {
       throw new Error("VAULT_ENCRYPTION_PASSPHRASE_TOO_SHORT");
     }
 
-    await ensureLocalVaultSettingsRecord(localVaultId, {
-      language: (settings?.language ?? (i18n.language === "ru" ? "ru" : "en")) as AppLanguage
-    });
+    await ensureLocalVaultSettingsRecord(localVaultId);
 
     const descriptor = await createEncryptionDescriptor(passphrase.trim(), getVaultDescriptor(localVaultId));
 
@@ -2658,6 +3610,25 @@ export default function App() {
     passphrase?: string;
     activate?: boolean;
   }) => {
+    const webCloudCanWrite =
+      adaptiveLayout.runtimeKind === "web" &&
+      Boolean(locorisCloudConnection) &&
+      webCloudOverview?.entitlement.capabilities.webAppEnabled !== false &&
+      webCloudOverview?.entitlement.capabilities.canWriteSync === true;
+
+    if (adaptiveLayout.runtimeKind === "web" && !webCloudCanWrite && localVaults.length >= 1) {
+      const limitMessage = t("webAccess.localVaultLimit");
+      setSyncFeedback({
+        tone: "error",
+        text: limitMessage
+      });
+      setWebAccessFeedback({
+        tone: "error",
+        text: limitMessage
+      });
+      throw new Error(limitMessage);
+    }
+
     const createdVault = createLocalVaultProfile(input.name, {
       activate: false,
       vaultKind: input.vaultKind
@@ -2853,12 +3824,18 @@ export default function App() {
       }
     }
 
+    const nextLocalVaultId = getNextLocalVaultAfterDelete(localVaultId);
+
     if (localVaultId === activeLocalVaultId) {
-      const nextActiveVaultId = getNextLocalVaultAfterDelete(localVaultId);
+      const nextActiveVaultId = nextLocalVaultId;
       switchActiveLocalVaultDatabase(nextActiveVaultId);
       setStoredActiveLocalVaultId(nextActiveVaultId);
       setActiveLocalVaultId(nextActiveVaultId);
       resetUiForVaultSwitch();
+    }
+
+    if (localVaultId === selectedSyncVaultId) {
+      setSelectedSyncVaultId(nextLocalVaultId);
     }
 
     removeLocalVaultProfile(localVaultId);
@@ -2875,20 +3852,28 @@ export default function App() {
     label?: string;
     managementToken?: string;
     sessionToken?: string;
+    refreshToken?: string | null;
     tokenExpiresAt?: number | null;
     userId?: string | null;
     userName?: string;
     userEmail?: string;
+    selfHostedDeviceId?: string | null;
+    selfHostedRole?: "owner" | "guest" | null;
+    selfHostedServerId?: string | null;
   }) => {
     const connection = await createSyncConnection(input);
     refreshSyncRegistryState();
     return connection;
   };
 
-  const handleDeleteSyncConnection = async (connectionId: string) => {
+  const handleDeleteSyncConnection = async (
+    connectionId: string,
+    options?: { skipConfirmation?: boolean }
+  ) => {
+    const connection = syncConnectionsById.get(connectionId) ?? null;
     const affectedBindings = syncBindings.filter((binding) => binding.connectionId === connectionId);
 
-    if (affectedBindings.length > 0) {
+    if (affectedBindings.length > 0 && !(options?.skipConfirmation ?? false)) {
       const confirmed = await requestConfirmation({
         title: t("sync.connectionDelete"),
         message: t("sync.connectionDeleteConfirm", {
@@ -2907,13 +3892,55 @@ export default function App() {
       await resetLocalVaultSyncBinding(binding.localVaultId);
     }
 
+    if (connection?.provider === "googleDrive") {
+      await clearGoogleDriveAccountSession(connection.sessionToken).catch(() => undefined);
+    }
+
     await removeSyncConnection(connectionId);
+    refreshSyncRegistryState();
+  };
+
+  const handleRevokeGoogleDriveConnection = async (connectionId: string) => {
+    const connection = syncConnectionsById.get(connectionId) ?? null;
+
+    if (connection?.provider !== "googleDrive") {
+      return;
+    }
+
+    const confirmed = await requestConfirmation({
+      title: t("sync.googleDriveRevoke"),
+      message: t("sync.googleDriveRevokeConfirm"),
+      confirmLabel: t("sync.googleDriveRevoke"),
+      cancelLabel: t("dialog.cancel")
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    await revokeGoogleDriveAccountAccess(connection.sessionToken, connection.id);
+    await updateSyncConnection(connection.id, {
+      sessionToken: "",
+      refreshToken: null,
+      tokenExpiresAt: null,
+      changePageToken: null
+    });
+    syncBindings
+      .filter((binding) => binding.connectionId === connection.id)
+      .forEach((binding) => {
+        updateSyncBindingState(binding.localVaultId, {
+          syncStatus: "error",
+          lastError: "GOOGLE_DRIVE_AUTH_REQUIRED"
+        });
+      });
     refreshSyncRegistryState();
   };
 
   const handleUpdateSyncConnection = async (
     connectionId: string,
-    patch: Partial<Omit<SyncConnection, "id" | "provider" | "createdAt">>
+    patch: Partial<Omit<SyncConnection, "id" | "provider" | "createdAt" | "refreshToken">> & {
+      refreshToken?: string | null;
+    }
   ) => {
     await updateSyncConnection(connectionId, patch);
     refreshSyncRegistryState();
@@ -2951,6 +3978,50 @@ export default function App() {
     }
   };
 
+  const handleRenameRemoteVault = async (input: {
+    connectionId: string;
+    remoteVaultId: string;
+    name: string;
+  }) => {
+    const connection = syncConnectionsById.get(input.connectionId) ?? null;
+    const name = input.name.trim().slice(0, 80);
+
+    if (!connection) {
+      throw new Error("SYNC_CONNECTION_NOT_FOUND");
+    }
+
+    if (!name) {
+      throw new Error("LOCAL_VAULT_NAME_REQUIRED");
+    }
+
+    const result =
+      connection.provider === "hosted"
+        ? await renameHostedVault(connection.serverUrl, connection.sessionToken, input.remoteVaultId, name)
+        : connection.provider === "googleDrive"
+          ? await renameGoogleDriveVault(connection.sessionToken, input.remoteVaultId, name)
+          : await renamePersonalServerVault(
+              connection.serverUrl,
+              connection.managementToken,
+              input.remoteVaultId,
+              name
+            );
+    const nextName = result.vault?.name?.trim() || name;
+    const affectedBindings = syncBindings.filter(
+      (binding) =>
+        binding.connectionId === input.connectionId && binding.remoteVaultId === input.remoteVaultId
+    );
+
+    for (const binding of affectedBindings) {
+      renameLocalVaultProfile(binding.localVaultId, nextName);
+      updateSyncBindingRemoteName(binding.localVaultId, nextName);
+    }
+
+    if (affectedBindings.length > 0) {
+      setLocalVaults(listLocalVaultProfiles());
+      refreshSyncRegistryState();
+    }
+  };
+
   const issueConnectionVaultToken = async (
     connectionId: string,
     remoteVaultId: string,
@@ -2971,11 +4042,7 @@ export default function App() {
         connection.serverUrl,
         connection.sessionToken,
         remoteVaultId,
-        {
-          deviceName: getHostedDeviceName(settings),
-          deviceId: settings.localDeviceId,
-          clientPlatform: getHostedDevicePlatform()
-        }
+        getHostedDeviceIdentity(settings.localDeviceId)
       );
 
       return {
@@ -3102,11 +4169,7 @@ export default function App() {
         connection.serverUrl,
         connection.sessionToken,
         binding.remoteVaultId,
-        {
-          deviceName: getHostedDeviceName(settings),
-          deviceId: settings.localDeviceId,
-          clientPlatform: getHostedDevicePlatform()
-        }
+        getHostedDeviceIdentity(settings.localDeviceId)
       );
       const refreshedBinding = {
         ...binding,
@@ -3142,6 +4205,246 @@ export default function App() {
         bindingOverride: binding,
         connectionOverride: connection
       });
+    }
+  };
+
+  const handleRefreshGoogleDriveConnectionCredentials = async (connection: SyncConnection) => {
+    if (connection.provider !== "googleDrive") {
+      return;
+    }
+
+    const repairedBindings: SyncVaultBinding[] = [];
+
+    for (const binding of listSyncBindings().filter(
+      (entry) => entry.connectionId === connection.id
+    )) {
+      const repairedBinding = await upsertSyncBinding({
+        ...binding,
+        syncStatus: "idle",
+        lastError: null
+      });
+      repairedBindings.push(repairedBinding);
+    }
+
+    refreshSyncRegistryState();
+
+    for (const binding of repairedBindings) {
+      await runBoundVaultSync(binding.localVaultId, {
+        bindingOverride: binding,
+        connectionOverride: connection
+      });
+    }
+  };
+
+  const handleRestoreHostedVaultBindings = async (
+    connection: SyncConnection,
+    remoteVaults: HostedAccountVault[]
+  ) => {
+    if (connection.provider !== "hosted" || !settings) {
+      return { restored: 0, failed: 0 };
+    }
+
+    let restored = 0;
+    let failed = 0;
+    const candidates = planExactHostedVaultBindingRecovery(
+      localVaults,
+      listSyncBindings(),
+      remoteVaults
+    );
+
+    for (const { localVault: vault, remoteVault } of candidates) {
+
+      try {
+        const registration = await registerHostedVaultDevice(
+          connection.serverUrl,
+          connection.sessionToken,
+          remoteVault.id,
+          getHostedDeviceIdentity(settings.localDeviceId)
+        );
+
+        await applyVaultBinding(
+          {
+            localVaultId: vault.id,
+            connectionId: connection.id,
+            remoteVaultId: remoteVault.id,
+            remoteVaultName: remoteVault.name,
+            syncToken: registration.token
+          },
+          {
+            resetLocalSyncState: false,
+            keepBindingMetadata: false,
+            lastSyncAt: null,
+            syncCursor: null,
+            successMessage: null,
+            scheduleSync: false
+          }
+        );
+
+        const binding = listSyncBindings().find((entry) => entry.localVaultId === vault.id) ?? null;
+
+        if (binding) {
+          await runBoundVaultSync(vault.id, {
+            bindingOverride: binding,
+            connectionOverride: connection
+          });
+        }
+
+        restored += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+
+    refreshSyncRegistryState();
+    return { restored, failed };
+  };
+
+  const handleWebCloudAuthenticate = async (input: WebAuthInput) => {
+    if (!settings) {
+      throw new Error("APP_SETTINGS_NOT_READY");
+    }
+
+    if (!online) {
+      throw new Error("SERVER_UNAVAILABLE");
+    }
+
+    const serverUrl = resolveLocorisCloudServerUrl(settings, locorisCloudConnection);
+
+    if (!serverUrl) {
+      throw new Error("CLOUD_ENDPOINT_NOT_CONFIGURED");
+    }
+
+    setWebCloudBusy(true);
+    setWebCloudAuthState("checking");
+    setWebAccessFeedback(null);
+
+    try {
+      const device = getHostedDeviceIdentity(settings.localDeviceId);
+      const result =
+        input.mode === "register"
+          ? await registerHostedAccount(serverUrl, {
+              name: "",
+              email: input.email,
+              password: input.password,
+              ...device
+            })
+          : await loginHostedAccount(serverUrl, {
+              email: input.email,
+              password: input.password,
+              ...device
+            });
+
+      let connection: SyncConnection;
+
+      if (locorisCloudConnection) {
+        connection = {
+          ...locorisCloudConnection,
+          role: "locorisCloud",
+          serverUrl,
+          sessionToken: result.session.token,
+          refreshToken: result.session.refreshToken ?? "",
+          tokenExpiresAt: result.session.expiresAt,
+          userId: result.user.id,
+          userName: result.user.name,
+          userEmail: result.user.email ?? input.email,
+          label: result.user.email ?? result.user.name,
+          updatedAt: Date.now()
+        };
+
+        await handleUpdateSyncConnection(locorisCloudConnection.id, {
+          role: "locorisCloud",
+          label: connection.label,
+          serverUrl: connection.serverUrl,
+          sessionToken: connection.sessionToken,
+          refreshToken: connection.refreshToken ?? null,
+          tokenExpiresAt: connection.tokenExpiresAt,
+          userId: connection.userId,
+          userName: connection.userName,
+          userEmail: connection.userEmail
+        });
+        await handleRefreshHostedConnectionCredentials(connection);
+      } else {
+        connection = await handleCreateSyncConnection({
+          provider: "hosted",
+          role: "locorisCloud",
+          serverUrl,
+          sessionToken: result.session.token,
+          refreshToken: result.session.refreshToken ?? null,
+          tokenExpiresAt: result.session.expiresAt,
+          userId: result.user.id,
+          userName: result.user.name,
+          userEmail: result.user.email ?? input.email,
+          label: result.user.email ?? result.user.name
+        });
+      }
+
+      try {
+        let overview = await loadHostedAccountOverview(
+          connection.serverUrl,
+          connection.sessionToken
+        );
+        const restoration = await handleRestoreHostedVaultBindings(connection, overview.vaults);
+
+        if (restoration.restored > 0) {
+          overview = await loadHostedAccountOverview(
+            connection.serverUrl,
+            connection.sessionToken
+          );
+        }
+
+        setWebCloudOverview(overview);
+        setWebCloudAuthState("authenticated");
+
+        const maxDevices = overview.entitlement.limits.maxSyncTokens;
+        const deviceCount = overview.usage.deviceCount ?? overview.usage.syncTokenCount ?? 0;
+
+        setWebAccessFeedback(
+          maxDevices !== null && deviceCount > maxDevices
+            ? {
+                tone: "error",
+                text: t("webAccess.authDeviceLimit")
+              }
+            : restoration.failed > 0
+              ? {
+                  tone: "error",
+                  text: t("settings.accountCloudBindingsRestorePartial", {
+                    restored: restoration.restored,
+                    failed: restoration.failed
+                  })
+                }
+              : restoration.restored > 0
+                ? {
+                    tone: "success",
+                    text: t("settings.accountCloudBindingsRestored", {
+                      count: restoration.restored
+                    })
+                  }
+                : null
+        );
+      } catch (error) {
+        const message = getErrorMessage(error);
+        const reauthRequired = [
+          "UNAUTHORIZED",
+          "CLOUD_REAUTH_REQUIRED",
+          "REFRESH_TOKEN_INVALID",
+          "REFRESH_TOKEN_REVOKED",
+          "REFRESH_TOKEN_EXPIRED",
+          "REFRESH_TOKEN_REUSED",
+          "REFRESH_TOKEN_DEVICE_MISMATCH"
+        ].includes(message);
+        setWebCloudAuthState(reauthRequired ? "reauthRequired" : "serverUnavailable");
+        setWebAccessFeedback({
+          tone: "error",
+          text: reauthRequired
+            ? t("sync.hostedSessionExpired")
+            : translateSyncError(error, "hosted")
+        });
+      }
+    } catch (error) {
+      setWebCloudAuthState(locorisCloudConnection ? "reauthRequired" : "signedOut");
+      throw error;
+    } finally {
+      setWebCloudBusy(false);
     }
   };
 
@@ -3182,9 +4485,7 @@ export default function App() {
         vaultGuid: remoteVaultId,
         vaultKind: input.remoteVaultKind ?? "regular"
       });
-      await ensureLocalVaultSettingsRecord(targetLocalVault.id, {
-        language: (settings?.language ?? (i18n.language === "ru" ? "ru" : "en")) as AppLanguage
-      });
+      await ensureLocalVaultSettingsRecord(targetLocalVault.id);
       setLocalVaults(listLocalVaultProfiles());
       setSelectedSyncVaultId(targetLocalVault.id);
 
@@ -3194,8 +4495,7 @@ export default function App() {
           localVaultId: targetLocalVault.id,
           serverUrl: connection.serverUrl,
           remoteVaultId,
-          syncToken: connection.provider === "googleDrive" ? connection.sessionToken : syncToken,
-          language: settings?.language ?? "en"
+          syncToken: connection.provider === "googleDrive" ? connection.sessionToken : syncToken
         });
 
         importedRevision = imported.revision;
@@ -3298,6 +4598,60 @@ export default function App() {
     await runBoundVaultSync(localVaultId, {
       showFeedback: true
     });
+  };
+
+  const refreshWebCloudOverview = async () => {
+    if (!locorisCloudConnection) {
+      setWebCloudOverview(null);
+      return null;
+    }
+
+    const overview = await loadHostedAccountOverview(
+      locorisCloudConnection.serverUrl,
+      locorisCloudConnection.sessionToken
+    );
+    setWebCloudOverview(overview);
+    return overview;
+  };
+
+  const handleExportCurrentVaultForWeb = async () => {
+    if (!activeLocalVaultProfile) {
+      return;
+    }
+
+    setWebCloudBusy(true);
+    setWebAccessFeedback(null);
+
+    try {
+      const blob = await createLocorisBackupBlob({
+        localVaultId: activeLocalVaultProfile.id,
+        vaultName: activeLocalVaultDisplayName
+      });
+
+      await saveBlobFileWithDialog({
+        defaultPath: getVaultBackupFileName(activeLocalVaultDisplayName),
+        filters: [
+          {
+            name: "Locoris Backup",
+            extensions: ["locorisbackup"]
+          }
+        ],
+        blob,
+        preferredExtension: "locorisbackup"
+      });
+
+      setWebAccessFeedback({
+        tone: "success",
+        text: t("webAccess.exportSuccess")
+      });
+    } catch (error) {
+      setWebAccessFeedback({
+        tone: "error",
+        text: translateSyncError(error)
+      });
+    } finally {
+      setWebCloudBusy(false);
+    }
   };
 
   const handleTagToggle = async (tagId: string) => {
@@ -3514,7 +4868,7 @@ export default function App() {
 
   const handleCreatePlannerTaskFromContext = async (input: PlannerContextTaskInput) => {
     const context = resolvePlannerContextTaskInput(input);
-    const fallbackTitle = currentAppLanguage === "ru" ? "Новая задача" : "New task";
+    const fallbackTitle = t("inline.plannerSurface.newTask");
     const title = normalizePlannerContextTaskTitle(context.title, fallbackTitle);
     const timestamp = Date.now();
     const task = await handleCreatePlannerTask({
@@ -3533,7 +4887,6 @@ export default function App() {
         projects,
         folders,
         notes,
-        language: currentAppLanguage,
         createdAt: timestamp
       })
     });
@@ -3593,13 +4946,52 @@ export default function App() {
     };
   }, []);
 
-  if (vaultBooting || !settings) {
+  if (
+    vaultBooting ||
+    !settings ||
+    (adaptiveLayout.runtimeKind === "web" && !webCloudInitialCheckComplete)
+  ) {
     return (
       <div className="boot-screen">
         <div className="boot-card">
           <span className="panel-kicker">{t("app.name")}</span>
           <strong>{t("app.booting")}</strong>
         </div>
+      </div>
+    );
+  }
+
+  if (
+    adaptiveLayout.runtimeKind === "web" &&
+    (["local", "unavailable", "checking", "reauthRequired"] as WebAccessMode[]).includes(
+      webAccessMode
+    )
+  ) {
+    return (
+      <div
+        className="locoris-adaptive-shell"
+        data-runtime-kind={adaptiveLayout.runtimeKind}
+        data-layout-device={adaptiveLayout.device}
+        data-layout-orientation={adaptiveLayout.orientation}
+        data-pointer-mode={adaptiveLayout.pointer}
+        data-mobile-shell={adaptiveLayout.isMobileShell ? "true" : "false"}
+      >
+        <WebAccessGate
+          enabled
+          mode={webAccessMode}
+          online={online}
+          busy={webCloudBusy}
+          feedback={webAccessFeedback}
+          initialEmail={locorisCloudConnection?.userEmail ?? ""}
+          entitlement={webCloudOverview?.entitlement ?? null}
+          accountPortalUrl={buildLocorisCloudAccountUrl(
+            resolveLocorisCloudServerUrl(settings, locorisCloudConnection),
+            webAccessMode === "unavailable" ? "billing" : undefined
+          )}
+          onAuthenticate={handleWebCloudAuthenticate}
+          onOpenCloud={openAccountCloudSettings}
+          onExportVault={() => void handleExportCurrentVaultForWeb()}
+        />
       </div>
     );
   }
@@ -3627,7 +5019,7 @@ export default function App() {
         tags={tags}
         assets={assets}
         assetCount={assets.length}
-        language={settings.language}
+        language={currentAppLanguage}
         editorOpen={Boolean(orbitalEditorEntry)}
         editorTitle={
           orbitalEditorEntry
@@ -3635,17 +5027,18 @@ export default function App() {
             : ""
         }
         editorMode={orbitalEditorEntry?.contentType ?? null}
+        editorContentKey={orbitalEditorEntry?.id ?? null}
         editorAccentColor={orbitalEditorEntry?.color || DEFAULT_NOTE_COLOR}
         editorSlot={
           orbitalEditorEntry ? (
             orbitalEditorEntry.contentType === "canvas" ? (
               <CanvasPane
-                key={`orbital-canvas-${orbitalEditorEntry.id}-${settings.language}`}
+                key={`orbital-canvas-${orbitalEditorEntry.id}-${currentAppLanguage}`}
                 note={orbitalEditorEntry}
                 notes={notes}
                 folders={folders}
                 tags={tags}
-                language={settings.language}
+                language={currentAppLanguage}
                 saveState={saveState}
                 immersive
                 onTitleChange={(title) =>
@@ -3710,12 +5103,12 @@ export default function App() {
 	              />
             ) : (
               <EditorPane
-                key={`orbital-note-${orbitalEditorEntry.id}-${settings.language}`}
+                key={`orbital-note-${orbitalEditorEntry.id}-${currentAppLanguage}`}
                 note={orbitalEditorEntry}
                 assets={assets.filter((asset) => asset.noteId === orbitalEditorEntry.id)}
                 folders={folders}
                 tags={tags}
-                language={settings.language}
+                language={currentAppLanguage}
                 saveState={saveState}
                 immersive
                 onTitleChange={(title) =>
@@ -3758,8 +5151,11 @@ export default function App() {
           ) : null
         }
         plannerSlot={
-	          <PlannerSurface
-            key={`planner-${activeLocalVaultId}-${settings.language}`}
+	          <Suspense
+              fallback={<div className="orbital-planner-slot-loading" aria-busy="true" />}
+            >
+	            <PlannerSurface
+              key={`planner-${activeLocalVaultId}-${currentAppLanguage}`}
 	            tasks={tasks}
 	            habits={habits}
 	            habitLogs={habitLogs}
@@ -3768,11 +5164,11 @@ export default function App() {
 	            folders={folders}
 	            notes={notes}
 		            tags={tags}
-		            language={settings.language}
+		            language={currentAppLanguage}
 		            adaptiveLayout={adaptiveLayout}
 		            defaultSurface={settings.plannerDefaultSurface ?? "planner"}
 		            defaultCalendarView={settings.plannerDefaultCalendarView ?? "week"}
-		            weekStartsOn={settings.plannerWeekStartsOn ?? "monday"}
+            weekStartsOn={localeRuntime.weekStartsOn}
 		            focusProjectId={plannerProjectFocusId}
 		            navigationRequest={plannerNavigationRequest}
 		            onCreateTask={handleCreatePlannerTask}
@@ -3789,14 +5185,15 @@ export default function App() {
             onCreateTag={handleCreateTag}
             onClearProjectFocus={() => setPlannerProjectFocusId(null)}
             onOpenNote={(noteId) => void handleOpenOrbitalNote(noteId)}
-            onOpenProjectMap={handleOpenProjectOnMap}
-	          />
+		              onOpenProjectMap={handleOpenProjectOnMap}
+	            />
+	          </Suspense>
 	        }
         trashModalSlot={
           <TrashPanel
             notes={trashedNotes}
             folderPathMap={folderPathMap}
-            language={settings.language}
+            language={currentAppLanguage}
             labels={{
               title: t("filters.viewTrash"),
               deletedAt: t("orbit.deletedAt"),
@@ -3806,7 +5203,6 @@ export default function App() {
               clearTrash: t("orbit.clearTrashAction"),
               emptyTitle: t("orbit.trashEmptyTitle"),
               emptyDescription: t("orbit.trashEmptyDescription"),
-              noteCount: t("noteList.noteCount"),
               allNotes: t("filters.allNotes"),
               noteType: t("orbit.note"),
               canvasType: t("orbit.canvas")
@@ -3819,6 +5215,8 @@ export default function App() {
         settingsModalSlot={
           <SettingsPanel
             settings={settings}
+            localePreferences={localePreferences}
+            localeRuntime={localeRuntime}
             accentThemeId={accentThemeId}
             orbitalAnimationMode={orbitalAnimationMode}
             orbitalTemporalSignalsMode={orbitalTemporalSignalsMode}
@@ -3838,28 +5236,37 @@ export default function App() {
               timeBlocks: timeBlocks.length
             }}
             onAccentThemeChange={handleChangeAccentTheme}
-	            onOrbitalAnimationModeChange={handleChangeOrbitalAnimationMode}
-	            onOrbitalTemporalSignalsModeChange={handleChangeOrbitalTemporalSignalsMode}
-	            onPlannerSettingsChange={(patch) => void handleChangePlannerSettings(patch)}
-	            onClearPlannerData={handleClearPlannerData}
-	            onLanguageChange={(language) => void handleChangeLanguage(language)}
+            onOrbitalAnimationModeChange={handleChangeOrbitalAnimationMode}
+            onOrbitalTemporalSignalsModeChange={handleChangeOrbitalTemporalSignalsMode}
+            onPlannerSettingsChange={(patch) => void handleChangePlannerSettings(patch)}
+            onClearPlannerData={handleClearPlannerData}
+            onLocalePreferencesChange={updateLocalePreferences}
             onSelectLocalVault={(localVaultId) => setSelectedSyncVaultId(localVaultId)}
+            onActivateLocalVault={(localVaultId) => activateLocalVault(localVaultId)}
             onCreateLocalVault={(input) => handleCreateLocalVault(input)}
             onRenameLocalVault={(localVaultId, name) =>
               handleRenameLocalVault(localVaultId, name)
             }
             onDeleteLocalVault={(localVaultId, options) =>
-              void handleDeleteLocalVault(localVaultId, options)
+              handleDeleteLocalVault(localVaultId, options)
             }
             onCreateConnection={handleCreateSyncConnection}
-            onDeleteConnection={(connectionId) => void handleDeleteSyncConnection(connectionId)}
+            onDeleteConnection={(connectionId, options) =>
+              handleDeleteSyncConnection(connectionId, options)
+            }
+            onRevokeGoogleDriveConnection={(connectionId) =>
+              void handleRevokeGoogleDriveConnection(connectionId)
+            }
             onUpdateConnection={handleUpdateSyncConnection}
             onRefreshHostedConnectionCredentials={handleRefreshHostedConnectionCredentials}
-            onBindVault={(input) => void handleBindVaultToConnection(input)}
+            onRefreshGoogleDriveConnectionCredentials={handleRefreshGoogleDriveConnectionCredentials}
+            onRestoreHostedVaultBindings={handleRestoreHostedVaultBindings}
+            onBindVault={(input) => handleBindVaultToConnection(input)}
             onImportRemoteVault={(input) => handleImportRemoteVault(input)}
             onDeleteRemoteVault={(input) => handleDeleteRemoteVault(input)}
+            onRenameRemoteVault={(input) => handleRenameRemoteVault(input)}
             onClearBinding={(localVaultId) => void handleClearVaultBinding(localVaultId)}
-            onRunVaultSync={(localVaultId) => void handleRunVaultSync(localVaultId)}
+            onRunVaultSync={(localVaultId) => handleRunVaultSync(localVaultId)}
             onEnableVaultEncryption={(input) => void handleEnableVaultEncryption(input)}
             onUnlockVaultEncryption={(input) => void handleUnlockVaultEncryption(input)}
             onChangeVaultEncryptionPassphrase={(input) =>
@@ -3870,11 +5277,16 @@ export default function App() {
             onClose={() => undefined}
           />
         }
+        settingsOpenRequest={settingsOpenRequest}
+        onSettingsOpenRequestHandled={handleSettingsOpenRequestHandled}
+        onOpenWebAccess={openAccountCloudSettings}
+        onExportWebVault={() => void handleExportCurrentVaultForWeb()}
         showClose={false}
         onClose={() => undefined}
         onCloseEditor={handleCloseOrbitalEditor}
         syncStatusChip={activeVaultSyncChip}
         syncTransportChip={activeSyncTransportChip}
+        webAccessStatus={webAccessStatus}
         updateChip={
           appUpdateChip
             ? {

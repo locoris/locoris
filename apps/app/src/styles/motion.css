@@ -1,0 +1,211 @@
+:root {
+  --motion-duration-press: 110ms;
+  --motion-duration-fast: 180ms;
+  --motion-duration-standard: 260ms;
+  --motion-duration-spatial: 360ms;
+  --motion-duration-sheet: 440ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0.72, 0.2, 1);
+  --motion-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-spring: cubic-bezier(0.2, 0.92, 0.14, 1);
+}
+
+@keyframes locoris-motion-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes locoris-motion-sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes locoris-motion-popover-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-7px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes locoris-motion-dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes locoris-motion-settings-forward {
+  from {
+    opacity: 0;
+    transform: translateX(18px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes locoris-motion-settings-back {
+  from {
+    opacity: 0;
+    transform: translateX(-14px) scale(0.997);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.settings-surface:is(
+  .is-planner-settings,
+  .is-ai-settings,
+  .is-backup-settings,
+  .is-interface-settings,
+  .is-locale-settings,
+  .account-cloud-panel-shell,
+  .sync-settings-panel-shell
+) {
+  animation: locoris-motion-settings-forward var(--motion-duration-spatial) var(--motion-ease-emphasized) both;
+}
+
+.settings-surface.is-motion-back {
+  animation: locoris-motion-settings-back var(--motion-duration-spatial) var(--motion-ease-emphasized) both;
+}
+
+.settings-surface.is-root-settings {
+  animation: locoris-motion-settings-back var(--motion-duration-spatial) var(--motion-ease-emphasized) both;
+}
+
+/* Portal layers share one entrance language while retaining their own layout. */
+:is(
+  .planner-mobile-sheet-layer,
+  .planner-calendar-mobile-sheet-layer,
+  .planner-date-dialog-layer,
+  .planner-habit-mobile-sheet-layer,
+  .sync-mobile-sheet-layer,
+  .canvas-mobile-sheet-layer,
+  .canvas-ai-mobile-sheet-layer,
+  .canvas-info-mobile-sheet-layer,
+  .editor-ai-mobile-layer,
+  .editor-pane-mobile-sheet-layer,
+  .cloud-vault-picker-layer,
+  .orbital-mobile-menu-layer,
+  .planner-task-scope-layer,
+  .planner-calendar-scope-layer,
+  .confirm-dialog-layer
+) > :is(button[class*="backdrop"], button[class*="dim"], .confirm-dialog-backdrop) {
+  animation: locoris-motion-backdrop-enter var(--motion-duration-fast) ease-out both;
+}
+
+:is(
+  .planner-mobile-sheet,
+  .planner-calendar-mobile-sheet,
+  .planner-habit-mobile-sheet,
+  .planner-habit-mobile-detail-sheet,
+  .planner-date-dialog-sheet,
+  .sync-mobile-sheet,
+  .canvas-mobile-menu-sheet,
+  .canvas-mobile-rename-sheet,
+  .canvas-mobile-sheet,
+  .canvas-ai-mobile-sheet,
+  .canvas-info-mobile-sheet,
+  .cloud-vault-picker-card,
+  .orbital-mobile-menu-sheet,
+  .orbital-mobile-menu-card,
+  .orbital-mobile-selection-sheet,
+  .editor-pane-mobile-options-sheet,
+  .planner-task-scope-sheet,
+  .planner-calendar-scope-sheet
+) {
+  animation: locoris-motion-sheet-enter var(--motion-duration-sheet) var(--motion-ease-emphasized) both;
+  transform-origin: 50% 100%;
+}
+
+:is(
+  .planner-date-dialog,
+  .confirm-dialog-window,
+  .planner-task-scope-dialog,
+  .planner-calendar-scope-dialog,
+  .editor-ai-preview-modal,
+  .note-transfer-modal
+) {
+  animation: locoris-motion-dialog-enter var(--motion-duration-spatial) var(--motion-ease-emphasized) both;
+}
+
+:is(
+  .vault-switcher-menu,
+  .vault-switcher-create-panel,
+  .canvas-ai-popover,
+  .orbital-note-hovercard,
+  .orbital-context-menu-card:not(.is-sheet),
+  .orbital-command-account-popover,
+  .folder-picker-menu
+) {
+  animation: locoris-motion-popover-enter var(--motion-duration-standard) var(--motion-ease-emphasized) both;
+  transform-origin: 50% 0;
+}
+
+/* Individual transform properties preserve component-owned transforms. */
+:where(button, [role="button"]):not(:disabled) {
+  transition-property: color, background-color, border-color, box-shadow, opacity, filter, translate, scale;
+  transition-duration: var(--motion-duration-fast);
+  transition-timing-function: var(--motion-ease-standard);
+}
+
+:where(button, [role="button"]):not(:disabled):active {
+  translate: 0 1px;
+  scale: 0.985;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-press: 1ms;
+    --motion-duration-fast: 1ms;
+    --motion-duration-standard: 1ms;
+    --motion-duration-spatial: 1ms;
+    --motion-duration-sheet: 1ms;
+  }
+
+  :is(
+    .planner-mobile-sheet-layer,
+    .planner-calendar-mobile-sheet-layer,
+    .planner-date-dialog-layer,
+    .planner-habit-mobile-sheet-layer,
+    .sync-mobile-sheet-layer,
+    .canvas-mobile-sheet-layer,
+    .canvas-ai-mobile-sheet-layer,
+    .canvas-info-mobile-sheet-layer,
+    .editor-ai-mobile-layer,
+    .editor-pane-mobile-sheet-layer,
+    .cloud-vault-picker-layer,
+    .orbital-mobile-menu-layer,
+    .planner-task-scope-layer,
+    .planner-calendar-scope-layer,
+    .confirm-dialog-layer
+  ) *,
+  :is(
+    .vault-switcher-menu,
+    .vault-switcher-create-panel,
+    .canvas-ai-popover,
+    .orbital-note-hovercard,
+    .orbital-context-menu-card,
+    .orbital-command-account-popover,
+    .folder-picker-menu
+  ) {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

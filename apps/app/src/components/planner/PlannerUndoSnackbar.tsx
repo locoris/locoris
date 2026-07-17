@@ -1,3 +1,4 @@
+import { translateInline } from "../../localization/translateInline";
 import type { AppLanguage } from "../../types";
 import "./PlannerUndoSnackbar.css";
 
@@ -29,7 +30,7 @@ export default function PlannerUndoSnackbar({ action, language, onDismiss }: Pla
           void currentAction.undo();
         }}
       >
-        {language === "ru" ? "Отменить" : "Undo"}
+        {translateInline(language, "plannerUndoSnackbar.undo")}
       </button>
     </div>
   );

@@ -1,5 +1,7 @@
+import { translateInline } from "../localization/translateInline";
+import { formatPlannerDateTime } from "../localization/plannerPresentation";
 import type { AppLanguage, Reminder, Task } from "../types";
-import { formatPlannerDateTime, isPlannerTaskActive } from "./planner";
+import { isPlannerTaskActive } from "./planner";
 
 const REMINDER_HORIZON_MS = 30 * 24 * 60 * 60 * 1000;
 const BROWSER_TIMER_HORIZON_MS = 24 * 24 * 60 * 60 * 1000;
@@ -64,7 +66,7 @@ function getScheduleItems(tasks: Task[], language: AppLanguage, now = Date.now()
         id: hashReminderId(task.id, reminder.id, remindAt),
         taskId: task.id,
         reminderId: reminder.id,
-        title: reminder.title || (language === "ru" ? "Напоминание Locoris" : "Locoris reminder"),
+        title: reminder.title || (translateInline(language, "plannerReminders.locorisReminder")),
         body: `${task.title} · ${formatPlannerDateTime(remindAt, language)}`,
         remindAt
       });

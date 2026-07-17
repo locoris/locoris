@@ -1,5 +1,7 @@
 import Dexie from "dexie";
 import type { SyncVaultBinding } from "../types";
+import { detectSystemLocale } from "../localization";
+import { translateApp } from "../localization/translateInline";
 import {
   readPersistentString,
   writePersistentString
@@ -31,10 +33,6 @@ interface LocalVaultRegistryState {
 // Legacy storage key. Rename only with a migration that preserves existing vault discovery.
 const REGISTRY_STORAGE_KEY = "zen-notes.local-vaults";
 const DEFAULT_LOCAL_VAULT_ID = "local-default";
-const DEFAULT_LOCAL_VAULT_NAMES = {
-  en: "Locoris Demo Vault",
-  ru: "Демо-хранилище Locoris"
-} as const;
 
 function now() {
   return Date.now();
@@ -57,17 +55,7 @@ function createVaultGuid() {
 }
 
 function getDefaultLocalVaultName() {
-  if (typeof navigator === "undefined") {
-    return DEFAULT_LOCAL_VAULT_NAMES.en;
-  }
-
-  const languages = [navigator.language, ...(navigator.languages ?? [])]
-    .filter(Boolean)
-    .map((language) => language.toLowerCase());
-
-  return languages.some((language) => language.startsWith("ru"))
-    ? DEFAULT_LOCAL_VAULT_NAMES.ru
-    : DEFAULT_LOCAL_VAULT_NAMES.en;
+  return translateApp(detectSystemLocale(), "app.demoVaultName");
 }
 
 function createDefaultVaultProfile(): LocalVaultProfile {

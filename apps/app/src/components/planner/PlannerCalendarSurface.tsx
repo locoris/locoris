@@ -1,3 +1,4 @@
+import { translateApp, translateInline } from "../../localization/translateInline";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 import { createPortal } from "react-dom";
 
@@ -8,15 +9,20 @@ import type {
   Note,
   PlannerCalendarDefaultView,
   PlannerTaskPriority,
-  PlannerWeekStartsOn,
   Project,
   Tag,
   Task,
   TimeBlock
 } from "../../types";
+import type { WeekdayNumber } from "../../localization";
 import {
+  formatDateForLocale,
   formatPlannerDate,
   formatPlannerTime,
+  getPlannerHabitCadenceLabel,
+  useLocale
+} from "../../localization";
+import {
   getEndOfLocalDay,
   getPlannerTimeBlocksForRange,
   getStartOfLocalDay,
@@ -38,7 +44,6 @@ import {
   type PlannerTaskOccurrence
 } from "../../lib/plannerRecurrence";
 import {
-  getPlannerHabitCadenceLabel,
   isPlannerHabitCompletedOnDay,
   isPlannerHabitDueOnDay
 } from "../../lib/plannerHabits";
@@ -65,7 +70,7 @@ interface PlannerCalendarSurfaceProps {
   language: AppLanguage;
   isMobile: boolean;
   defaultMode: PlannerCalendarDefaultView;
-  weekStartsOn: PlannerWeekStartsOn;
+  weekStartsOn: WeekdayNumber;
   selectedTaskId: string | null;
   onClose: () => void;
   onSelectTask: (taskId: string) => void;
@@ -215,11 +220,11 @@ function addMonths(value: number, months: number) {
   return date.getTime();
 }
 
-function startOfWeek(value: number, weekStartsOn: PlannerWeekStartsOn) {
+function startOfWeek(value: number, weekStartsOn: WeekdayNumber) {
   const date = new Date(getStartOfLocalDay(value));
-  const day = date.getDay();
-  const offset = weekStartsOn === "monday" ? (day === 0 ? -6 : 1 - day) : -day;
-  date.setDate(date.getDate() + offset);
+  const day = date.getDay() === 0 ? 7 : date.getDay();
+  const offset = (day - weekStartsOn + 7) % 7;
+  date.setDate(date.getDate() - offset);
   return date.getTime();
 }
 
@@ -235,8 +240,7 @@ function getMonthDayCount(value: number) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 }
 
-function getCalendarDays(startAt: number, count: number, language: AppLanguage, activeMonthAt?: number): CalendarDay[] {
-  const locale = language === "ru" ? "ru-RU" : "en-US";
+function getCalendarDays(startAt: number, count: number, locale: string, activeMonthAt?: number): CalendarDay[] {
   const todayStart = getStartOfLocalDay();
   const activeMonth = activeMonthAt ? new Date(activeMonthAt) : null;
 
@@ -249,13 +253,13 @@ function getCalendarDays(startAt: number, count: number, language: AppLanguage, 
       key: String(dayStartAt),
       startAt: dayStartAt,
       endAt: dayEndAt,
-      label: new Intl.DateTimeFormat(locale, {
+      label: formatDateForLocale(dayStartAt, locale, {
         weekday: "short",
         day: "numeric",
         month: "short"
-      }).format(dayStartAt),
-      weekday: new Intl.DateTimeFormat(locale, { weekday: "short" }).format(dayStartAt),
-      dayNumber: new Intl.DateTimeFormat(locale, { day: "numeric" }).format(dayStartAt),
+      }),
+      weekday: formatDateForLocale(dayStartAt, locale, { weekday: "short" }),
+      dayNumber: formatDateForLocale(dayStartAt, locale, { day: "numeric" }),
       isToday: dayStartAt === todayStart,
       isOutsideMonth: activeMonth
         ? dayDate.getMonth() !== activeMonth.getMonth() || dayDate.getFullYear() !== activeMonth.getFullYear()
@@ -351,17 +355,17 @@ function formatTimeEditorMinutes(minutesOfDay: number) {
 
 function formatDurationMinutes(minutes: number, language: AppLanguage) {
   if (minutes < 60) {
-    return language === "ru" ? `${minutes} мин` : `${minutes}m`;
+    return translateInline(language, "plannerCalendarSurface.m", { value0: minutes });
   }
 
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
 
   if (rest === 0) {
-    return language === "ru" ? `${hours} ч` : `${hours}h`;
+    return translateInline(language, "plannerCalendarSurface.h", { value0: hours });
   }
 
-  return language === "ru" ? `${hours} ч ${rest} мин` : `${hours}h ${rest}m`;
+  return translateInline(language, "plannerCalendarSurface.hM", { value0: hours, value1: rest });
 }
 
 function getTimeEditorMaxDuration(startMinutes: number) {
@@ -482,75 +486,65 @@ function getEventInspectorStyle(anchor: CalendarEventInspectorState["anchor"], i
 function getRangeTitle(
   cursorAt: number,
   mode: CalendarMode,
-  language: AppLanguage,
-  weekStartsOn: PlannerWeekStartsOn
+  locale: string,
+  weekStartsOn: WeekdayNumber
 ) {
-  const locale = language === "ru" ? "ru-RU" : "en-US";
-
   if (mode === "day") {
-    return new Intl.DateTimeFormat(locale, {
+    return formatDateForLocale(cursorAt, locale, {
       weekday: "long",
       day: "numeric",
       month: "long",
       year: "numeric"
-    }).format(cursorAt);
+    });
   }
 
   if (mode === "week") {
     const weekStart = startOfWeek(cursorAt, weekStartsOn);
     const weekEnd = addDays(weekStart, 6);
-    const formatter = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
-    return `${formatter.format(weekStart)} - ${formatter.format(weekEnd)}`;
+    return `${formatDateForLocale(weekStart, locale, { day: "numeric", month: "short" })} - ${formatDateForLocale(weekEnd, locale, { day: "numeric", month: "short" })}`;
   }
 
-  return new Intl.DateTimeFormat(locale, {
+  return formatDateForLocale(cursorAt, locale, {
     month: "long",
     year: "numeric"
-  }).format(cursorAt);
+  });
 }
 
-function formatCompactDayMonth(value: number, language: AppLanguage) {
-  const date = new Date(value);
-  const day = date.getDate();
-  const month = date.getMonth() + 1;
-
-  if (language === "ru") {
-    return `${day}.${String(month).padStart(2, "0")}`;
-  }
-
-  return `${month}/${day}`;
+function formatCompactDayMonth(value: number, locale: string) {
+  return formatDateForLocale(value, locale, {
+    day: "2-digit",
+    month: "2-digit"
+  });
 }
 
 function getCompactRangeTitle(
   cursorAt: number,
   mode: CalendarMode,
-  language: AppLanguage,
-  weekStartsOn: PlannerWeekStartsOn
+  locale: string,
+  weekStartsOn: WeekdayNumber
 ) {
-  const locale = language === "ru" ? "ru-RU" : "en-US";
-
   if (mode === "day") {
-    return new Intl.DateTimeFormat(locale, {
+    return formatDateForLocale(cursorAt, locale, {
       weekday: "short",
       day: "numeric",
       month: "short"
-    }).format(cursorAt);
+    });
   }
 
   if (mode === "week") {
     const weekStart = startOfWeek(cursorAt, weekStartsOn);
     const weekEnd = addDays(weekStart, 6);
-    return `${formatCompactDayMonth(weekStart, language)} - ${formatCompactDayMonth(weekEnd, language)}`;
+    return `${formatCompactDayMonth(weekStart, locale)} - ${formatCompactDayMonth(weekEnd, locale)}`;
   }
 
   if (mode === "month") {
-    return new Intl.DateTimeFormat(locale, {
+    return formatDateForLocale(cursorAt, locale, {
       month: "short",
       year: "numeric"
-    }).format(cursorAt);
+    });
   }
 
-  return getRangeTitle(cursorAt, mode, language, weekStartsOn);
+  return getRangeTitle(cursorAt, mode, locale, weekStartsOn);
 }
 
 function isSameCalendarMonth(leftAt: number, rightAt: number) {
@@ -562,7 +556,7 @@ function isSameCalendarMonth(leftAt: number, rightAt: number) {
 function isCalendarCursorAtToday(
   cursorAt: number,
   mode: CalendarMode,
-  weekStartsOn: PlannerWeekStartsOn,
+  weekStartsOn: WeekdayNumber,
   todayStartAt = getStartOfLocalDay()
 ) {
   if (mode === "day") {
@@ -669,30 +663,26 @@ function getCalendarEventSubtitle(event: CalendarEvent, language: AppLanguage) {
 
   if (event.kind === "habit") {
     if (event.dayState === "future") {
-      return language === "ru" ? "Привычка · будущий ритм" : "Habit · future rhythm";
+      return translateInline(language, "plannerCalendarSurface.habitFutureRhythm");
     }
 
     if (event.dayState === "past-missed") {
-      return language === "ru" ? "Привычка · пропущено" : "Habit · missed";
+      return translateInline(language, "plannerCalendarSurface.habitMissed");
     }
 
     if (event.completed) {
-      return language === "ru" ? "Привычка · отмечено" : "Habit · done";
+      return translateInline(language, "plannerCalendarSurface.habitDone");
     }
 
-    return language === "ru" ? "Привычка · сегодня" : "Habit · today";
+    return translateInline(language, "plannerCalendarSurface.habitToday");
   }
 
   if (event.isAllDay) {
     const kindLabel = event.isDueOnly
-      ? language === "ru"
-        ? "срок"
-        : "due"
-      : language === "ru"
-        ? "запланировано"
-        : "scheduled";
+      ? translateInline(language, "plannerCalendarSurface.due")
+      : translateInline(language, "plannerCalendarSurface.scheduled");
 
-    return `${language === "ru" ? "Весь день" : "All day"} · ${kindLabel}`;
+    return `${translateInline(language, "plannerCalendarSurface.allDay")} · ${kindLabel}`;
   }
 
   const timeLabel =
@@ -700,12 +690,8 @@ function getCalendarEventSubtitle(event: CalendarEvent, language: AppLanguage) {
       ? `${formatPlannerTime(event.startAt, language)} - ${formatPlannerTime(event.endAt, language)}`
       : formatPlannerTime(event.startAt, language);
   const kindLabel = event.isDueOnly
-    ? language === "ru"
-      ? "срок"
-      : "due"
-    : language === "ru"
-      ? "запланировано"
-      : "scheduled";
+    ? translateInline(language, "plannerCalendarSurface.due2")
+    : translateInline(language, "plannerCalendarSurface.scheduled2");
 
   return `${timeLabel} · ${kindLabel}`;
 }
@@ -774,23 +760,10 @@ function getReminderPreset(task: Task): CalendarReminderPreset {
 }
 
 function getReminderLabel(preset: CalendarReminderPreset, language: AppLanguage) {
-  if (language === "ru") {
-    return {
-      none: "Нет",
-      "0": "В момент",
-      "15": "За 15 мин",
-      "60": "За час",
-      "1440": "За день"
-    }[preset];
-  }
-
-  return {
-    none: "None",
-    "0": "At time",
-    "15": "15 min",
-    "60": "1 hour",
-    "1440": "1 day"
-  }[preset];
+  const keys: Record<CalendarReminderPreset, string> = {
+    none: "none", "0": "atTime", "15": "min15", "60": "hour1", "1440": "day1"
+  };
+  return translateApp(language, `plannerCore.reminders.${keys[preset]}`);
 }
 
 function isCalendarEventOverdue(event: CalendarEvent) {
@@ -841,6 +814,7 @@ export default function PlannerCalendarSurface({
   onUpdateTimeBlock,
   onDeleteTimeBlock
 }: PlannerCalendarSurfaceProps) {
+  const { runtime: localeRuntime } = useLocale();
   const [mode, setMode] = useState<CalendarMode>(defaultMode);
   const [cursorAt, setCursorAt] = useState(getStartOfLocalDay());
   const [selectedDayAt, setSelectedDayAt] = useState(getStartOfLocalDay());
@@ -888,8 +862,10 @@ export default function PlannerCalendarSurface({
   const projectMap = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
   const noteMap = useMemo(() => new Map(notes.map((note) => [note.id, note])), [notes]);
   const todayStartAt = getStartOfLocalDay();
-  const calendarFullRangeTitle = getRangeTitle(cursorAt, mode, language, weekStartsOn);
-  const calendarRangeTitle = isMobile ? getCompactRangeTitle(cursorAt, mode, language, weekStartsOn) : calendarFullRangeTitle;
+  const calendarFullRangeTitle = getRangeTitle(cursorAt, mode, localeRuntime.formatLocale, weekStartsOn);
+  const calendarRangeTitle = isMobile
+    ? getCompactRangeTitle(cursorAt, mode, localeRuntime.formatLocale, weekStartsOn)
+    : calendarFullRangeTitle;
   const isCalendarAtToday = isCalendarCursorAtToday(cursorAt, mode, weekStartsOn, todayStartAt);
 
   const goToToday = () => {
@@ -905,7 +881,7 @@ export default function PlannerCalendarSurface({
       return {
         startAt,
         endAt: addDays(startAt, dayCount),
-        days: getCalendarDays(startAt, dayCount, language, cursorAt)
+        days: getCalendarDays(startAt, dayCount, localeRuntime.formatLocale, cursorAt)
       };
     }
 
@@ -914,7 +890,7 @@ export default function PlannerCalendarSurface({
       return {
         startAt,
         endAt: addDays(startAt, 7),
-        days: getCalendarDays(startAt, 7, language)
+        days: getCalendarDays(startAt, 7, localeRuntime.formatLocale)
       };
     }
 
@@ -922,9 +898,9 @@ export default function PlannerCalendarSurface({
     return {
       startAt,
       endAt: getEndOfLocalDay(cursorAt),
-      days: getCalendarDays(startAt, 1, language)
+      days: getCalendarDays(startAt, 1, localeRuntime.formatLocale)
     };
-  }, [cursorAt, language, mode, weekStartsOn]);
+  }, [cursorAt, localeRuntime.formatLocale, mode, weekStartsOn]);
   const visibleTimeBlocks = useMemo(
     () => getPlannerTimeBlocksForRange(timeBlocks, range.startAt, range.endAt),
     [range.endAt, range.startAt, timeBlocks]
@@ -1195,7 +1171,7 @@ export default function PlannerCalendarSurface({
           estimateMinutes: null,
           status: task.status === "inbox" ? "todo" : task.status
         },
-        language === "ru" ? "Задача поставлена на день" : "Task scheduled for day"
+        translateInline(language, "plannerCalendarSurface.taskScheduledForDay")
       );
       onSelectTask(task.id);
       setTapScheduleTaskId(null);
@@ -1215,7 +1191,7 @@ export default function PlannerCalendarSurface({
       endAt: rangeForBlock.endAt,
       color: taskProject?.color ?? PLANNER_INBOX_EVENT_COLOR
     });
-    showUndoToast(language === "ru" ? "Задача поставлена в слот" : "Task scheduled in slot", () =>
+    showUndoToast(translateInline(language, "plannerCalendarSurface.taskScheduledInSlot"), () =>
       onDeleteTimeBlock(createdBlock.id)
     );
     onSelectTask(task.id);
@@ -1600,7 +1576,7 @@ export default function PlannerCalendarSurface({
               id: taskId,
               kind: "task",
               title: task.title,
-              subtitle: language === "ru" ? "без даты" : "no date",
+              subtitle: translateInline(language, "plannerCalendarSurface.noDate"),
               color: getTaskProjectColor(task, projectMap),
               x: dragState.startX,
               y: dragState.startY,
@@ -1664,7 +1640,7 @@ export default function PlannerCalendarSurface({
           id: dragState.taskId,
           kind: "task",
           title: task.title,
-          subtitle: language === "ru" ? "без даты" : "no date",
+          subtitle: translateInline(language, "plannerCalendarSurface.noDate2"),
           color: getTaskProjectColor(task, projectMap),
           x: event.clientX,
           y: event.clientY,
@@ -1939,7 +1915,7 @@ export default function PlannerCalendarSurface({
       status: task.status === "inbox" || task.status === "scheduled" ? "todo" : task.status
     });
     await onDeleteTimeBlock(previousBlock.id);
-    showUndoToast(language === "ru" ? "Задача перенесена на весь день" : "Task moved to all-day", async () => {
+    showUndoToast(translateInline(language, "plannerCalendarSurface.taskMovedToAllDay"), async () => {
       await onUpdateTask(task.id, taskUndoPatch);
       await onCreateTimeBlock({
         title: previousBlock.title,
@@ -1978,7 +1954,7 @@ export default function PlannerCalendarSurface({
     return [
       {
         id: crypto.randomUUID(),
-        title: language === "ru" ? "Напоминание" : "Reminder",
+        title: translateInline(language, "plannerCalendarSurface.reminder"),
         remindAt: task.scheduledStartAt ? null : baseAt - offsetMinutes * 60_000,
         offsetMinutes,
         channel: "system",
@@ -1994,7 +1970,7 @@ export default function PlannerCalendarSurface({
     await updateTaskWithUndo(
       task,
       { reminders: buildTaskReminder(task, preset) },
-      language === "ru" ? "Напоминание изменено" : "Reminder changed"
+      translateInline(language, "plannerCalendarSurface.reminderChanged")
     );
   };
 
@@ -2019,7 +1995,7 @@ export default function PlannerCalendarSurface({
             completedAt: null,
             status: task.status === "done" ? (task.scheduledStartAt ? "scheduled" : "todo") : task.status
           },
-          language === "ru" ? "Отметка снята" : "Completion removed"
+          translateInline(language, "plannerCalendarSurface.completionRemoved")
         );
         return;
       }
@@ -2029,7 +2005,7 @@ export default function PlannerCalendarSurface({
           ? ({ status: "done", completedAt: Date.now(), recurrenceUntilAt: task.recurrenceUntilAt ?? marker } satisfies PlannerTaskUpdateInput)
           : buildRecurringTaskPatch(task, effectiveScope === "future" ? "completeAllFuture" : "completeOccurrence", marker);
 
-      await updateTaskWithUndo(task, patch, language === "ru" ? "Событие отмечено" : "Event completed");
+      await updateTaskWithUndo(task, patch, translateInline(language, "plannerCalendarSurface.eventCompleted"));
       return;
     }
 
@@ -2039,7 +2015,7 @@ export default function PlannerCalendarSurface({
         status: done ? "done" : task.scheduledStartAt ? "scheduled" : "todo",
         completedAt: done ? Date.now() : null
       },
-      done ? (language === "ru" ? "Задача выполнена" : "Task completed") : language === "ru" ? "Задача возвращена" : "Task reopened"
+      done ? (translateInline(language, "plannerCalendarSurface.taskCompleted")) : translateInline(language, "plannerCalendarSurface.taskReopened")
     );
   };
 
@@ -2076,7 +2052,7 @@ export default function PlannerCalendarSurface({
             ? ({ recurrenceUntilAt: Math.max(0, marker - 1000) } satisfies PlannerTaskUpdateInput)
             : buildRecurringTaskPatch(task, "skipOccurrence", marker);
 
-      await updateTaskWithUndo(task, patch, language === "ru" ? "Событие убрано" : "Event removed");
+      await updateTaskWithUndo(task, patch, translateInline(language, "plannerCalendarSurface.eventRemoved"));
       return;
     }
 
@@ -2089,7 +2065,7 @@ export default function PlannerCalendarSurface({
         estimateMinutes: null,
         status: task.status === "scheduled" ? "todo" : task.status
       },
-      language === "ru" ? "Задача убрана из календаря" : "Task removed from calendar"
+      translateInline(language, "plannerCalendarSurface.taskRemovedFromCalendar")
     );
   };
 
@@ -2112,7 +2088,7 @@ export default function PlannerCalendarSurface({
           endAt: Math.max(nextStartAt + MIN_EVENT_DURATION_MS, nextEndAt ?? nextStartAt + getCalendarEventDuration(calendarEvent)),
           color: nextProject?.color ?? calendarEvent.timeBlock.color
         },
-        language === "ru" ? "Блок перенесен" : "Block moved"
+        translateInline(language, "plannerCalendarSurface.blockMoved")
       );
       return;
     }
@@ -2134,12 +2110,8 @@ export default function PlannerCalendarSurface({
           calendarEvent.startAt
         ),
         recurrenceScope === "future"
-          ? language === "ru"
-            ? "Будущие события перенесены"
-            : "Future events moved"
-          : language === "ru"
-            ? "Серия перенесена"
-            : "Series moved"
+          ? translateInline(language, "plannerCalendarSurface.futureEventsMoved")
+          : translateInline(language, "plannerCalendarSurface.seriesMoved")
       );
       return;
     }
@@ -2149,7 +2121,7 @@ export default function PlannerCalendarSurface({
         ? buildRescheduleOccurrencePatch(task, calendarEvent.occurrence.originalStartAt, nextStartAt, nextEndAt)
         : buildTaskCalendarPatch(task, nextStartAt, nextEndAt, isAllDay);
 
-    await updateTaskWithUndo(task, patch, language === "ru" ? "Событие перенесено" : "Event moved");
+    await updateTaskWithUndo(task, patch, translateInline(language, "plannerCalendarSurface.eventMoved"));
   };
 
   const applyEventResize = async (
@@ -2167,7 +2139,7 @@ export default function PlannerCalendarSurface({
       await updateTimeBlockWithUndo(
         calendarEvent.timeBlock,
         { endAt: normalizedEndAt },
-        language === "ru" ? "Длительность изменена" : "Duration changed"
+        translateInline(language, "plannerCalendarSurface.durationChanged")
       );
       return;
     }
@@ -2186,7 +2158,7 @@ export default function PlannerCalendarSurface({
         ? buildRescheduleOccurrencePatch(task, calendarEvent.occurrence.originalStartAt, calendarEvent.startAt, normalizedEndAt)
         : buildTaskCalendarPatch(task, calendarEvent.startAt, normalizedEndAt, false);
 
-    await updateTaskWithUndo(task, patch, language === "ru" ? "Длительность изменена" : "Duration changed");
+    await updateTaskWithUndo(task, patch, translateInline(language, "plannerCalendarSurface.durationChanged2"));
   };
 
   const applyScopedAction = async (scope: CalendarOccurrenceScope) => {
@@ -2227,12 +2199,8 @@ export default function PlannerCalendarSurface({
           actualEndAt: calendarEvent.timeBlock.status === "completed" ? null : Date.now()
         },
         calendarEvent.timeBlock.status === "completed"
-          ? language === "ru"
-            ? "Блок возвращен"
-            : "Block reopened"
-          : language === "ru"
-            ? "Блок выполнен"
-            : "Block completed"
+          ? translateInline(language, "plannerCalendarSurface.blockReopened")
+          : translateInline(language, "plannerCalendarSurface.blockCompleted")
       );
       return;
     }
@@ -2243,7 +2211,7 @@ export default function PlannerCalendarSurface({
       }
 
       await onToggleHabitLog(calendarEvent.habit.id, calendarEvent.startAt);
-      showUndoToast(language === "ru" ? "Отметка привычки изменена" : "Habit check changed", async () => {
+      showUndoToast(translateInline(language, "plannerCalendarSurface.habitCheckChanged"), async () => {
         await onToggleHabitLog(calendarEvent.habit.id, calendarEvent.startAt);
       });
       return;
@@ -2260,7 +2228,7 @@ export default function PlannerCalendarSurface({
     if (calendarEvent.kind === "timeBlock") {
       const previous = calendarEvent.timeBlock;
       await onDeleteTimeBlock(previous.id);
-      showUndoToast(language === "ru" ? "Блок удален" : "Block deleted", async () => {
+      showUndoToast(translateInline(language, "plannerCalendarSurface.blockDeleted"), async () => {
         await onCreateTimeBlock({
           title: previous.title,
           description: previous.description,
@@ -2389,14 +2357,10 @@ export default function PlannerCalendarSurface({
               }}
               title={
                 isCompleted
-                  ? language === "ru"
-                    ? "Вернуть"
-                    : "Reopen"
-                  : language === "ru"
-                    ? "Отметить выполненным"
-                    : "Mark done"
+                  ? translateInline(language, "plannerCalendarSurface.reopen")
+                  : translateInline(language, "plannerCalendarSurface.markDone")
               }
-              aria-label={language === "ru" ? "Изменить статус события" : "Toggle event status"}
+              aria-label={translateInline(language, "plannerCalendarSurface.toggleEventStatus")}
             >
               <span className="planner-calendar-event-action-icon is-done" aria-hidden="true" />
             </button>
@@ -2407,8 +2371,8 @@ export default function PlannerCalendarSurface({
                   eventObject.stopPropagation();
                   void removeCalendarEvent(event);
                 }}
-                title={language === "ru" ? "Убрать из календаря" : "Remove from calendar"}
-                aria-label={language === "ru" ? "Убрать из календаря" : "Remove from calendar"}
+                title={translateInline(language, "plannerCalendarSurface.removeFromCalendar")}
+                aria-label={translateInline(language, "plannerCalendarSurface.removeFromCalendar2")}
               >
                 <span className="planner-calendar-event-action-icon is-remove" aria-hidden="true" />
               </button>
@@ -2428,8 +2392,8 @@ export default function PlannerCalendarSurface({
                 setResizePreview(null);
               }}
               onPointerUp={(eventObject) => void handleResizeEnd(eventObject)}
-              aria-label={language === "ru" ? "Изменить начало" : "Resize start"}
-              title={language === "ru" ? "Изменить начало" : "Resize start"}
+              aria-label={translateInline(language, "plannerCalendarSurface.resizeStart")}
+              title={translateInline(language, "plannerCalendarSurface.resizeStart2")}
             />
             <button
               type="button"
@@ -2442,8 +2406,8 @@ export default function PlannerCalendarSurface({
                 setResizePreview(null);
               }}
               onPointerUp={(eventObject) => void handleResizeEnd(eventObject)}
-              aria-label={language === "ru" ? "Изменить окончание" : "Resize end"}
-              title={language === "ru" ? "Изменить окончание" : "Resize end"}
+              aria-label={translateInline(language, "plannerCalendarSurface.resizeEnd")}
+              title={translateInline(language, "plannerCalendarSurface.resizeEnd2")}
             />
           </>
         ) : null}
@@ -2477,19 +2441,15 @@ export default function PlannerCalendarSurface({
           onClick={() => void handleDayTap(day.startAt)}
           onDoubleClick={() => openQuickCreate(day.startAt, null)}
         >
-          <time>{language === "ru" ? "Весь день" : "All day"}</time>
+          <time>{translateInline(language, "plannerCalendarSurface.allDay2")}</time>
           <div>
             {allDayEvents.length > 0 ? (
               allDayEvents.map((event) => renderCalendarEvent(event, "wide"))
             ) : (
               <span className="planner-calendar-empty-slot">
                 {tapScheduleTaskId
-                  ? language === "ru"
-                    ? "Тапни, чтобы поставить на день"
-                    : "Tap to schedule for the day"
-                  : language === "ru"
-                    ? "Нет событий на весь день"
-                    : "No all-day events"}
+                  ? translateInline(language, "plannerCalendarSurface.tapToScheduleForTheDay")
+                  : translateInline(language, "plannerCalendarSurface.noAllDayEvents")}
               </span>
             )}
           </div>
@@ -2526,12 +2486,8 @@ export default function PlannerCalendarSurface({
                 ) : (
                   <span className="planner-calendar-empty-slot">
                     {tapScheduleTaskId
-                      ? language === "ru"
-                        ? "Тапни, чтобы поставить сюда"
-                        : "Tap to schedule here"
-                      : language === "ru"
-                        ? "Свободно"
-                        : "Free"}
+                      ? translateInline(language, "plannerCalendarSurface.tapToScheduleHere")
+                      : translateInline(language, "plannerCalendarSurface.free")}
                   </span>
                 )}
               </div>
@@ -2598,14 +2554,10 @@ export default function PlannerCalendarSurface({
                   type="button"
                   className="planner-calendar-more"
                   aria-label={
-                    language === "ru"
-                      ? `Показать все события за ${formatPlannerDate(day.startAt, language)}`
-                      : `Show all events for ${formatPlannerDate(day.startAt, language)}`
+                    translateInline(language, "plannerCalendarSurface.showAllEventsFor", { value0: formatPlannerDate(day.startAt, language) })
                   }
                   title={
-                    language === "ru"
-                      ? `Показать все события за ${formatPlannerDate(day.startAt, language)}`
-                      : `Show all events for ${formatPlannerDate(day.startAt, language)}`
+                    translateInline(language, "plannerCalendarSurface.showAllEventsFor2", { value0: formatPlannerDate(day.startAt, language) })
                   }
                   onClick={(event) => {
                     event.preventDefault();
@@ -2617,7 +2569,7 @@ export default function PlannerCalendarSurface({
                     event.stopPropagation();
                   }}
                 >
-                  +{hiddenCount} {language === "ru" ? "еще" : "more"}
+                  +{hiddenCount} {translateInline(language, "plannerCalendarSurface.more")}
                 </button>
               ) : null}
             </div>
@@ -2632,7 +2584,7 @@ export default function PlannerCalendarSurface({
       {selectedDayEvents.length > 0 ? (
         selectedDayEvents.map((event) => renderCalendarEvent(event, "wide"))
       ) : (
-        <p>{language === "ru" ? "На выбранный день ничего не запланировано." : "Nothing scheduled for the selected day."}</p>
+        <p>{translateInline(language, "plannerCalendarSurface.nothingScheduledForTheSelectedDay")}</p>
       )}
     </div>
   );
@@ -2641,12 +2593,8 @@ export default function PlannerCalendarSurface({
     <>
       <p>
         {isMobile
-          ? language === "ru"
-            ? "Тапни задачу для выбора или удержи, чтобы перенести в календарь."
-            : "Tap a task to select it, or hold to move it into the calendar."
-          : language === "ru"
-            ? "Перетащи задачу на день или час."
-            : "Drag a task onto a day or hour."}
+          ? translateInline(language, "plannerCalendarSurface.tapATaskToSelectItOr")
+          : translateInline(language, "plannerCalendarSurface.dragATaskOntoADayOr")}
       </p>
       <div className="planner-calendar-unscheduled-list">
         {unscheduledTasks.slice(0, 12).map((task) => (
@@ -2679,11 +2627,11 @@ export default function PlannerCalendarSurface({
             }}
           >
             <strong>{task.title}</strong>
-            <small>{language === "ru" ? "без даты" : "no date"}</small>
+            <small>{translateInline(language, "plannerCalendarSurface.noDate3")}</small>
           </button>
         ))}
         {unscheduledTasks.length === 0 ? (
-          <p>{language === "ru" ? "Все активные задачи уже имеют дату." : "All active tasks already have a date."}</p>
+          <p>{translateInline(language, "plannerCalendarSurface.allActiveTasksAlreadyHaveADate")}</p>
         ) : null}
       </div>
     </>
@@ -2705,7 +2653,7 @@ export default function PlannerCalendarSurface({
             projectId,
             color: project?.color ?? PLANNER_INBOX_EVENT_COLOR
           },
-          language === "ru" ? "Проект изменен" : "Project changed"
+          translateInline(language, "plannerCalendarSurface.projectChanged")
         );
         return;
       }
@@ -2713,13 +2661,13 @@ export default function PlannerCalendarSurface({
       await updateTaskWithUndo(
         calendarEvent.occurrence.task,
         { projectId },
-        language === "ru" ? "Проект изменен" : "Project changed"
+        translateInline(language, "plannerCalendarSurface.projectChanged2")
       );
     };
 
     return (
       <section className="planner-calendar-inspector-section">
-        <span className="planner-calendar-inspector-label">{language === "ru" ? "Проект" : "Project"}</span>
+        <span className="planner-calendar-inspector-label">{translateInline(language, "plannerCalendarSurface.project")}</span>
         <div className="planner-calendar-inspector-chip-row">
           <button
             type="button"
@@ -2751,26 +2699,9 @@ export default function PlannerCalendarSurface({
     }
 
     const task = calendarEvent.occurrence.task;
-    const labels =
-      language === "ru"
-        ? {
-            none: "Без приоритета",
-            low: "Низкий",
-            medium: "Средний",
-            high: "Высокий",
-            urgent: "Срочно"
-          }
-        : {
-            none: "No priority",
-            low: "Low",
-            medium: "Medium",
-            high: "High",
-            urgent: "Urgent"
-          };
-
     return (
       <section className="planner-calendar-inspector-section">
-        <span className="planner-calendar-inspector-label">{language === "ru" ? "Приоритет" : "Priority"}</span>
+        <span className="planner-calendar-inspector-label">{translateInline(language, "plannerCalendarSurface.priority")}</span>
         <div className="planner-calendar-inspector-chip-row is-priority">
           {TASK_PRIORITIES.map((priority) => (
             <button
@@ -2781,11 +2712,11 @@ export default function PlannerCalendarSurface({
                 void updateTaskWithUndo(
                   task,
                   { priority },
-                  language === "ru" ? "Приоритет изменен" : "Priority changed"
+                  translateInline(language, "plannerCalendarSurface.priorityChanged")
                 )
               }
             >
-              {labels[priority]}
+              {translateApp(language, `plannerCore.priorities.${priority}`)}
             </button>
           ))}
         </div>
@@ -2850,30 +2781,30 @@ export default function PlannerCalendarSurface({
 
     return (
       <section className="planner-calendar-inspector-section">
-        <span className="planner-calendar-inspector-label">{language === "ru" ? "Связи" : "Links"}</span>
+        <span className="planner-calendar-inspector-label">{translateInline(language, "plannerCalendarSurface.links")}</span>
         <div className="planner-calendar-link-list">
           {project ? (
             onOpenProjectMap ? (
               <button type="button" onClick={() => openLinkedProject(project.id)}>
                 <i style={{ "--project-color": project.color } as CSSProperties} />
-                {language === "ru" ? "Проект" : "Project"} · {project.name}
+                {translateInline(language, "plannerCalendarSurface.project2")} · {project.name}
               </button>
             ) : (
               <span>
                 <i style={{ "--project-color": project.color } as CSSProperties} />
-                {language === "ru" ? "Проект" : "Project"} · {project.name}
+                {translateInline(language, "plannerCalendarSurface.project3")} · {project.name}
               </span>
             )
           ) : null}
           {noteId && noteId !== canvasId ? (
             <button type="button" onClick={() => openLinkedDocument(noteId)} disabled={!onOpenNote}>
-              {language === "ru" ? "Заметка" : "Note"} · {note?.title || noteId}
+              {translateInline(language, "plannerCalendarSurface.note")} · {note?.title || noteId}
             </button>
           ) : null}
           {canvasId ? (
             <button type="button" onClick={() => openLinkedDocument(canvasId)} disabled={!onOpenNote}>
               {project ? <i style={{ "--project-color": project.color } as CSSProperties} /> : null}
-              {language === "ru" ? "Canvas" : "Canvas"} · {canvas?.title || canvasId}
+              {translateInline(language, "plannerCalendarSurface.canvas")} · {canvas?.title || canvasId}
             </button>
           ) : null}
         </div>
@@ -2895,38 +2826,24 @@ export default function PlannerCalendarSurface({
       const canToggleHabit = canToggleHabitCalendarEvent(calendarEvent, "inspector");
       const habitStatusLabel =
         calendarEvent.dayState === "future"
-          ? language === "ru"
-            ? "будущий ритм"
-            : "future rhythm"
+          ? translateInline(language, "plannerCalendarSurface.futureRhythm")
           : calendarEvent.dayState === "past-missed"
-            ? language === "ru"
-              ? "пропущено"
-              : "missed"
+            ? translateInline(language, "plannerCalendarSurface.missed")
             : calendarEvent.completed
-              ? language === "ru"
-                ? "отмечено"
-                : "done"
-              : language === "ru"
-                ? "ожидает отметки"
-                : "waiting";
+              ? translateInline(language, "plannerCalendarSurface.done")
+              : translateInline(language, "plannerCalendarSurface.waiting");
       const habitButtonLabel = calendarEvent.completed
-        ? language === "ru"
-          ? "Убрать отметку"
-          : "Undo check-in"
+        ? translateInline(language, "plannerCalendarSurface.undoCheckIn")
         : isPastMissedHabit
-          ? language === "ru"
-            ? "Отметить прошедший день"
-            : "Backfill this day"
-          : language === "ru"
-            ? "Отметить сегодня"
-            : "Check in today";
+          ? translateInline(language, "plannerCalendarSurface.backfillThisDay")
+          : translateInline(language, "plannerCalendarSurface.checkInToday");
       const toggleHabitFromInspector = async () => {
         if (!canToggleHabit) {
           return;
         }
 
         await onToggleHabitLog(calendarEvent.habit.id, calendarEvent.startAt);
-        showUndoToast(language === "ru" ? "Отметка привычки изменена" : "Habit check changed", async () => {
+        showUndoToast(translateInline(language, "plannerCalendarSurface.habitCheckChanged2"), async () => {
           await onToggleHabitLog(calendarEvent.habit.id, calendarEvent.startAt);
         });
       };
@@ -2936,18 +2853,18 @@ export default function PlannerCalendarSurface({
           <header className="planner-calendar-inspector-head is-habit">
             <div className="planner-calendar-inspector-orb" style={{ "--planner-calendar-event-color": calendarEvent.color } as CSSProperties} />
             <div>
-              <span className="planner-kicker">{language === "ru" ? "Привычка" : "Habit"}</span>
+              <span className="planner-kicker">{translateInline(language, "plannerCalendarSurface.habit")}</span>
               <h3>{calendarEvent.title}</h3>
               <p>{getPlannerHabitCadenceLabel(calendarEvent.habit.frequencyRule, language)}</p>
             </div>
-            <button type="button" onClick={() => setEventInspector(null)} aria-label={language === "ru" ? "Закрыть" : "Close"}>
+            <button type="button" onClick={() => setEventInspector(null)} aria-label={translateInline(language, "plannerCalendarSurface.close")}>
               ×
             </button>
           </header>
 
           <div className="planner-calendar-inspector-scroll">
             <section className={`planner-calendar-habit-status ${calendarEvent.completed ? "is-complete" : ""}`}>
-              <span className="planner-calendar-inspector-label">{language === "ru" ? "День привычки" : "Habit day"}</span>
+              <span className="planner-calendar-inspector-label">{translateInline(language, "plannerCalendarSurface.habitDay")}</span>
               <strong>
                 {formatPlannerDate(calendarEvent.startAt, language)}
                 {" · "}
@@ -2963,42 +2880,32 @@ export default function PlannerCalendarSurface({
               {!canToggleHabit ? (
                 <small>
                   {isArchived
-                    ? language === "ru"
-                      ? "Архивная привычка недоступна для отметок."
-                      : "Archived habit cannot be checked in."
+                    ? translateInline(language, "plannerCalendarSurface.archivedHabitCannotBeCheckedIn")
                     : isPaused
-                      ? language === "ru"
-                        ? "Пауза сохраняет streak и блокирует отметки."
-                        : "Paused habits keep the streak and block check-ins."
+                      ? translateInline(language, "plannerCalendarSurface.pausedHabitsKeepTheStreakAndBlock")
                       : isFutureHabit
-                        ? language === "ru"
-                          ? "Будущие привычки нельзя отмечать заранее."
-                          : "Future habits cannot be checked in ahead of time."
-                        : language === "ru"
-                          ? "Для этого дня отметка недоступна."
-                          : "This day cannot be checked in."}
+                        ? translateInline(language, "plannerCalendarSurface.futureHabitsCannotBeCheckedInAhead")
+                        : translateInline(language, "plannerCalendarSurface.thisDayCannotBeCheckedIn")}
                 </small>
               ) : null}
               {isPastMissedHabit && canToggleHabit ? (
                 <small>
-                  {language === "ru"
-                    ? "Это осознанное восстановление пропущенного дня, а не быстрая отметка из календаря."
-                    : "This is a deliberate backfill, not a quick calendar check-in."}
+                  {translateInline(language, "plannerCalendarSurface.thisIsADeliberateBackfillNotA")}
                 </small>
               ) : null}
             </section>
 
             <section className="planner-calendar-inspector-section">
-              <span className="planner-calendar-inspector-label">{language === "ru" ? "Ритм" : "Cadence"}</span>
+              <span className="planner-calendar-inspector-label">{translateInline(language, "plannerCalendarSurface.cadence")}</span>
               <div className="planner-calendar-habit-facts">
                 <span>
-                  <small>{language === "ru" ? "Повтор" : "Repeat"}</small>
+                  <small>{translateInline(language, "plannerCalendarSurface.repeat")}</small>
                   <strong>{getPlannerHabitCadenceLabel(calendarEvent.habit.frequencyRule, language)}</strong>
                 </span>
                 <span>
-                  <small>{language === "ru" ? "Цель" : "Target"}</small>
+                  <small>{translateInline(language, "plannerCalendarSurface.target")}</small>
                   <strong>
-                    {calendarEvent.habit.targetCount} {calendarEvent.habit.targetUnit || (language === "ru" ? "раз" : "times")}
+                    {calendarEvent.habit.targetCount} {calendarEvent.habit.targetUnit || (translateInline(language, "plannerCalendarSurface.times"))}
                   </strong>
                 </span>
               </div>
@@ -3006,7 +2913,7 @@ export default function PlannerCalendarSurface({
 
             {calendarEvent.habit.description.trim() ? (
               <section className="planner-calendar-inspector-section">
-                <span className="planner-calendar-inspector-label">{language === "ru" ? "Описание" : "Description"}</span>
+                <span className="planner-calendar-inspector-label">{translateInline(language, "plannerCalendarSurface.description")}</span>
                 <p className="planner-calendar-habit-description">{calendarEvent.habit.description}</p>
               </section>
             ) : null}
@@ -3109,7 +3016,7 @@ export default function PlannerCalendarSurface({
         await updateTaskWithUndo(
           calendarEvent.occurrence.task,
           { title: normalizedTitle },
-          language === "ru" ? "Название изменено" : "Title updated"
+          translateInline(language, "plannerCalendarSurface.titleUpdated")
         );
         return;
       }
@@ -3118,7 +3025,7 @@ export default function PlannerCalendarSurface({
         await updateTimeBlockWithUndo(
           calendarEvent.timeBlock,
           { title: normalizedTitle },
-          language === "ru" ? "Название изменено" : "Title updated"
+          translateInline(language, "plannerCalendarSurface.titleUpdated2")
         );
       }
     };
@@ -3129,7 +3036,7 @@ export default function PlannerCalendarSurface({
         await updateTaskWithUndo(
           calendarEvent.occurrence.task,
           { description: normalizedDescription },
-          language === "ru" ? "Описание изменено" : "Description updated"
+          translateInline(language, "plannerCalendarSurface.descriptionUpdated")
         );
         return;
       }
@@ -3138,7 +3045,7 @@ export default function PlannerCalendarSurface({
         await updateTimeBlockWithUndo(
           calendarEvent.timeBlock,
           { description: normalizedDescription },
-          language === "ru" ? "Описание изменено" : "Description updated"
+          translateInline(language, "plannerCalendarSurface.descriptionUpdated2")
         );
       }
     };
@@ -3149,12 +3056,8 @@ export default function PlannerCalendarSurface({
           <div>
             <span className="planner-kicker">
               {calendarEvent.kind === "timeBlock"
-                ? language === "ru"
-                  ? "Блок времени"
-                  : "Time block"
-                : language === "ru"
-                  ? "Событие"
-                  : "Event"}
+                ? translateInline(language, "plannerCalendarSurface.timeBlock")
+                : translateInline(language, "plannerCalendarSurface.event")}
             </span>
             <input
               className="planner-calendar-inspector-title-input"
@@ -3167,21 +3070,21 @@ export default function PlannerCalendarSurface({
                   event.currentTarget.blur();
                 }
               }}
-              placeholder={language === "ru" ? "Название события" : "Event title"}
+              placeholder={translateInline(language, "plannerCalendarSurface.eventTitle")}
             />
             <p>{getCalendarEventSubtitle(calendarEvent, language)}</p>
           </div>
-          <button type="button" onClick={() => setEventInspector(null)} aria-label={language === "ru" ? "Закрыть" : "Close"}>
+          <button type="button" onClick={() => setEventInspector(null)} aria-label={translateInline(language, "plannerCalendarSurface.close2")}>
             ×
           </button>
         </header>
 
         <div className="planner-calendar-inspector-scroll">
           <section className="planner-calendar-inspector-section">
-            <span className="planner-calendar-inspector-label">{language === "ru" ? "Дата" : "Date"}</span>
+            <span className="planner-calendar-inspector-label">{translateInline(language, "plannerCalendarSurface.date")}</span>
             <div className="planner-calendar-inspector-date-grid">
-              <button type="button" onClick={() => shiftDate(-1)}>{language === "ru" ? "− день" : "- day"}</button>
-              <button type="button" onClick={() => shiftDate(1)}>{language === "ru" ? "+ день" : "+ day"}</button>
+              <button type="button" onClick={() => shiftDate(-1)}>{translateInline(language, "plannerCalendarSurface.day")}</button>
+              <button type="button" onClick={() => shiftDate(1)}>{translateInline(language, "plannerCalendarSurface.day2")}</button>
             </div>
             {canEditTime ? (
               <div className="planner-calendar-time-control">
@@ -3190,52 +3093,46 @@ export default function PlannerCalendarSurface({
                   <span>
                     <small>
                       {calendarEvent.isAllDay
-                        ? language === "ru"
-                          ? "без времени"
-                          : "all-day"
-                        : language === "ru"
-                          ? "интервал"
-                          : "time"}
+                        ? translateInline(language, "plannerCalendarSurface.allDay3")
+                        : translateInline(language, "plannerCalendarSurface.time")}
                     </small>
                     <strong>
                       {calendarEvent.isAllDay
-                        ? language === "ru"
-                          ? "Назначить время"
-                          : "Set time"
+                        ? translateInline(language, "plannerCalendarSurface.setTime")
                         : `${formatPlannerTime(calendarEvent.startAt, language)} - ${formatPlannerTime(calendarEvent.endAt, language)}`}
                     </strong>
                   </span>
                 </button>
                 {!calendarEvent.isAllDay && canMakeAllDay ? (
                   <button type="button" className="planner-calendar-date-mode-button is-secondary" onClick={makeEventAllDay}>
-                    {language === "ru" ? "Весь день" : "All day"}
+                    {translateInline(language, "plannerCalendarSurface.allDay4")}
                   </button>
                 ) : null}
                 {isTimeEditorOpen ? (
                   <div className="planner-calendar-time-editor">
                     <div className="planner-calendar-time-editor-row">
-                      <span>{language === "ru" ? "Начало" : "Start"}</span>
+                      <span>{translateInline(language, "plannerCalendarSurface.start")}</span>
                       <PlannerTimeField
                         valueMinutes={activeTimeEditorDraft.startMinutes}
                         language={language}
-                        ariaLabel={language === "ru" ? "Время начала" : "Start time"}
+                        ariaLabel={translateInline(language, "plannerCalendarSurface.startTime")}
                         minMinutes={0}
                         maxMinutes={MAX_TIME_INPUT_START_MINUTES}
                         onChange={setTimeEditorStart}
                       />
                     </div>
                     <div className="planner-calendar-time-editor-row">
-                      <span>{language === "ru" ? "Конец" : "End"}</span>
+                      <span>{translateInline(language, "plannerCalendarSurface.end")}</span>
                       <PlannerTimeField
                         valueMinutes={timeEditorEndMinutes}
                         language={language}
-                        ariaLabel={language === "ru" ? "Время окончания" : "End time"}
+                        ariaLabel={translateInline(language, "plannerCalendarSurface.endTime")}
                         minMinutes={Math.min(MAX_TIME_INPUT_MINUTES, activeTimeEditorDraft.startMinutes + MIN_TIME_INPUT_DURATION_MINUTES)}
                         maxMinutes={MAX_TIME_INPUT_MINUTES}
                         onChange={setTimeEditorEnd}
                       />
                     </div>
-                    <div className="planner-calendar-time-editor-presets" aria-label={language === "ru" ? "Быстрая длительность" : "Quick duration"}>
+                    <div className="planner-calendar-time-editor-presets" aria-label={translateInline(language, "plannerCalendarSurface.quickDuration")}>
                       {QUICK_CREATE_DURATIONS.map((duration) => (
                         <button
                           key={duration}
@@ -3252,7 +3149,7 @@ export default function PlannerCalendarSurface({
                         {timeEditorStartLabel} - {timeEditorEndLabel} · {formatDurationMinutes(activeTimeEditorDraft.durationMinutes, language)}
                       </span>
                       <button type="button" onClick={applyTimeEditor}>
-                        {language === "ru" ? "Применить" : "Apply"}
+                        {translateInline(language, "plannerCalendarSurface.apply")}
                       </button>
                     </div>
                   </div>
@@ -3266,7 +3163,7 @@ export default function PlannerCalendarSurface({
 
           {task ? (
             <section className="planner-calendar-inspector-section">
-              <span className="planner-calendar-inspector-label">{language === "ru" ? "Напоминание" : "Reminder"}</span>
+              <span className="planner-calendar-inspector-label">{translateInline(language, "plannerCalendarSurface.reminder2")}</span>
               <button
                 type="button"
                 className="planner-calendar-reminder-card"
@@ -3274,7 +3171,7 @@ export default function PlannerCalendarSurface({
               >
                 <span className="planner-calendar-reminder-icon" aria-hidden="true" />
                 <span>
-                  <small>{reminderPreset === "none" ? (language === "ru" ? "Добавить" : "Add") : language === "ru" ? "Выбрано" : "Selected"}</small>
+                  <small>{reminderPreset === "none" ? (translateInline(language, "plannerCalendarSurface.add")) : translateInline(language, "plannerCalendarSurface.selected")}</small>
                   <strong>{getReminderLabel(reminderPreset, language)}</strong>
                 </span>
               </button>
@@ -3297,21 +3194,21 @@ export default function PlannerCalendarSurface({
 
           {canEditDescription ? (
             <section className="planner-calendar-inspector-section">
-              <span className="planner-calendar-inspector-label">{language === "ru" ? "Описание" : "Description"}</span>
+              <span className="planner-calendar-inspector-label">{translateInline(language, "plannerCalendarSurface.description2")}</span>
               <textarea
                 className="planner-calendar-inspector-description"
                 value={inspectorDescriptionDraft}
                 rows={inspectorDescriptionDraft ? 4 : 2}
                 onChange={(event) => setInspectorDescriptionDraft(event.target.value)}
                 onBlur={() => void commitDescription()}
-                placeholder={language === "ru" ? "Контекст, критерии готовности, ссылки..." : "Context, notes, links..."}
+                placeholder={translateInline(language, "plannerCalendarSurface.contextNotesLinks")}
               />
             </section>
           ) : null}
 
           {task ? (
             <section className="planner-calendar-inspector-section">
-              <span className="planner-calendar-inspector-label">{language === "ru" ? "Теги" : "Tags"}</span>
+              <span className="planner-calendar-inspector-label">{translateInline(language, "plannerCalendarSurface.tags")}</span>
               {onCreateTag ? (
                 <TagInputField
                   tags={tags}
@@ -3324,13 +3221,13 @@ export default function PlannerCalendarSurface({
                     updateTaskWithUndo(
                       task,
                       { tagIds },
-                      language === "ru" ? "Теги изменены" : "Tags updated"
+                      translateInline(language, "plannerCalendarSurface.tagsUpdated")
                     )
                   }
                 />
               ) : (
                 <p className="planner-calendar-inspector-muted">
-                  {language === "ru" ? "Теги можно добавить в документах." : "Tags can be added in documents."}
+                  {translateInline(language, "plannerCalendarSurface.tagsCanBeAddedInDocuments")}
                 </p>
               )}
             </section>
@@ -3354,7 +3251,7 @@ export default function PlannerCalendarSurface({
             type="button"
             className="planner-calendar-inspector-backdrop"
             onClick={() => setEventInspector(null)}
-            aria-label={language === "ru" ? "Закрыть инспектор" : "Close inspector"}
+            aria-label={translateInline(language, "plannerCalendarSurface.closeInspector")}
           />
         ) : null}
         <section
@@ -3376,20 +3273,12 @@ export default function PlannerCalendarSurface({
 
     const title =
       scopedAction.kind === "complete"
-        ? language === "ru"
-          ? "Отметить повтор?"
-          : "Complete repeating event?"
+        ? translateInline(language, "plannerCalendarSurface.completeRepeatingEvent")
         : scopedAction.kind === "remove"
-          ? language === "ru"
-            ? "Убрать повтор?"
-            : "Remove repeating event?"
+          ? translateInline(language, "plannerCalendarSurface.removeRepeatingEvent")
           : scopedAction.kind === "resize"
-            ? language === "ru"
-              ? "Изменить длительность?"
-              : "Change duration?"
-            : language === "ru"
-              ? "Перенести повтор?"
-              : "Move repeating event?";
+            ? translateInline(language, "plannerCalendarSurface.changeDuration")
+            : translateInline(language, "plannerCalendarSurface.moveRepeatingEvent");
 
     return (
       <div className="planner-calendar-scope-layer" role="dialog" aria-modal="true">
@@ -3397,28 +3286,26 @@ export default function PlannerCalendarSurface({
           type="button"
           className="planner-calendar-scope-backdrop"
           onClick={() => setScopedAction(null)}
-          aria-label={language === "ru" ? "Отмена" : "Cancel"}
+          aria-label={translateInline(language, "plannerCalendarSurface.cancel")}
         />
         <section className="planner-calendar-scope-dialog">
-          <span className="planner-kicker">{language === "ru" ? "Повторяющаяся задача" : "Recurring task"}</span>
+          <span className="planner-kicker">{translateInline(language, "plannerCalendarSurface.recurringTask")}</span>
           <h3>{title}</h3>
           <p>
-            {language === "ru"
-              ? "Выбери, применить действие только к этому событию, ко всем будущим или ко всей серии."
-              : "Choose whether to apply this to this occurrence, future events, or the whole series."}
+            {translateInline(language, "plannerCalendarSurface.chooseWhetherToApplyThisToThis")}
           </p>
           <div>
             <button type="button" onClick={() => void applyScopedAction("this")}>
-              <strong>{language === "ru" ? "Только это" : "Only this"}</strong>
-              <small>{language === "ru" ? "Аккуратный override для выбранной даты" : "A precise override for this date"}</small>
+              <strong>{translateInline(language, "plannerCalendarSurface.onlyThis")}</strong>
+              <small>{translateInline(language, "plannerCalendarSurface.aPreciseOverrideForThisDate")}</small>
             </button>
             <button type="button" onClick={() => void applyScopedAction("future")}>
-              <strong>{language === "ru" ? "Это и будущие" : "This and future"}</strong>
-              <small>{language === "ru" ? "Серия будет разделена с этой даты" : "Splits the series from this date"}</small>
+              <strong>{translateInline(language, "plannerCalendarSurface.thisAndFuture")}</strong>
+              <small>{translateInline(language, "plannerCalendarSurface.splitsTheSeriesFromThisDate")}</small>
             </button>
             <button type="button" onClick={() => void applyScopedAction("all")}>
-              <strong>{language === "ru" ? "Вся серия" : "Whole series"}</strong>
-              <small>{language === "ru" ? "Применить ко всем повторам" : "Apply to every occurrence"}</small>
+              <strong>{translateInline(language, "plannerCalendarSurface.wholeSeries")}</strong>
+              <small>{translateInline(language, "plannerCalendarSurface.applyToEveryOccurrence")}</small>
             </button>
           </div>
         </section>
@@ -3447,7 +3334,7 @@ export default function PlannerCalendarSurface({
           type="button"
           className="planner-calendar-mobile-sheet-backdrop"
           onClick={() => setMobilePanel(null)}
-          aria-label={language === "ru" ? "Закрыть панель" : "Close panel"}
+          aria-label={translateInline(language, "plannerCalendarSurface.closePanel")}
         />
         <section className={`planner-calendar-mobile-sheet is-${mobilePanel}`}>
           <div className="planner-calendar-mobile-sheet-handle" aria-hidden="true" />
@@ -3455,21 +3342,13 @@ export default function PlannerCalendarSurface({
             <div>
               <span className="planner-kicker">
                 {isAgendaPanel
-                  ? language === "ru"
-                    ? "Повестка"
-                    : "Agenda"
-                  : language === "ru"
-                    ? "Планирование"
-                    : "Scheduling"}
+                  ? translateInline(language, "plannerCalendarSurface.agenda")
+                  : translateInline(language, "plannerCalendarSurface.scheduling")}
               </span>
               <h3>
                 {isAgendaPanel
-                  ? language === "ru"
-                    ? "Повестка"
-                    : "Agenda"
-                  : language === "ru"
-                    ? "Без даты"
-                    : "No date"}
+                  ? translateInline(language, "plannerCalendarSurface.agenda2")
+                  : translateInline(language, "plannerCalendarSurface.noDate4")}
               </h3>
               {isAgendaPanel ? <p>{selectedDayAgendaLabel}</p> : null}
             </div>
@@ -3477,7 +3356,7 @@ export default function PlannerCalendarSurface({
             <button
               type="button"
               onClick={() => setMobilePanel(null)}
-              aria-label={language === "ru" ? "Закрыть" : "Close"}
+              aria-label={translateInline(language, "plannerCalendarSurface.close3")}
             >
               ×
             </button>
@@ -3501,7 +3380,7 @@ export default function PlannerCalendarSurface({
           type="button"
           className="planner-calendar-quick-create-backdrop"
           onClick={() => setQuickCreateDraft(null)}
-          aria-label={language === "ru" ? "Закрыть создание задачи" : "Close task creation"}
+          aria-label={translateInline(language, "plannerCalendarSurface.closeTaskCreation")}
         />
         <form
           className="planner-calendar-quick-create"
@@ -3512,29 +3391,29 @@ export default function PlannerCalendarSurface({
         >
           <header>
             <div>
-              <span className="planner-kicker">{language === "ru" ? "Новая задача" : "New task"}</span>
+              <span className="planner-kicker">{translateInline(language, "plannerCalendarSurface.newTask")}</span>
               <h3>
                 {quickCreateDraft.mode === "time"
                   ? `${formatPlannerTime(quickCreateDraft.startAt, language)} - ${formatPlannerTime(quickCreateDraft.endAt, language)}`
                   : formatPlannerDate(quickCreateDraft.startAt, language)}
               </h3>
             </div>
-            <button type="button" onClick={() => setQuickCreateDraft(null)} aria-label={language === "ru" ? "Закрыть" : "Close"}>
+            <button type="button" onClick={() => setQuickCreateDraft(null)} aria-label={translateInline(language, "plannerCalendarSurface.close4")}>
               ×
             </button>
           </header>
           <label>
-            <span>{language === "ru" ? "Название" : "Title"}</span>
+            <span>{translateInline(language, "plannerCalendarSurface.title")}</span>
             <input
               autoFocus
               value={quickCreateDraft.title}
               onChange={(event) => setQuickCreateDraft((current) => (current ? { ...current, title: event.target.value } : current))}
-              placeholder={language === "ru" ? "Что запланировать?" : "What should be planned?"}
+              placeholder={translateInline(language, "plannerCalendarSurface.whatShouldBePlanned")}
             />
           </label>
           {quickCreateDraft.mode === "time" ? (
             <section className="planner-calendar-quick-duration">
-              <span>{language === "ru" ? "Длительность" : "Duration"}</span>
+              <span>{translateInline(language, "plannerCalendarSurface.duration")}</span>
               <div>
                 {QUICK_CREATE_DURATIONS.map((duration) => {
                   const currentDuration = quickCreateDraft.endAt
@@ -3549,12 +3428,8 @@ export default function PlannerCalendarSurface({
                       onClick={() => updateQuickCreateDuration(duration)}
                     >
                       {duration < 60
-                        ? language === "ru"
-                          ? `${duration} мин`
-                          : `${duration}m`
-                        : language === "ru"
-                          ? `${duration / 60} ч`
-                          : `${duration / 60}h`}
+                        ? translateInline(language, "plannerCalendarSurface.m2", { value0: duration })
+                        : translateInline(language, "plannerCalendarSurface.h2", { value0: duration / 60 })}
                     </button>
                   );
                 })}
@@ -3563,10 +3438,10 @@ export default function PlannerCalendarSurface({
           ) : null}
           <footer>
             <button type="button" onClick={() => setQuickCreateDraft(null)}>
-              {language === "ru" ? "Отмена" : "Cancel"}
+              {translateInline(language, "plannerCalendarSurface.cancel2")}
             </button>
             <button type="submit" className="is-primary" disabled={!quickCreateDraft.title.trim()}>
-              {language === "ru" ? "Создать" : "Create"}
+              {translateInline(language, "plannerCalendarSurface.create")}
             </button>
           </footer>
         </form>
@@ -3578,23 +3453,23 @@ export default function PlannerCalendarSurface({
     const filters: Array<{ id: CalendarFilterId; label: string; hint: string }> = [
       {
         id: "tasks",
-        label: language === "ru" ? "Задачи" : "Tasks",
-        hint: language === "ru" ? "Показать задачи и блоки времени" : "Show tasks and time blocks"
+        label: translateInline(language, "plannerCalendarSurface.tasks"),
+        hint: translateInline(language, "plannerCalendarSurface.showTasksAndTimeBlocks")
       },
       {
         id: "habits",
-        label: language === "ru" ? "Привычки" : "Habits",
-        hint: language === "ru" ? "Показать привычки прошлого и сегодняшнего дня" : "Show past and today habits"
+        label: translateInline(language, "plannerCalendarSurface.habits"),
+        hint: translateInline(language, "plannerCalendarSurface.showPastAndTodayHabits")
       },
       {
         id: "futureHabits",
-        label: language === "ru" ? "Будущие" : "Future",
-        hint: language === "ru" ? "Показать будущие привычки тихим слоем" : "Show future habits as a quiet layer"
+        label: translateInline(language, "plannerCalendarSurface.future"),
+        hint: translateInline(language, "plannerCalendarSurface.showFutureHabitsAsAQuietLayer")
       },
       {
         id: "completed",
-        label: language === "ru" ? "Завершенные" : "Done",
-        hint: language === "ru" ? "Показать завершенные задачи и отмеченные привычки" : "Show completed tasks and checked habits"
+        label: translateInline(language, "plannerCalendarSurface.done2"),
+        hint: translateInline(language, "plannerCalendarSurface.showCompletedTasksAndCheckedHabits")
       }
     ];
 
@@ -3613,7 +3488,7 @@ export default function PlannerCalendarSurface({
       <div
         className="planner-calendar-filter-row"
         role="toolbar"
-        aria-label={language === "ru" ? "Фильтры календаря" : "Calendar filters"}
+        aria-label={translateInline(language, "plannerCalendarSurface.calendarFilters")}
         onWheel={handleFilterWheel}
       >
         {filters.map((filter) => {
@@ -3668,13 +3543,13 @@ export default function PlannerCalendarSurface({
       <div className="planner-calendar-shell">
         <header className="planner-calendar-head">
           <div className="planner-calendar-title">
-            <span className="planner-kicker">{language === "ru" ? "Календарь" : "Calendar"}</span>
+            <span className="planner-kicker">{translateInline(language, "plannerCalendarSurface.calendar")}</span>
             <div className="planner-calendar-period-nav">
               <button
                 type="button"
                 className="planner-calendar-period-arrow"
                 onClick={() => shiftCursor(-1)}
-                aria-label={language === "ru" ? "Предыдущий период" : "Previous period"}
+                aria-label={translateInline(language, "plannerCalendarSurface.previousPeriod")}
               >
                 ‹
               </button>
@@ -3685,7 +3560,7 @@ export default function PlannerCalendarSurface({
                 type="button"
                 className="planner-calendar-period-arrow"
                 onClick={() => shiftCursor(1)}
-                aria-label={language === "ru" ? "Следующий период" : "Next period"}
+                aria-label={translateInline(language, "plannerCalendarSurface.nextPeriod")}
               >
                 ›
               </button>
@@ -3694,24 +3569,22 @@ export default function PlannerCalendarSurface({
                 className={`planner-calendar-today-button ${isCalendarAtToday ? "is-current" : ""}`}
                 onClick={goToToday}
                 aria-pressed={isCalendarAtToday}
-                aria-label={language === "ru" ? "Вернуться к сегодняшнему дню" : "Return to today"}
+                aria-label={translateInline(language, "plannerCalendarSurface.returnToToday")}
               >
                 <span className="planner-calendar-today-icon" aria-hidden="true" />
                 <span className="planner-calendar-today-label">
-                  {isCalendarAtToday ? (language === "ru" ? "Сегодня" : "Today") : language === "ru" ? "К сегодня" : "To today"}
+                  {isCalendarAtToday ? (translateInline(language, "plannerCalendarSurface.today")) : translateInline(language, "plannerCalendarSurface.toToday")}
                 </span>
               </button>
             </div>
             <p>
-              {language === "ru"
-                ? "Планируй задачи как блоки времени: сроки остаются сроками, расписание становится видимым."
-                : "Plan tasks as time blocks: due dates stay due dates, scheduled work becomes visible."}
+              {translateInline(language, "plannerCalendarSurface.planTasksAsTimeBlocksDueDates")}
             </p>
             {!isMobile ? renderCalendarFilters() : null}
           </div>
 
           <div className="planner-calendar-head-actions">
-            <div className="planner-calendar-mode-switch" role="radiogroup" aria-label={language === "ru" ? "Режим календаря" : "Calendar mode"}>
+            <div className="planner-calendar-mode-switch" role="radiogroup" aria-label={translateInline(language, "plannerCalendarSurface.calendarMode")}>
               {(["day", "week", "month"] as CalendarMode[]).map((nextMode) => (
                 <button
                   key={nextMode}
@@ -3722,16 +3595,10 @@ export default function PlannerCalendarSurface({
                   aria-checked={mode === nextMode}
                 >
                   {nextMode === "day"
-                    ? language === "ru"
-                      ? "День"
-                      : "Day"
+                    ? translateInline(language, "plannerCalendarSurface.day3")
                     : nextMode === "week"
-                      ? language === "ru"
-                        ? "Неделя"
-                        : "Week"
-                      : language === "ru"
-                        ? "Месяц"
-                        : "Month"}
+                      ? translateInline(language, "plannerCalendarSurface.week")
+                      : translateInline(language, "plannerCalendarSurface.month")}
                 </button>
               ))}
             </div>
@@ -3742,10 +3609,10 @@ export default function PlannerCalendarSurface({
               onClick={() => openQuickCreate(selectedQuickCreateDayAt, mode === "day" ? selectedQuickCreateHour ?? 9 : null)}
             >
               <span aria-hidden="true">+</span>
-              {language === "ru" ? "Новая" : "New"}
+              {translateInline(language, "plannerCalendarSurface.new")}
             </button>
 
-            <button type="button" className="planner-calendar-close" onClick={onClose} aria-label={language === "ru" ? "Закрыть календарь" : "Close calendar"}>
+            <button type="button" className="planner-calendar-close" onClick={onClose} aria-label={translateInline(language, "plannerCalendarSurface.closeCalendar")}>
               ×
             </button>
           </div>
@@ -3757,7 +3624,7 @@ export default function PlannerCalendarSurface({
           <main
             ref={calendarBoardRef}
             className="planner-calendar-board"
-            aria-label={language === "ru" ? "Рабочая область календаря" : "Calendar workspace"}
+            aria-label={translateInline(language, "plannerCalendarSurface.calendarWorkspace")}
           >
             {mode === "day" ? renderDayAgenda(range.days[0], dayModeEvents) : renderCalendarGrid()}
           </main>
@@ -3769,7 +3636,7 @@ export default function PlannerCalendarSurface({
             >
               <div className="planner-calendar-side-title">
                 <div>
-                  <span>{language === "ru" ? "Повестка" : "Agenda"}</span>
+                  <span>{translateInline(language, "plannerCalendarSurface.agenda3")}</span>
                   <em>{selectedDayAgendaLabel}</em>
                 </div>
                 <small>{selectedDayEvents.length}</small>
@@ -3779,7 +3646,7 @@ export default function PlannerCalendarSurface({
 
             <section className="planner-calendar-side-card is-unscheduled">
               <div className="planner-calendar-side-title">
-                <span>{language === "ru" ? "Без даты" : "No date"}</span>
+                <span>{translateInline(language, "plannerCalendarSurface.noDate5")}</span>
                 <small>{unscheduledTasks.length}</small>
               </div>
               {renderUnscheduledList()}
@@ -3788,25 +3655,25 @@ export default function PlannerCalendarSurface({
         </div>
 
         {isMobile ? (
-          <nav className="planner-calendar-mobile-dock" aria-label={language === "ru" ? "Панели календаря" : "Calendar panels"}>
+          <nav className="planner-calendar-mobile-dock" aria-label={translateInline(language, "plannerCalendarSurface.calendarPanels")}>
             <button type="button" onClick={() => setMobilePanel("agenda")}>
               <span className="planner-calendar-mobile-dock-icon is-agenda" aria-hidden="true" />
               <span>
-                <strong>{language === "ru" ? "Повестка" : "Agenda"}</strong>
+                <strong>{translateInline(language, "plannerCalendarSurface.agenda4")}</strong>
                 <small>{selectedDayEvents.length}</small>
               </span>
             </button>
             <button type="button" onClick={() => setMobilePanel("unscheduled")}>
               <span className="planner-calendar-mobile-dock-icon is-unscheduled" aria-hidden="true" />
               <span>
-                <strong>{language === "ru" ? "Без даты" : "No date"}</strong>
+                <strong>{translateInline(language, "plannerCalendarSurface.noDate6")}</strong>
                 <small>{unscheduledTasks.length}</small>
               </span>
             </button>
             <button type="button" onClick={() => openQuickCreate(selectedQuickCreateDayAt, selectedQuickCreateHour)}>
               <span className="planner-calendar-mobile-dock-icon is-create" aria-hidden="true" />
               <span>
-                <strong>{language === "ru" ? "Новая" : "New"}</strong>
+                <strong>{translateInline(language, "plannerCalendarSurface.new2")}</strong>
                 <small>{selectedDay ? formatPlannerDate(selectedDay.startAt, language) : ""}</small>
               </span>
             </button>

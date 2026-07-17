@@ -1,18 +1,23 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { formatDateTimeValue, useLocale, type LocaleRuntime } from "../../localization";
 
 import type { LocalVaultProfile } from "../../lib/localVaults";
 import { useAndroidBackHandler } from "../../lib/useAndroidBackHandler";
 import type { RemoteVaultImportResult, SyncConnection, SyncRemoteVault, SyncVaultBinding, VaultEncryptionSummary } from "../../types";
 import "./SyncSettingsMobile.css";
 
-type SyncFeedbackState = {
-  tone: "success" | "error";
-  text: string;
-} | null;
-
 type ConnectionAvailabilityState = "checking" | "available" | "unavailable" | "authError";
 type MobileTab = "vaults" | "connections";
+
+function renderMobilePortal(content: ReactNode) {
+  if (typeof document === "undefined") {
+    return content;
+  }
+
+  return createPortal(content, document.body);
+}
 
 type SyncSettingsMobileProps = {
   online: boolean;
@@ -21,6 +26,8 @@ type SyncSettingsMobileProps = {
   selectedLocalVaultId: string;
   syncConnections: SyncConnection[];
   syncBindings: SyncVaultBinding[];
+  bindingConnections: SyncConnection[];
+  vaultBindings: SyncVaultBinding[];
   vaultEncryptionById: Record<string, VaultEncryptionSummary>;
   connectionAvailability: Record<string, ConnectionAvailabilityState>;
   remoteVaultsByConnectionId: Record<string, SyncRemoteVault[]>;
@@ -29,10 +36,8 @@ type SyncSettingsMobileProps = {
   pendingBindVaultId: string | null;
   bindingSheetVault: LocalVaultProfile | null;
   busyKey: string | null;
-  feedback: SyncFeedbackState;
   getVaultLabel: (vault: Pick<LocalVaultProfile, "id" | "name"> | null | undefined) => string;
-  onBack: () => void;
-  onClose: () => void;
+  getBindingErrorLabel: (errorCode: string | null) => string | null;
   onSelectLocalVault: (localVaultId: string) => void;
   onCreateVault: () => void;
   onRenameVault: (vault: LocalVaultProfile) => void;
@@ -51,7 +56,9 @@ type SyncSettingsMobileProps = {
   onDeleteRemoteVault: (connection: SyncConnection, remoteVault: SyncRemoteVault) => void;
   onBindAllVaults: (connection: SyncConnection) => void;
   onDeleteConnection: (connectionId: string) => void | Promise<void>;
+  onRevokeGoogleDriveConnection: (connectionId: string) => void | Promise<void>;
   onRepairConnection: (connection: SyncConnection) => void | Promise<void>;
+  onManageSelfHostedAccess: (connection: SyncConnection) => void;
 };
 
 function MobileIconButton({
@@ -78,14 +85,6 @@ function MobileIconButton({
     >
       {children}
     </button>
-  );
-}
-
-function BackGlyph() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M12.4 4.8 7.2 10l5.2 5.2" />
-    </svg>
   );
 }
 
@@ -219,25 +218,17 @@ function providerAccent(provider: SyncConnection["provider"]) {
   return "#ffd27d";
 }
 
-function formatTime(timestamp: number | null, locale: string) {
+function formatTime(timestamp: number | null, runtime: LocaleRuntime) {
   if (!timestamp) {
     return "—";
   }
 
-  return new Date(timestamp).toLocaleString(locale, {
+  return formatDateTimeValue(timestamp, runtime, {
     hour: "2-digit",
     minute: "2-digit",
     day: "2-digit",
     month: "short"
   });
-}
-
-function maskToken(value: string) {
-  if (!value || value.length <= 8) {
-    return "••••";
-  }
-
-  return `${value.slice(0, 4)}••••${value.slice(-3)}`;
 }
 
 export default function SyncSettingsMobile({
@@ -247,6 +238,8 @@ export default function SyncSettingsMobile({
   selectedLocalVaultId,
   syncConnections,
   syncBindings,
+  bindingConnections,
+  vaultBindings,
   vaultEncryptionById,
   connectionAvailability,
   remoteVaultsByConnectionId,
@@ -255,10 +248,8 @@ export default function SyncSettingsMobile({
   pendingBindVaultId,
   bindingSheetVault,
   busyKey,
-  feedback,
   getVaultLabel,
-  onBack,
-  onClose,
+  getBindingErrorLabel,
   onSelectLocalVault,
   onCreateVault,
   onRenameVault,
@@ -277,20 +268,27 @@ export default function SyncSettingsMobile({
   onDeleteRemoteVault,
   onBindAllVaults,
   onDeleteConnection,
-  onRepairConnection
+  onRevokeGoogleDriveConnection,
+  onRepairConnection,
+  onManageSelfHostedAccess
 }: SyncSettingsMobileProps) {
   const { t, i18n } = useTranslation();
+  const { runtime: localeRuntime } = useLocale();
   const [activeTab, setActiveTab] = useState<MobileTab>("vaults");
   const [detailConnectionId, setDetailConnectionId] = useState<string | null>(null);
   const [isMobilePortrait, setIsMobilePortrait] = useState(false);
 
   const bindingsByVaultId = useMemo(
-    () => new Map(syncBindings.map((binding) => [binding.localVaultId, binding])),
-    [syncBindings]
+    () => new Map(vaultBindings.map((binding) => [binding.localVaultId, binding])),
+    [vaultBindings]
   );
   const connectionsById = useMemo(
     () => new Map(syncConnections.map((connection) => [connection.id, connection])),
     [syncConnections]
+  );
+  const bindingConnectionsById = useMemo(
+    () => new Map(bindingConnections.map((connection) => [connection.id, connection])),
+    [bindingConnections]
   );
   const localVaultByGuid = useMemo(
     () => new Map(localVaults.map((vault) => [vault.vaultGuid, vault])),
@@ -389,11 +387,19 @@ export default function SyncSettingsMobile({
       ? connection.userName || t("sync.hostedAccountSignedOut")
       : connection.provider === "googleDrive"
         ? t("settings.googleDriveSessionReady")
-        : `${t("sync.managementToken")}: ${maskToken(connection.managementToken)}`;
+        : connection.selfHostedRole === "guest"
+          ? t("settings.selfHostedGuestDeviceAccess")
+          : connection.selfHostedDeviceId
+            ? t("settings.selfHostedTrustedDeviceAccess")
+            : t("settings.selfHostedLegacyAccess");
 
   const renderRemoteVaultCard = (connection: SyncConnection, remoteVault: SyncRemoteVault) => {
     const matchingLocalVault = localVaultByGuid.get(remoteVault.id) ?? null;
     const matchingBinding = matchingLocalVault ? bindingsByVaultId.get(matchingLocalVault.id) ?? null : null;
+    const matchingBindingConnection = matchingBinding
+      ? bindingConnectionsById.get(matchingBinding.connectionId) ?? null
+      : null;
+    const isLocorisCloudManaged = matchingBindingConnection?.role === "locorisCloud";
     const isLinkedHere =
       matchingBinding?.connectionId === connection.id && matchingBinding.remoteVaultId === remoteVault.id;
     const hasNameCollision = !matchingLocalVault && localVaultNameSet.has(remoteVault.name.trim().toLowerCase());
@@ -410,6 +416,9 @@ export default function SyncSettingsMobile({
           {matchingLocalVault && !isLinkedHere ? (
             <span className="sync-mobile-chip is-info">{t("settings.remoteVaultOnDevice")}</span>
           ) : null}
+          {isLocorisCloudManaged ? (
+            <span className="sync-mobile-chip is-cloud">{t("settings.accountCloudConnected")}</span>
+          ) : null}
           {hasNameCollision ? (
             <span className="sync-mobile-chip is-count">{t("settings.remoteVaultNameCollision")}</span>
           ) : null}
@@ -424,7 +433,7 @@ export default function SyncSettingsMobile({
         <span className="sync-mobile-muted">{t("settings.remoteVaultIdLabel", { id: remoteVault.id })}</span>
         <span className="sync-mobile-muted">
           {t("settings.remoteVaultUpdatedAt", {
-            time: formatTime(remoteVault.lastSyncAt ?? remoteVault.updatedAt, i18n.language)
+            time: formatTime(remoteVault.lastSyncAt ?? remoteVault.updatedAt, localeRuntime)
           })}
         </span>
         {matchingLocalVault ? (
@@ -438,7 +447,7 @@ export default function SyncSettingsMobile({
         ) : null}
 
         <div className="sync-mobile-remote-actions">
-          {!isLinkedHere ? (
+          {!isLinkedHere && !isLocorisCloudManaged ? (
             <button
               type="button"
               className="sync-mobile-secondary-action"
@@ -467,7 +476,10 @@ export default function SyncSettingsMobile({
     <div className="sync-mobile-list">
       {localVaults.map((vault) => {
         const binding = bindingsByVaultId.get(vault.id) ?? null;
-        const bindingConnection = binding ? connectionsById.get(binding.connectionId) ?? null : null;
+        const bindingConnection = binding
+          ? bindingConnectionsById.get(binding.connectionId) ?? null
+          : null;
+        const isLocorisCloudManaged = bindingConnection?.role === "locorisCloud";
         const encryption =
           vaultEncryptionById[vault.id] ?? {
             enabled: false,
@@ -478,6 +490,13 @@ export default function SyncSettingsMobile({
         const privateEncryptionVisible = vault.vaultKind === "private" && encryption.state !== "disabled";
         const needsUnlock =
           (binding?.lastError === "VAULT_ENCRYPTION_LOCKED" || encryption.state === "locked") && encryption.enabled;
+        const needsGoogleDriveSignIn = Boolean(
+          binding &&
+            bindingConnection?.provider === "googleDrive" &&
+            ["GOOGLE_DRIVE_AUTH_REQUIRED", "GOOGLE_DRIVE_INTERACTION_REQUIRED"].includes(
+              binding.lastError ?? ""
+            )
+        );
         const isSelected = selectedLocalVaultId === vault.id;
         const isActive = activeLocalVaultId === vault.id;
         const statusLabel = !binding
@@ -506,6 +525,11 @@ export default function SyncSettingsMobile({
               {privateEncryptionVisible ? (
                 <span className={`sync-mobile-chip ${encryption.state === "ready" ? "is-encrypted-ready" : "is-encrypted-locked"}`}>
                   {encryption.state === "ready" ? t("settings.vaultEncryptionReady") : t("settings.vaultEncryptionLocked")}
+                </span>
+              ) : null}
+              {isLocorisCloudManaged ? (
+                <span className="sync-mobile-chip is-cloud">
+                  {t("settings.accountCloudConnected")}
                 </span>
               ) : null}
               <span
@@ -542,12 +566,30 @@ export default function SyncSettingsMobile({
                     : t("sync.localVaultUnbound")}
                 </span>
                 {binding ? (
-                  <small>{`${binding.remoteVaultName} · ${formatTime(binding.lastSyncAt, i18n.language)}`}</small>
+                  <small>{`${binding.remoteVaultName} · ${formatTime(binding.lastSyncAt, localeRuntime)}`}</small>
+                ) : null}
+                {binding?.lastError && binding.lastError !== "VAULT_ENCRYPTION_LOCKED" ? (
+                  <small className="sync-mobile-binding-error" role="status">
+                    {getBindingErrorLabel(binding.lastError)}
+                  </small>
                 ) : null}
               </div>
             </div>
 
             <div className="sync-mobile-action-row">
+              {needsGoogleDriveSignIn && bindingConnection ? (
+                <button
+                  type="button"
+                  className="sync-mobile-primary-action"
+                  disabled={busyKey !== null}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void onRepairConnection(bindingConnection);
+                  }}
+                >
+                  {t("settings.googleDriveReconnect")}
+                </button>
+              ) : null}
               {privateEncryptionVisible ? (
                 <button
                   type="button"
@@ -565,27 +607,31 @@ export default function SyncSettingsMobile({
                   </span>
                 </button>
               ) : null}
-              <button
-                type="button"
-                className={`sync-mobile-primary-action ${binding ? "is-change" : ""}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onStartVaultBinding(vault);
-                }}
-              >
-                {binding ? t("settings.changeBindingAction") : t("settings.bindVaultAction")}
-              </button>
-              {binding ? (
-                <button
-                  type="button"
-                  className="sync-mobile-secondary-action is-danger-soft"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void onClearBinding(vault.id);
-                  }}
-                >
-                  {t("settings.unbindVaultAction")}
-                </button>
+              {!isLocorisCloudManaged ? (
+                <>
+                  <button
+                    type="button"
+                    className={`sync-mobile-primary-action ${binding ? "is-change" : ""}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onStartVaultBinding(vault);
+                    }}
+                  >
+                    {binding ? t("settings.changeBindingAction") : t("settings.bindVaultAction")}
+                  </button>
+                  {binding ? (
+                    <button
+                      type="button"
+                      className="sync-mobile-secondary-action is-danger-soft"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void onClearBinding(vault.id);
+                      }}
+                    >
+                      {t("settings.unbindVaultAction")}
+                    </button>
+                  ) : null}
+                </>
               ) : null}
               <MobileIconButton
                 label={t("sync.localVaultRename")}
@@ -670,6 +716,19 @@ export default function SyncSettingsMobile({
               </div>
 
               <div className="sync-mobile-action-row">
+                {connection.provider === "googleDrive" && availability === "authError" ? (
+                  <button
+                    type="button"
+                    className="sync-mobile-primary-action"
+                    disabled={busyKey !== null}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void onRepairConnection(connection);
+                    }}
+                  >
+                    {t("settings.googleDriveReconnect")}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="sync-mobile-primary-action"
@@ -705,7 +764,7 @@ export default function SyncSettingsMobile({
       return null;
     }
 
-    return (
+    return renderMobilePortal(
       <div className="sync-mobile-sheet-layer" role="dialog" aria-modal="true">
         <button type="button" className="sync-mobile-sheet-dim" aria-label={t("orbit.closeModal")} onClick={onCancelVaultBinding} />
         <section className="sync-mobile-sheet is-binding">
@@ -806,7 +865,7 @@ export default function SyncSettingsMobile({
         detailConnection.provider === "googleDrive") &&
       availability === "authError";
 
-    return (
+    return renderMobilePortal(
       <div className="sync-mobile-sheet-layer" role="dialog" aria-modal="true">
         <button
           type="button"
@@ -843,6 +902,16 @@ export default function SyncSettingsMobile({
                 <span>{t("settings.remoteVaultCount", { count: remoteVaults.length })}</span>
               </div>
               <div className="sync-mobile-action-row">
+                {detailConnection.provider === "selfHosted" && detailConnection.selfHostedRole !== "guest" ? (
+                  <button
+                    type="button"
+                    className="sync-mobile-secondary-action"
+                    disabled={busyKey !== null || availability !== "available"}
+                    onClick={() => onManageSelfHostedAccess(detailConnection)}
+                  >
+                    {t("settings.selfHostedManageAccess")}
+                  </button>
+                ) : null}
                 {canRepair ? (
                   <button type="button" className="sync-mobile-primary-action" disabled={busyKey !== null} onClick={() => void onRepairConnection(detailConnection)}>
                     {detailConnection.provider === "googleDrive"
@@ -895,7 +964,7 @@ export default function SyncSettingsMobile({
                       </span>
                       <span>
                         <strong>{vault ? getVaultLabel(vault) : binding.localVaultId}</strong>
-                        <small>{`${binding.remoteVaultName} · ${formatTime(binding.lastSyncAt, i18n.language)}`}</small>
+                        <small>{`${binding.remoteVaultName} · ${formatTime(binding.lastSyncAt, localeRuntime)}`}</small>
                       </span>
                     </button>
                   ))}
@@ -945,6 +1014,16 @@ export default function SyncSettingsMobile({
           </div>
 
           <footer className="sync-mobile-sheet-actions">
+            {detailConnection.provider === "googleDrive" ? (
+              <button
+                type="button"
+                className="sync-mobile-secondary-action"
+                disabled={busyKey !== null}
+                onClick={() => void onRevokeGoogleDriveConnection(detailConnection.id)}
+              >
+                {t("sync.googleDriveRevoke")}
+              </button>
+            ) : null}
             <button
               type="button"
               className="sync-mobile-secondary-action is-danger-soft"
@@ -967,25 +1046,6 @@ export default function SyncSettingsMobile({
 
   return (
     <section className="sync-settings-mobile-panel">
-      <header className="sync-mobile-header">
-        <MobileIconButton label={t("settings.back")} onClick={onBack}>
-          <BackGlyph />
-        </MobileIconButton>
-        <div className="sync-mobile-heading">
-          <span className="sync-mobile-kicker">{online ? t("sync.statusReady") : t("settings.connectionOffline")}</span>
-          <h2>{t("settings.syncTitle")}</h2>
-        </div>
-        <MobileIconButton label={t("orbit.closeModal")} onClick={onClose}>
-          <CloseGlyph />
-        </MobileIconButton>
-      </header>
-
-      <div className="sync-mobile-summary">
-        <span>{t("settings.mobileVaultCount", { count: localVaults.length })}</span>
-        <span>{t("settings.mobileConnectionCount", { count: syncConnections.length })}</span>
-        <span>{t("settings.linkedVaultCount", { count: syncBindings.length })}</span>
-      </div>
-
       {hostedConnection ? (
         <button
           type="button"
@@ -1029,13 +1089,6 @@ export default function SyncSettingsMobile({
           <strong>{syncConnections.length}</strong>
         </button>
       </nav>
-
-      {feedback ? (
-        <div className={`sync-mobile-feedback ${feedback.tone === "error" ? "is-error" : "is-success"}`}>
-          <span>{feedback.text}</span>
-        </div>
-      ) : null}
-
       <main className="sync-mobile-content">
         <div className="sync-mobile-content-head">
           <div>

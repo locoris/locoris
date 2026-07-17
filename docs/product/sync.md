@@ -12,15 +12,17 @@ Hosted sync is the commercial cloud path. It should be easy to connect in the ap
 
 ### Self-hosted Sync
 
-The personal server is a free self-hosted runtime for users who want control. It supports one owner with many remote vaults.
+The personal server is a free self-hosted runtime for users who want control. It supports owner devices, scoped guest devices, and many remote vaults.
 
-Manual server URL and token flows are acceptable for self-hosted sync because this is an advanced path.
+Normal onboarding uses a one-time invitation represented as a link, short code, and optional QR. Each device receives its own revocable credential. Manual recovery-token entry remains only for legacy and disaster-recovery cases.
 
 ### Google Drive Sync
 
 Google Drive sync stores Locoris sync data in the hidden Google Drive `appDataFolder`.
 
 This keeps Locoris files out of the user's visible Drive folders while still allowing the user to sync through their own Google account.
+
+The production transport uses immutable checkpoints and commits. This prevents two devices from overwriting each other's last write: an unmerged concurrent commit remains recoverable until a later checkpoint includes it. Web reconnect is intentionally user-driven when Google requires a gesture; desktop refresh tokens stay in native secure storage, and Android authorization is managed by Google Play Services.
 
 ## Payload Modes
 
@@ -60,5 +62,4 @@ Normal hosted sync should become a premium app-driven flow:
 5. unlock private vaults with the passphrase when needed;
 6. show stable synced status and recoverable errors.
 
-Manual token entry should remain available for self-hosted, recovery, and advanced cases.
-
+Manual recovery-token entry remains available behind the advanced self-hosted flow for legacy and disaster-recovery cases.

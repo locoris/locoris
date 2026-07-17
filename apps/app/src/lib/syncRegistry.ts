@@ -3,6 +3,7 @@ import type {
   SyncConnection,
   SyncConnectionRole,
   SyncConnectionProvider,
+  SelfHostedDeviceRole,
   SyncVaultBinding
 } from "../types";
 import {
@@ -25,7 +26,7 @@ import {
 const SYNC_REGISTRY_STORAGE_KEY = "zen-notes.sync-registry";
 const SYNC_REGISTRY_VERSION = 1;
 
-type PersistedSyncConnection = Omit<SyncConnection, "managementToken" | "sessionToken">;
+type PersistedSyncConnection = Omit<SyncConnection, "managementToken" | "sessionToken" | "refreshToken">;
 type PersistedSyncVaultBinding = Omit<SyncVaultBinding, "syncToken">;
 
 interface SyncRegistryState {
@@ -44,6 +45,10 @@ function sanitizeProvider(value: unknown): SyncConnectionProvider | null {
 
 function sanitizeConnectionRole(value: unknown): SyncConnectionRole {
   return value === "locorisCloud" ? "locorisCloud" : "external";
+}
+
+function sanitizeSelfHostedDeviceRole(value: unknown): SelfHostedDeviceRole | null {
+  return value === "owner" || value === "guest" ? value : null;
 }
 
 function sanitizeText(value: unknown, maxLength: number) {
@@ -85,6 +90,10 @@ function normalizeConnection(entry: unknown): PersistedSyncConnection | null {
     userId: sanitizeText(record.userId, 120) || null,
     userName: sanitizeText(record.userName, 160),
     userEmail: sanitizeText(record.userEmail, 160),
+    changePageToken: sanitizeText(record.changePageToken, 2048) || null,
+    selfHostedDeviceId: sanitizeText(record.selfHostedDeviceId, 120) || null,
+    selfHostedRole: sanitizeSelfHostedDeviceRole(record.selfHostedRole),
+    selfHostedServerId: sanitizeText(record.selfHostedServerId, 120) || null,
     createdAt: typeof record.createdAt === "number" ? record.createdAt : timestamp,
     updatedAt: typeof record.updatedAt === "number" ? record.updatedAt : timestamp
   };
@@ -208,7 +217,8 @@ function toRuntimeConnection(connection: PersistedSyncConnection): SyncConnectio
   return hydrateCachedSyncConnection({
     ...connection,
     managementToken: "",
-    sessionToken: ""
+    sessionToken: "",
+    refreshToken: ""
   });
 }
 
@@ -220,7 +230,12 @@ function toRuntimeBinding(binding: PersistedSyncVaultBinding): SyncVaultBinding 
 }
 
 function toPersistedConnection(connection: SyncConnection): PersistedSyncConnection {
-  const { managementToken: _managementToken, sessionToken: _sessionToken, ...persisted } = connection;
+  const {
+    managementToken: _managementToken,
+    sessionToken: _sessionToken,
+    refreshToken: _refreshToken,
+    ...persisted
+  } = connection;
   return persisted;
 }
 
@@ -274,6 +289,10 @@ export async function createSyncConnection(input: {
   userId?: string | null;
   userName?: string;
   userEmail?: string;
+  changePageToken?: string | null;
+  selfHostedDeviceId?: string | null;
+  selfHostedRole?: SelfHostedDeviceRole | null;
+  selfHostedServerId?: string | null;
 }) {
   const serverUrl = sanitizeText(input.serverUrl, 512);
 
@@ -291,10 +310,15 @@ export async function createSyncConnection(input: {
     serverUrl,
     managementToken: sanitizeText(input.managementToken, 512),
     sessionToken: sanitizeText(input.sessionToken, 1024),
+    refreshToken: sanitizeText(input.refreshToken, 2048),
     tokenExpiresAt: typeof input.tokenExpiresAt === "number" ? input.tokenExpiresAt : null,
     userId: sanitizeText(input.userId, 120) || null,
     userName: sanitizeText(input.userName, 160),
     userEmail: sanitizeText(input.userEmail, 160),
+    changePageToken: sanitizeText(input.changePageToken, 2048) || null,
+    selfHostedDeviceId: sanitizeText(input.selfHostedDeviceId, 120) || null,
+    selfHostedRole: sanitizeSelfHostedDeviceRole(input.selfHostedRole),
+    selfHostedServerId: sanitizeText(input.selfHostedServerId, 120) || null,
     createdAt: timestamp,
     updatedAt: timestamp
   };
@@ -324,7 +348,7 @@ export async function createSyncConnection(input: {
 
 export async function updateSyncConnection(
   connectionId: string,
-  patch: Partial<Omit<SyncConnection, "id" | "provider" | "createdAt">> & {
+  patch: Partial<Omit<SyncConnection, "id" | "provider" | "createdAt" | "refreshToken">> & {
     refreshToken?: string | null;
   }
 ) {
@@ -353,6 +377,10 @@ export async function updateSyncConnection(
       typeof patch.sessionToken === "string"
         ? sanitizeText(patch.sessionToken, 1024)
         : readCachedSecureSecret(buildSyncConnectionSecretKey(connectionId, "sessionToken")),
+    refreshToken:
+      typeof patch.refreshToken === "string" || patch.refreshToken === null
+        ? sanitizeText(patch.refreshToken, 2048)
+        : readCachedSecureSecret(buildSyncConnectionSecretKey(connectionId, "refreshToken")),
     tokenExpiresAt:
       typeof patch.tokenExpiresAt === "number" || patch.tokenExpiresAt === null
         ? patch.tokenExpiresAt ?? null
@@ -369,6 +397,22 @@ export async function updateSyncConnection(
       typeof patch.userEmail === "string"
         ? sanitizeText(patch.userEmail, 160)
         : currentConnection.userEmail,
+    changePageToken:
+      typeof patch.changePageToken === "string" || patch.changePageToken === null
+        ? sanitizeText(patch.changePageToken, 2048) || null
+        : currentConnection.changePageToken ?? null,
+    selfHostedDeviceId:
+      typeof patch.selfHostedDeviceId === "string" || patch.selfHostedDeviceId === null
+        ? sanitizeText(patch.selfHostedDeviceId, 120) || null
+        : currentConnection.selfHostedDeviceId ?? null,
+    selfHostedRole:
+      patch.selfHostedRole === "owner" || patch.selfHostedRole === "guest" || patch.selfHostedRole === null
+        ? patch.selfHostedRole
+        : currentConnection.selfHostedRole ?? null,
+    selfHostedServerId:
+      typeof patch.selfHostedServerId === "string" || patch.selfHostedServerId === null
+        ? sanitizeText(patch.selfHostedServerId, 120) || null
+        : currentConnection.selfHostedServerId ?? null,
     role: patch.role ?? currentConnection.role ?? "external",
     updatedAt: now()
   };
@@ -608,6 +652,9 @@ export async function migrateSyncRegistryFromLegacyVaultSettings(
           userId: null,
           userName: "",
           userEmail: "",
+          selfHostedDeviceId: null,
+          selfHostedRole: null,
+          selfHostedServerId: null,
           createdAt: timestamp,
           updatedAt: timestamp
         };
@@ -655,6 +702,9 @@ export async function migrateSyncRegistryFromLegacyVaultSettings(
           userId: settings.hostedUserId,
           userName: settings.hostedUserName.trim(),
           userEmail: settings.hostedUserEmail.trim(),
+          selfHostedDeviceId: null,
+          selfHostedRole: null,
+          selfHostedServerId: null,
           createdAt: timestamp,
           updatedAt: timestamp
         };

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, open, readFile, rename } from "node:fs/promises";
 import path from "node:path";
 
 const MAX_BODY_BYTES = 128 * 1024 * 1024;
@@ -171,7 +171,29 @@ export async function readJsonFile(filePath, fallbackValue) {
 
 export async function writeJsonFile(filePath, value) {
   await ensureDir(path.dirname(filePath));
-  await writeFile(filePath, JSON.stringify(value, null, 2), "utf8");
+  const directory = path.dirname(filePath);
+  const temporaryPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
+  const handle = await open(temporaryPath, "w", 0o600);
+
+  try {
+    await handle.writeFile(JSON.stringify(value, null, 2), "utf8");
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+
+  await rename(temporaryPath, filePath);
+
+  // Best-effort directory sync makes the rename durable on filesystems that
+  // support it, while keeping the personal server usable on constrained hosts.
+  try {
+    const directoryHandle = await open(directory, "r");
+    await directoryHandle.sync();
+    await directoryHandle.close();
+  } catch {
+    // The atomic rename above remains the safety boundary when directory fsync
+    // is unavailable (for example on some Windows filesystems).
+  }
 }
 
 function sortObjectKeys(value) {

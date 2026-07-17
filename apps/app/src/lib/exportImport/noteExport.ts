@@ -18,7 +18,7 @@ import {
 import type { jsPDF as JsPDFDocument } from "jspdf";
 
 import type { AppLanguage, Note, NoteContent, StoredBlock } from "../../types";
-import { getDisplayNoteTitle } from "../displayNames";
+import { getDisplayNoteTitle } from "../../localization/displayNames";
 import {
   blocksToHtmlBody,
   blocksToMarkdown,

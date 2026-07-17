@@ -28,7 +28,9 @@ const GOOGLE_DESKTOP_LEGACY_LOOPBACK_PATH: &str = "/oauth/google-drive";
 const GOOGLE_DESKTOP_LOOPBACK_BIND_HOST: &str = "127.0.0.1";
 const GOOGLE_DESKTOP_LOOPBACK_REDIRECT_HOST: &str = "localhost";
 const GOOGLE_DESKTOP_LOOPBACK_LISTENER_TIMEOUT_SECS: u64 = 190;
+const GOOGLE_OAUTH_HTTP_TIMEOUT_SECS: u64 = 30;
 const GOOGLE_OAUTH_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
+const GOOGLE_OAUTH_REVOKE_URL: &str = "https://oauth2.googleapis.com/revoke";
 
 #[derive(Default)]
 struct DesktopGoogleOauthState {
@@ -51,7 +53,6 @@ struct DesktopGoogleOauthCallbackPayload {
 #[serde(rename_all = "camelCase")]
 struct DesktopGoogleOauthExchangeCodeInput {
   client_id: String,
-  client_secret: Option<String>,
   code: String,
   code_verifier: String,
   redirect_uri: String,
@@ -61,7 +62,6 @@ struct DesktopGoogleOauthExchangeCodeInput {
 #[serde(rename_all = "camelCase")]
 struct DesktopGoogleOauthRefreshTokenInput {
   client_id: String,
-  client_secret: Option<String>,
   refresh_token: String,
 }
 
@@ -70,10 +70,7 @@ struct DesktopGoogleOauthTokenResponse {
   access_token: Option<String>,
   expires_in: Option<u64>,
   refresh_token: Option<String>,
-  scope: Option<String>,
-  token_type: Option<String>,
   error: Option<String>,
-  error_description: Option<String>,
 }
 
 #[cfg(target_os = "android")]
@@ -553,18 +550,6 @@ fn desktop_google_oauth_is_callback_target(target: &str) -> bool {
     || target.starts_with(GOOGLE_DESKTOP_LEGACY_LOOPBACK_PATH)
 }
 
-fn trim_oauth_value(value: Option<String>) -> Option<String> {
-  value.and_then(|entry| {
-    let trimmed = entry.trim();
-
-    if trimmed.is_empty() {
-      None
-    } else {
-      Some(trimmed.to_string())
-    }
-  })
-}
-
 async fn desktop_google_oauth_submit_token_request(
   mut params: Vec<(&'static str, String)>,
 ) -> Result<DesktopGoogleOauthTokenResponse, String> {
@@ -573,7 +558,12 @@ async fn desktop_google_oauth_submit_token_request(
     .extend_pairs(params.iter().map(|(key, value)| (*key, value.as_str())))
     .finish();
 
-  let response = reqwest::Client::new()
+  let client = reqwest::Client::builder()
+    .connect_timeout(Duration::from_secs(15))
+    .timeout(Duration::from_secs(GOOGLE_OAUTH_HTTP_TIMEOUT_SECS))
+    .build()
+    .map_err(|_| "GOOGLE_OAUTH_FAILED".to_string())?;
+  let response = client
     .post(GOOGLE_OAUTH_TOKEN_URL)
     .header("Content-Type", "application/x-www-form-urlencoded")
     .body(encoded_body)
@@ -592,37 +582,32 @@ async fn desktop_google_oauth_submit_token_request(
       "GOOGLE_OAUTH_FAILED".to_string()
     })?;
   let payload = serde_json::from_str::<DesktopGoogleOauthTokenResponse>(&raw_payload).map_err(|error| {
-    log::warn!(
-      "Desktop Google OAuth token response JSON could not be parsed: {error}; payload=`{raw_payload}`"
-    );
+    log::warn!("Desktop Google OAuth token response JSON could not be parsed: {error}");
     "GOOGLE_OAUTH_FAILED".to_string()
   })?;
 
   if !status.is_success() {
     let error_code = payload.error.as_deref().map(str::trim).unwrap_or_default();
-    let error_description = payload
-      .error_description
-      .as_deref()
-      .map(str::trim)
-      .unwrap_or_default();
-
     log::warn!(
-      "Desktop Google OAuth token exchange failed with status {}: error=`{}` description=`{}`",
+      "Desktop Google OAuth token exchange failed with status {} and error code `{}`",
       status,
-      error_code,
-      error_description
+      error_code
     );
 
-    if matches!(error_code, "invalid_grant" | "invalid_client" | "unauthorized_client") {
+    if error_code == "invalid_grant" {
       return Err("GOOGLE_DRIVE_AUTH_REQUIRED".into());
     }
 
-    if !error_description.is_empty() {
-      return Err(error_description.to_string());
+    if matches!(error_code, "invalid_client" | "unauthorized_client" | "invalid_request") {
+      return Err("GOOGLE_OAUTH_INVALID_REQUEST".into());
     }
 
-    if !error_code.is_empty() {
-      return Err(error_code.to_string());
+    if error_code == "access_denied" {
+      return Err("GOOGLE_OAUTH_ACCESS_DENIED".into());
+    }
+
+    if error_code == "temporarily_unavailable" || status.is_server_error() {
+      return Err("SERVER_UNAVAILABLE".into());
     }
 
     return Err("GOOGLE_OAUTH_FAILED".into());
@@ -752,10 +737,6 @@ async fn desktop_google_oauth_exchange_code(
 ) -> Result<DesktopGoogleOauthTokenResponse, String> {
   desktop_google_oauth_submit_token_request(vec![
     ("client_id", input.client_id.trim().to_string()),
-    (
-      "client_secret",
-      trim_oauth_value(input.client_secret).unwrap_or_default(),
-    ),
     ("code", input.code.trim().to_string()),
     ("code_verifier", input.code_verifier.trim().to_string()),
     ("grant_type", "authorization_code".to_string()),
@@ -770,14 +751,41 @@ async fn desktop_google_oauth_refresh_token(
 ) -> Result<DesktopGoogleOauthTokenResponse, String> {
   desktop_google_oauth_submit_token_request(vec![
     ("client_id", input.client_id.trim().to_string()),
-    (
-      "client_secret",
-      trim_oauth_value(input.client_secret).unwrap_or_default(),
-    ),
     ("refresh_token", input.refresh_token.trim().to_string()),
     ("grant_type", "refresh_token".to_string()),
   ])
   .await
+}
+
+#[tauri::command]
+async fn desktop_google_oauth_revoke_token(token: String) -> Result<(), String> {
+  let token = token.trim();
+
+  if token.is_empty() {
+    return Ok(());
+  }
+
+  let encoded_token = url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>();
+  let revoke_url = format!("{GOOGLE_OAUTH_REVOKE_URL}?token={encoded_token}");
+  let client = reqwest::Client::builder()
+    .connect_timeout(Duration::from_secs(15))
+    .timeout(Duration::from_secs(GOOGLE_OAUTH_HTTP_TIMEOUT_SECS))
+    .build()
+    .map_err(|_| "GOOGLE_OAUTH_REVOKE_FAILED".to_string())?;
+  let response = client
+    .post(revoke_url)
+    .send()
+    .await
+    .map_err(|error| {
+      log::warn!("Desktop Google OAuth revoke request failed: {error}");
+      "SERVER_UNAVAILABLE".to_string()
+    })?;
+
+  if response.status().is_success() || response.status().as_u16() == 400 {
+    return Ok(());
+  }
+
+  Err("GOOGLE_OAUTH_REVOKE_FAILED".into())
 }
 
 #[tauri::command]
@@ -1068,6 +1076,19 @@ fn android_google_drive_clear_token(_token: String) -> Result<(), String> {
 
 #[cfg(target_os = "android")]
 #[tauri::command]
+fn android_google_drive_revoke_access<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+  let _: Value = android_bridge::run(&app, "googleDriveRevokeAccess", serde_json::json!({}))?;
+  Ok(())
+}
+
+#[cfg(not(target_os = "android"))]
+#[tauri::command]
+fn android_google_drive_revoke_access() -> Result<(), String> {
+  Err("GOOGLE_OAUTH_UNAVAILABLE".into())
+}
+
+#[cfg(target_os = "android")]
+#[tauri::command]
 fn android_install_apk_update<R: Runtime>(
   app: AppHandle<R>,
   url: String,
@@ -1309,9 +1330,11 @@ pub fn run() {
       desktop_google_oauth_wait_for_callback,
       desktop_google_oauth_exchange_code,
       desktop_google_oauth_refresh_token,
+      desktop_google_oauth_revoke_token,
       android_google_drive_check_availability,
       android_google_drive_authorize,
       android_google_drive_clear_token,
+      android_google_drive_revoke_access,
       android_install_apk_update,
       android_get_apk_update_progress,
       android_open_install_permission_settings,
@@ -1324,6 +1347,7 @@ pub fn run() {
       secure_secret_delete
     ])
     .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_deep_link::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(
       tauri_plugin_log::Builder::new()

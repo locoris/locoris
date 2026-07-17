@@ -77,14 +77,6 @@ async function migrateVaultIntoNativeStoreIfNeeded(localVaultId: string) {
     return existingNativeSnapshot;
   }
 
-  if (await hasLocalVaultPersistedState(localVaultId)) {
-    const migrated = await persistDexieVaultIntoNativeStore(localVaultId);
-
-    if (migrated) {
-      return readLocalVaultNativeSnapshot(localVaultId);
-    }
-  }
-
   const desktopBackup = await readDesktopVaultBackup(localVaultId);
 
   if (desktopBackup) {
@@ -99,6 +91,20 @@ async function hydrateDexieCachesFromNativeStore() {
   const vaults = listLocalVaultProfiles();
 
   for (const vault of vaults) {
+    // A populated IndexedDB belongs to the current WebView profile and is more
+    // recent than a delayed recovery checkpoint after an unexpected shutdown.
+    // Only restore native data into an empty profile (for example, after a
+    // WebView migration or reset), never overwrite live local edits at startup.
+    if (await hasLocalVaultPersistedState(vault.id)) {
+      const nativeSnapshot = await readLocalVaultNativeSnapshot(vault.id);
+
+      if (!nativeSnapshot) {
+        await persistDexieVaultIntoNativeStore(vault.id);
+      }
+
+      continue;
+    }
+
     const snapshot = await migrateVaultIntoNativeStoreIfNeeded(vault.id);
 
     if (!snapshot) {

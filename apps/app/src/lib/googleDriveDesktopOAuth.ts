@@ -27,10 +27,6 @@ type GoogleDesktopTokenResponse = {
   access_token?: string;
   expires_in?: number;
   refresh_token?: string;
-  scope?: string;
-  token_type?: string;
-  error?: string;
-  error_description?: string;
 };
 
 type GoogleDesktopLoopbackSession = {
@@ -66,10 +62,6 @@ function now() {
 
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function getDesktopClientSecretFromEnv() {
-  return normalizeText(import.meta.env.VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_SECRET);
 }
 
 async function focusDesktopWindow() {
@@ -181,35 +173,6 @@ function buildDesktopAuthorizationUrl(input: {
   return `${GOOGLE_OAUTH_AUTHORIZATION_URL}?${params.toString()}`;
 }
 
-async function parseGoogleTokenResponse(response: Response) {
-  const payload = (await response.json().catch(() => null)) as GoogleDesktopTokenResponse | null;
-
-  if (!response.ok) {
-    const message = normalizeText(payload?.error);
-    const description = normalizeText(payload?.error_description);
-
-    if (
-      message === "invalid_grant" ||
-      message === "invalid_client" ||
-      message === "unauthorized_client"
-    ) {
-      throw new Error("GOOGLE_DRIVE_AUTH_REQUIRED");
-    }
-
-    if (message === "invalid_request") {
-      throw new Error("GOOGLE_OAUTH_INVALID_REQUEST");
-    }
-
-    throw new Error(description || message || "GOOGLE_OAUTH_FAILED");
-  }
-
-  if (!payload?.access_token) {
-    throw new Error("GOOGLE_DRIVE_AUTH_REQUIRED");
-  }
-
-  return payload;
-}
-
 async function invokeDesktopGoogleOauth<T>(
   command: string,
   args: Record<string, unknown>
@@ -229,7 +192,6 @@ async function invokeDesktopGoogleOauth<T>(
 
 async function exchangeDesktopAuthorizationCode(input: {
   clientId: string;
-  clientSecret?: string;
   code: string;
   codeVerifier: string;
   redirectUri: string;
@@ -237,7 +199,6 @@ async function exchangeDesktopAuthorizationCode(input: {
   return invokeDesktopGoogleOauth<GoogleDesktopTokenResponse>("desktop_google_oauth_exchange_code", {
     input: {
       clientId: input.clientId,
-      clientSecret: normalizeText(input.clientSecret) || null,
       code: input.code,
       codeVerifier: input.codeVerifier,
       redirectUri: input.redirectUri
@@ -247,13 +208,11 @@ async function exchangeDesktopAuthorizationCode(input: {
 
 async function refreshDesktopAccessToken(input: {
   clientId: string;
-  clientSecret?: string;
   refreshToken: string;
 }) {
   return invokeDesktopGoogleOauth<GoogleDesktopTokenResponse>("desktop_google_oauth_refresh_token", {
     input: {
       clientId: input.clientId,
-      clientSecret: normalizeText(input.clientSecret) || null,
       refreshToken: input.refreshToken
     }
   });
@@ -375,7 +334,6 @@ export async function connectGoogleDriveDesktopAccount(options: {
   prompt?: string;
 }) {
   const clientId = normalizeText(options.clientId);
-  const clientSecret = getDesktopClientSecretFromEnv();
 
   if (!clientId) {
     throw new Error("GOOGLE_DRIVE_CLIENT_ID_REQUIRED");
@@ -422,7 +380,6 @@ export async function connectGoogleDriveDesktopAccount(options: {
 
     const tokenPayload = await exchangeDesktopAuthorizationCode({
       clientId,
-      clientSecret,
       code: callbackPayload.code,
       codeVerifier,
       redirectUri: loopbackSession.redirectUri
@@ -439,7 +396,6 @@ export async function refreshGoogleDriveDesktopAccountSession(options: {
   connectionId: string;
 }) {
   const clientId = normalizeText(options.clientId);
-  const clientSecret = getDesktopClientSecretFromEnv();
 
   if (!clientId) {
     throw new Error("GOOGLE_DRIVE_CLIENT_ID_REQUIRED");
@@ -459,7 +415,6 @@ export async function refreshGoogleDriveDesktopAccountSession(options: {
 
   const tokenPayload = await refreshDesktopAccessToken({
     clientId,
-    clientSecret,
     refreshToken
   });
 
@@ -467,4 +422,22 @@ export async function refreshGoogleDriveDesktopAccountSession(options: {
     ...tokenPayload,
     refresh_token: normalizeText(tokenPayload.refresh_token) || refreshToken
   });
+}
+
+export async function revokeGoogleDriveDesktopAccess(
+  accessToken: string,
+  connectionId?: string
+) {
+  const refreshToken = normalizeText(
+    connectionId
+      ? await readSecureSecret(buildSyncConnectionSecretKey(connectionId, "refreshToken"))
+      : ""
+  );
+  const token = refreshToken || normalizeText(accessToken);
+
+  if (!token || !isDesktopGoogleDriveRuntime()) {
+    return;
+  }
+
+  await invokeDesktopGoogleOauth<void>("desktop_google_oauth_revoke_token", { token });
 }

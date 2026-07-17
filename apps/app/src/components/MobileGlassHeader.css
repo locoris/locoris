@@ -1,0 +1,199 @@
+.mobile-glass-header,
+.mobile-glass-header * {
+  box-sizing: border-box;
+}
+
+.mobile-glass-header {
+  --mobile-glass-header-accent: var(--settings-accent, var(--mobile-account-accent, var(--mobile-more-accent, var(--accent-theme-primary, var(--gold)))));
+  --mobile-glass-header-secondary: var(--settings-accent-secondary, var(--mobile-account-secondary, var(--accent-theme-secondary, var(--cyan))));
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  isolation: isolate;
+  overflow: hidden;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(10px, 1.6vw, 18px);
+  padding: clamp(14px, 1.9vw, 20px);
+  border: 1px solid color-mix(in srgb, var(--mobile-glass-header-accent) 23%, rgb(var(--line-rgb) / 0.13));
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 10% -18%, color-mix(in srgb, var(--mobile-glass-header-accent) 22%, transparent), transparent 46%),
+    radial-gradient(circle at 90% -12%, color-mix(in srgb, var(--mobile-glass-header-secondary) 17%, transparent), transparent 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.19), rgba(255, 255, 255, 0.065)),
+    rgb(var(--surface-rgb) / 0.93);
+  box-shadow:
+    0 22px 58px rgba(0, 0, 0, 0.38),
+    0 1px 0 rgba(255, 255, 255, 0.17) inset,
+    0 -1px 0 rgba(255, 255, 255, 0.045) inset;
+  backdrop-filter: blur(69px) saturate(178%) contrast(108%);
+  -webkit-backdrop-filter: blur(69px) saturate(178%) contrast(108%);
+}
+
+.mobile-glass-header::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(108deg, rgba(255, 255, 255, 0.17), transparent 24%, transparent 72%, rgba(255, 255, 255, 0.065)),
+    radial-gradient(ellipse at 50% -45%, rgba(255, 255, 255, 0.22), transparent 58%);
+  mix-blend-mode: screen;
+  opacity: 0.72;
+}
+
+.mobile-glass-header > * {
+  position: relative;
+  z-index: 2;
+}
+
+.mobile-glass-header-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+}
+
+.mobile-glass-header-kicker {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: color-mix(in srgb, var(--settings-emphasis, var(--text-emphasis, var(--mobile-glass-header-accent))) 72%, var(--mobile-glass-header-accent) 28%);
+  font-size: clamp(0.62rem, 1.05vw, 0.74rem);
+  font-weight: 860;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.mobile-glass-header-title {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: color-mix(in srgb, var(--settings-emphasis, var(--text, #fff)) 88%, #fff 12%);
+  font-family: var(--font-ui-display);
+  font-size: clamp(1.16rem, 1.58vw, 1.54rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.04;
+}
+
+.mobile-glass-header-button,
+.mobile-glass-header-pad {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+}
+
+.mobile-glass-header-pad {
+  visibility: hidden;
+}
+
+.mobile-glass-header-button {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--mobile-glass-header-accent) 28%, rgb(var(--line-rgb) / 0.16));
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--mobile-glass-header-accent) 18%, transparent), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.092), rgba(255, 255, 255, 0.03)),
+    rgb(var(--surface-rgb) / 0.36);
+  color: rgba(245, 248, 255, 0.9);
+  font: inherit;
+  cursor: pointer;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.mobile-glass-header-button > span {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  line-height: 0;
+}
+
+.mobile-glass-header-button:hover,
+.mobile-glass-header-button:focus-visible {
+  border-color: color-mix(in srgb, var(--mobile-glass-header-accent) 38%, rgba(255, 255, 255, 0.18));
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--mobile-glass-header-accent) 24%, transparent), transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.036)),
+    rgb(var(--surface-rgb) / 0.42);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.mobile-glass-header-button svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mobile-glass-header .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px), (orientation: portrait) {
+  .mobile-glass-header {
+    padding: 13px;
+    border-radius: 25px;
+  }
+
+  .mobile-glass-header-title {
+    font-size: clamp(1.1rem, 5vw, 1.42rem);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .mobile-glass-header,
+  .mobile-glass-header-button {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .mobile-glass-header {
+    background: rgb(var(--surface-rgb) / 0.96);
+  }
+
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .mobile-glass-header {
+    background: rgb(var(--surface-rgb) / 0.94);
+  }
+
+  .mobile-glass-header-button {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.035)),
+      rgb(var(--surface-rgb) / 0.92);
+  }
+}

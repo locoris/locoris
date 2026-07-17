@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
-import type { Note, NoteListView, Tag } from "../types";
+import type { AppLanguage, Note, NoteListView, Tag } from "../types";
 
-import { getDisplayNotePreview, getDisplayNoteTitle } from "../lib/displayNames";
+import { getDisplayNotePreview, getDisplayNoteTitle } from "../localization/displayNames";
 import { formatTimestamp } from "../lib/notes";
 
 interface NotesPanelProps {
@@ -9,7 +9,7 @@ interface NotesPanelProps {
   tags: Tag[];
   folderPathMap: Map<string, string>;
   activeNoteId: string | null;
-  language: "en" | "ru";
+  language: AppLanguage;
   viewMode: NoteListView;
   selectedFolderName: string | null;
   selectedTagName: string | null;
@@ -17,7 +17,6 @@ interface NotesPanelProps {
     title: string;
     create: string;
     clear: string;
-    noteCount: string;
     filteredByFolder: string;
     filteredByTag: string;
     emptyTitle: string;
@@ -58,7 +57,7 @@ export default function NotesPanel({
     ? `${labels.filteredByFolder}: ${selectedFolderName}`
     : selectedTagName
       ? `${labels.filteredByTag}: ${selectedTagName}`
-      : `${notes.length} ${labels.noteCount}`;
+      : t("counts.notes", { count: notes.length });
 
   return (
     <section className="panel list-panel notes-hub-panel">
@@ -68,7 +67,7 @@ export default function NotesPanel({
           <div className="notes-hub-heading-row">
             <h2 className="panel-title notes-hub-heading">{title}</h2>
             <span className="notes-hub-counter">
-              {notes.length} {labels.noteCount}
+              {t("counts.notes", { count: notes.length })}
             </span>
           </div>
           <p className="notes-hub-caption">{description}</p>
@@ -112,7 +111,7 @@ export default function NotesPanel({
               <div className="note-card-topline">
                 <div className="note-card-titlewrap">
                   <span className="note-card-title">{getDisplayNoteTitle(note, language)}</span>
-                  <span className="note-card-date">{formatTimestamp(note.updatedAt, language)}</span>
+                  <span className="note-card-date">{formatTimestamp(note.updatedAt)}</span>
                 </div>
                 <div className="note-card-flags">
                   {note.pinned || note.favorite ? (

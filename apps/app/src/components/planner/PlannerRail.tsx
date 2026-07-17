@@ -1,8 +1,9 @@
+import { translateInline } from "../../localization/translateInline";
+import { getPlannerViewLabels } from "../../localization/plannerPresentation";
 import type { AppLanguage } from "../../types";
 import {
   PLANNER_VIEW_IDS,
-  type PlannerViewId,
-  getPlannerViewLabels
+  type PlannerViewId
 } from "../../lib/planner";
 
 interface PlannerRailProps {
@@ -31,10 +32,10 @@ export default function PlannerRail({
   const labels = getPlannerViewLabels(language);
 
   return (
-    <aside className="planner-rail" aria-label={language === "ru" ? "Разделы планировщика" : "Planner sections"}>
+    <aside className="planner-rail" aria-label={translateInline(language, "plannerRail.plannerSections")}>
       <div className="planner-rail-head">
-        <span className="planner-kicker">{language === "ru" ? "Время" : "Time"}</span>
-        <h2>{language === "ru" ? "План" : "Plan"}</h2>
+        <span className="planner-kicker">{translateInline(language, "plannerRail.time")}</span>
+        <h2>{translateInline(language, "plannerRail.plan")}</h2>
       </div>
 
       <nav className="planner-rail-nav">

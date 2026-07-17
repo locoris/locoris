@@ -1,0 +1,247 @@
+.orbital-map-controls {
+  position: absolute;
+  z-index: 5;
+  left: 14px;
+  bottom: 14px;
+  display: inline-flex;
+  max-width: calc(100% - 28px);
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid color-mix(in srgb, var(--orbital-scene-accent, var(--accent-theme-primary, var(--cyan))) 22%, rgb(var(--line-rgb) / 0.12));
+  border-radius: 21px;
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--orbital-scene-accent, var(--accent-theme-primary, var(--cyan))) 15%, transparent), transparent 58%),
+    linear-gradient(180deg, rgb(var(--surface-rgb) / 0.73), rgb(var(--surface-deep-rgb) / 0.62)),
+    rgb(var(--surface-deep-rgb) / 0.66);
+  box-shadow:
+    0 18px 46px rgba(2, 5, 15, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.075);
+  backdrop-filter: blur(17px) saturate(128%);
+  -webkit-backdrop-filter: blur(17px) saturate(128%);
+  scrollbar-width: none;
+}
+
+.orbital-map-controls::-webkit-scrollbar {
+  display: none;
+}
+
+.orbital-map-control-button {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 40px;
+  min-width: 40px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--orbital-scene-accent, var(--accent-theme-primary, var(--cyan))) 26%, rgb(var(--line-rgb) / 0.16));
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 28% 0%, color-mix(in srgb, var(--orbital-scene-accent, var(--accent-theme-primary, var(--cyan))) 16%, transparent), transparent 62%),
+    rgba(255, 255, 255, 0.045);
+  color: color-mix(in srgb, var(--orbital-scene-accent, var(--accent-theme-primary, var(--cyan))) 64%, rgba(232, 238, 255, 0.92));
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 850;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.orbital-map-control-button:hover,
+.orbital-map-control-button:focus-visible {
+  border-color: color-mix(in srgb, var(--orbital-scene-accent, var(--accent-theme-primary, var(--cyan))) 46%, rgba(255, 255, 255, 0.2));
+  background:
+    radial-gradient(circle at 28% 0%, color-mix(in srgb, var(--orbital-scene-accent, var(--accent-theme-primary, var(--cyan))) 24%, transparent), transparent 62%),
+    rgba(255, 255, 255, 0.065);
+  color: #fff;
+  outline: none;
+  box-shadow:
+    0 12px 28px color-mix(in srgb, var(--orbital-scene-accent, var(--accent-theme-primary, var(--cyan))) 12%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.orbital-map-control-button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--orbital-scene-accent, var(--accent-theme-primary, var(--cyan))) 48%, rgba(255, 255, 255, 0.2));
+  background:
+    radial-gradient(circle at 28% 0%, color-mix(in srgb, var(--orbital-scene-accent, var(--accent-theme-primary, var(--cyan))) 27%, transparent), transparent 62%),
+    rgba(255, 255, 255, 0.075);
+  color: #fff;
+}
+
+.orbital-map-control-button:active {
+  transform: translateY(1px);
+}
+
+.orbital-map-control-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.orbital-map-control-icon {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+}
+
+.orbital-map-control-icon::before,
+.orbital-map-control-icon::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.orbital-map-control-icon.is-play::before {
+  left: 6px;
+  top: 4px;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid currentColor;
+}
+
+.orbital-map-control-icon.is-pause::before,
+.orbital-map-control-icon.is-pause::after {
+  top: 4px;
+  width: 3px;
+  height: 10px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.orbital-map-control-icon.is-pause::before {
+  left: 5px;
+}
+
+.orbital-map-control-icon.is-pause::after {
+  right: 5px;
+}
+
+.orbital-map-control-icon.is-plan {
+  border: 1.6px solid currentColor;
+  border-radius: 50%;
+}
+
+.orbital-map-control-icon.is-plan::before {
+  left: 8px;
+  top: 3px;
+  width: 1.7px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: bottom center;
+}
+
+.orbital-map-control-icon.is-plan::after {
+  left: 8px;
+  top: 8px;
+  width: 5px;
+  height: 1.7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.orbital-map-control-icon.is-zoom-in::before,
+.orbital-map-control-icon.is-zoom-out::before {
+  left: 2px;
+  top: 2px;
+  width: 11px;
+  height: 11px;
+  border: 1.7px solid currentColor;
+  border-radius: 50%;
+}
+
+.orbital-map-control-icon.is-zoom-in::after,
+.orbital-map-control-icon.is-zoom-out::after {
+  right: 1px;
+  bottom: 2px;
+  width: 7px;
+  height: 1.8px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: rotate(45deg);
+  box-shadow: -7px -4px 0 -0.2px currentColor;
+}
+
+.orbital-map-control-icon.is-zoom-in {
+  background:
+    linear-gradient(currentColor, currentColor) 7px 5px / 1.7px 6px no-repeat,
+    linear-gradient(currentColor, currentColor) 5px 7px / 6px 1.7px no-repeat;
+}
+
+.orbital-map-control-icon.is-center::before {
+  inset: 2px;
+  border: 1.6px solid currentColor;
+  border-radius: 50%;
+}
+
+.orbital-map-control-icon.is-center::after {
+  left: 8px;
+  top: 0;
+  width: 2px;
+  height: 18px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.9;
+}
+
+.orbital-map-control-icon.is-center {
+  background:
+    linear-gradient(currentColor, currentColor) 0 8px / 18px 2px no-repeat,
+    radial-gradient(circle at center, currentColor 0 2px, transparent 2.2px);
+}
+
+.orbital-map-control-icon.is-reset::before {
+  left: 3px;
+  top: 4px;
+  width: 12px;
+  height: 10px;
+  border: 1.7px solid currentColor;
+  border-left-color: transparent;
+  border-radius: 50%;
+  transform: rotate(-18deg);
+}
+
+.orbital-map-control-icon.is-reset::after {
+  left: 2px;
+  top: 3px;
+  width: 6px;
+  height: 6px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(18deg);
+}
+
+.orbital-overlay.is-android-mobile-shell .orbital-map-controls {
+  left: 12px;
+  bottom: 16px;
+  max-width: calc(100% - 24px);
+  border-radius: 20px;
+}
+
+.orbital-overlay.is-android-runtime .orbital-map-controls {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}

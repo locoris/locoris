@@ -1,7 +1,13 @@
 import type { AppLanguage, Note, NoteContent, StoredBlock } from "../../types";
-import { getDisplayNoteTitle } from "../displayNames";
+import { getDisplayNoteTitle } from "../../localization/displayNames";
 import { extractPlainText } from "../notes";
 import { sanitizeExportFileName } from "./filenames";
+import {
+  formatDateTimeValue,
+  getCurrentLocaleRuntime,
+  getLocaleDirection,
+  resolveSupportedLocale
+} from "../../localization";
 
 type InlineRenderResult = {
   markdown: string;
@@ -284,10 +290,16 @@ export function buildNoteHtmlDocument(input: {
 }) {
   const title = getDisplayNoteTitle(input.note, input.language);
   const body = blocksToHtmlBody(input.note.content);
-  const direction = input.language === "ru" ? "ru" : "en";
+  const documentLocale = resolveSupportedLocale(input.language);
+  const direction = getLocaleDirection(documentLocale);
+  const generatedLabel = formatDateTimeValue(
+    input.generatedAt ?? new Date(),
+    getCurrentLocaleRuntime(),
+    { dateStyle: "medium", timeStyle: "short" }
+  );
 
   return `<!doctype html>
-<html lang="${direction}">
+<html lang="${documentLocale}" dir="${direction}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -347,10 +359,7 @@ export function buildNoteHtmlDocument(input: {
 <body>
   <main>
     <h1 class="title">${escapeHtml(title)}</h1>
-    <p class="meta">${new Intl.DateTimeFormat(input.language === "ru" ? "ru-RU" : "en-US", {
-      dateStyle: "medium",
-      timeStyle: "short"
-    }).format(input.generatedAt ?? new Date())}</p>
+    <p class="meta">${generatedLabel}</p>
     ${body || "<p></p>"}
   </main>
 </body>

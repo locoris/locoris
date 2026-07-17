@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import "./TagPanel.css";
 import { buildTagCounts } from "../lib/notes";
 import { normalizeTagName, sortTagsByName } from "../lib/tags";
-import type { AppLanguage, Note, Tag } from "../types";
+import type { Note, Tag } from "../types";
 
 interface TagPanelProps {
   tags: Tag[];
@@ -25,10 +25,6 @@ interface TagPanelProps {
   onDelete: (tagId: string) => Promise<void>;
 }
 
-function detectLanguage(tags: Tag[]): AppLanguage {
-  return tags.some((tag) => /[А-Яа-яЁё]/.test(tag.name)) ? "ru" : "en";
-}
-
 export default function TagPanel({
   tags,
   notes,
@@ -39,13 +35,13 @@ export default function TagPanel({
   onRename,
   onDelete
 }: TagPanelProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const counts = buildTagCounts(notes, tags);
   const [draftName, setDraftName] = useState("");
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const sortedTags = useMemo(() => sortTagsByName(tags, detectLanguage(tags)), [tags]);
+  const sortedTags = useMemo(() => sortTagsByName(tags, i18n.language), [i18n.language, tags]);
   const filteredTags = useMemo(() => {
     const normalizedQuery = normalizeTagName(query).toLocaleLowerCase();
 
@@ -167,7 +163,7 @@ export default function TagPanel({
                     >
                       <span className="tag-manager-pill-name">{tag.name}</span>
                       <span className="tag-manager-pill-meta">
-                        {noteCount} {t("noteList.noteCount")}
+                        {t("counts.notes", { count: noteCount })}
                       </span>
                     </button>
 

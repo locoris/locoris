@@ -1,3 +1,4 @@
+import { createLocaleCollator, getCurrentLocaleRuntime } from "../localization";
 import type { AppLanguage, Tag } from "../types";
 
 export function normalizeTagName(value: string) {
@@ -60,7 +61,8 @@ export function uniqueTagsByName(tags: Tag[]) {
 }
 
 export function sortTagsByName(tags: Tag[], language: AppLanguage) {
-  const collator = new Intl.Collator(language === "ru" ? "ru" : "en", {
+  void language;
+  const collator = createLocaleCollator(getCurrentLocaleRuntime(), {
     sensitivity: "base",
     numeric: true
   });

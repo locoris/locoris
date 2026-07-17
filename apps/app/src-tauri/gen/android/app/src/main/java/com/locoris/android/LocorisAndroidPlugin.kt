@@ -7,6 +7,8 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
@@ -22,6 +24,7 @@ import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.ClearTokenRequest
 import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.auth.api.identity.RevokeAccessRequest
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ApiException
@@ -33,9 +36,9 @@ import org.json.JSONArray
 
 private const val DEFAULT_GOOGLE_DRIVE_APP_DATA_SCOPE = "https://www.googleapis.com/auth/drive.appdata"
 private const val DEFAULT_ACCESS_TOKEN_TTL_SECONDS = 55 * 60
+private const val GOOGLE_DRIVE_AUTHORIZATION_TIMEOUT_MS = 3 * 60 * 1000L
 private const val ANDROID_APK_MIME_TYPE = "application/vnd.android.package-archive"
 private const val LOCORIS_ANDROID_TAG = "LocorisAndroid"
-private const val GOOGLE_DRIVE_AUTHORIZATION_REQUEST_CODE = 42031
 
 @InvokeArg
 class GoogleDriveAuthorizeArgs {
@@ -65,6 +68,8 @@ class InstallApkUpdateArgs {
 @TauriPlugin
 class LocorisAndroidPlugin(private val activity: Activity) : Plugin(activity) {
   private var googleDriveAuthorizationInFlight = false
+  private val mainHandler = Handler(Looper.getMainLooper())
+  private var googleDriveAuthorizationTimeout: Runnable? = null
   @Volatile private var updateDownloadProgressPercent: Int? = null
   private val securePreferences: SharedPreferences by lazy {
     val masterKey = MasterKey.Builder(activity.applicationContext)
@@ -129,16 +134,17 @@ class LocorisAndroidPlugin(private val activity: Activity) : Plugin(activity) {
             try {
               pendingGoogleDriveAuthorizationPlugin = this
               pendingGoogleDriveAuthorizationInvoke = invoke
-              activity.startIntentSenderForResult(
-                pendingIntent.intentSender,
-                GOOGLE_DRIVE_AUTHORIZATION_REQUEST_CODE,
-                null,
-                0,
-                0,
-                0
-              )
+              val mainActivity = activity as? MainActivity
+
+              if (mainActivity == null) {
+                throw IllegalStateException("Google authorization requires MainActivity")
+              }
+
+              scheduleGoogleDriveAuthorizationTimeout(invoke)
+              mainActivity.launchGoogleDriveAuthorization(pendingIntent)
             } catch (error: Exception) {
               Log.w(LOCORIS_ANDROID_TAG, "Unable to launch Google Drive authorization resolution", error)
+              cancelGoogleDriveAuthorizationTimeout()
               clearPendingGoogleDriveAuthorization(this, invoke)
               googleDriveAuthorizationInFlight = false
               invoke.reject("GOOGLE_OAUTH_FAILED")
@@ -160,6 +166,7 @@ class LocorisAndroidPlugin(private val activity: Activity) : Plugin(activity) {
   }
 
   private fun handleGoogleDriveAuthorizationResult(invoke: Invoke, resultCode: Int, data: Intent?) {
+    cancelGoogleDriveAuthorizationTimeout()
     googleDriveAuthorizationInFlight = false
 
     if (resultCode == Activity.RESULT_CANCELED) {
@@ -198,6 +205,18 @@ class LocorisAndroidPlugin(private val activity: Activity) : Plugin(activity) {
         .addOnFailureListener { invoke.reject("GOOGLE_OAUTH_FAILED") }
     } catch (_: Exception) {
       invoke.reject("GOOGLE_OAUTH_FAILED")
+    }
+  }
+
+  @Command
+  fun googleDriveRevokeAccess(invoke: Invoke) {
+    try {
+      Identity.getAuthorizationClient(activity)
+        .revokeAccess(RevokeAccessRequest.builder().build())
+        .addOnSuccessListener { invoke.resolve() }
+        .addOnFailureListener { invoke.reject("GOOGLE_OAUTH_REVOKE_FAILED") }
+    } catch (_: Exception) {
+      invoke.reject("GOOGLE_OAUTH_REVOKE_FAILED")
     }
   }
 
@@ -376,6 +395,25 @@ class LocorisAndroidPlugin(private val activity: Activity) : Plugin(activity) {
     invoke.resolve(result)
   }
 
+  private fun scheduleGoogleDriveAuthorizationTimeout(invoke: Invoke) {
+    cancelGoogleDriveAuthorizationTimeout()
+    val timeout = Runnable {
+      if (pendingGoogleDriveAuthorizationInvoke === invoke) {
+        clearPendingGoogleDriveAuthorization(this, invoke)
+        googleDriveAuthorizationInFlight = false
+        invoke.reject("GOOGLE_OAUTH_REDIRECT_TIMEOUT")
+      }
+      googleDriveAuthorizationTimeout = null
+    }
+    googleDriveAuthorizationTimeout = timeout
+    mainHandler.postDelayed(timeout, GOOGLE_DRIVE_AUTHORIZATION_TIMEOUT_MS)
+  }
+
+  private fun cancelGoogleDriveAuthorizationTimeout() {
+    googleDriveAuthorizationTimeout?.let(mainHandler::removeCallbacks)
+    googleDriveAuthorizationTimeout = null
+  }
+
   private fun rejectGoogleDriveError(invoke: Invoke, error: Exception) {
     Log.w(LOCORIS_ANDROID_TAG, "Google Drive authorization failed", error)
 
@@ -420,15 +458,7 @@ class LocorisAndroidPlugin(private val activity: Activity) : Plugin(activity) {
       }
     }
 
-    fun handleGoogleDriveAuthorizationActivityResult(
-      requestCode: Int,
-      resultCode: Int,
-      data: Intent?
-    ): Boolean {
-      if (requestCode != GOOGLE_DRIVE_AUTHORIZATION_REQUEST_CODE) {
-        return false
-      }
-
+    fun handleGoogleDriveAuthorizationActivityResult(resultCode: Int, data: Intent?) {
       val plugin = pendingGoogleDriveAuthorizationPlugin
       val invoke = pendingGoogleDriveAuthorizationInvoke
       pendingGoogleDriveAuthorizationPlugin = null
@@ -436,11 +466,10 @@ class LocorisAndroidPlugin(private val activity: Activity) : Plugin(activity) {
 
       if (plugin == null || invoke == null) {
         Log.w(LOCORIS_ANDROID_TAG, "Google Drive authorization result arrived without a pending request")
-        return true
+        return
       }
 
       plugin.handleGoogleDriveAuthorizationResult(invoke, resultCode, data)
-      return true
     }
   }
 

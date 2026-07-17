@@ -1,13 +1,5 @@
-import type { AppLanguage, Folder, Note, NoteContent, StoredBlock, Tag } from "../types";
-
-const UNTITLED_TITLE: Record<AppLanguage, string> = {
-  en: "Untitled note",
-  ru: "Новая заметка"
-};
-
-export function getUntitledTitle(language: AppLanguage) {
-  return UNTITLED_TITLE[language];
-}
+import type { Folder, Note, NoteContent, StoredBlock, Tag } from "../types";
+import { formatDateTimeValue, getCurrentLocaleRuntime } from "../localization";
 
 const FILE_BLOCK_TYPES = new Set(["image", "file", "audio", "video"]);
 const TEXT_METADATA_KEYS = new Set([
@@ -704,13 +696,13 @@ export function buildTagCounts(notes: Note[], tags: Tag[]) {
   return counts;
 }
 
-export function formatTimestamp(timestamp: number, language: AppLanguage) {
-  return new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", {
+export function formatTimestamp(timestamp: number) {
+  return formatDateTimeValue(timestamp, getCurrentLocaleRuntime(), {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
     minute: "2-digit"
-  }).format(timestamp);
+  });
 }
 
 export function matchSearch(note: Note, search: string, tagMap: Map<string, Tag>) {

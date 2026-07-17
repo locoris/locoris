@@ -1,143 +1,119 @@
-# Google Drive Setup
+# Google Drive Production Setup
 
-Locoris supports Google Drive sync through the hidden `appDataFolder` space.
+Locoris stores Google Drive sync records in the hidden `appDataFolder` space and requests only the `drive.appdata` scope. Google Drive is a first-class transport alongside Locoris Cloud and the personal self-hosted server.
 
-Desktop builds use the recommended native flow:
+## Runtime Behavior
 
-- system browser
-- OAuth authorization code + PKCE
-- local loopback callback on `127.0.0.1`
-- refresh token stored in native secure storage
+- Web uses Google Identity Services token flow. Google may require an explicit user gesture after the access token expires; Locoris shows **Sign in again** instead of opening a background popup.
+- macOS and Windows use the system browser, authorization code + PKCE, a loopback callback, and a refresh token kept in the operating-system secure store.
+- Android uses Google Play Services `AuthorizationClient`; token clearing and full access revocation use the platform APIs.
+- Private vault checkpoints and commits are encrypted on the client before upload. Google receives ciphertext and sync metadata, not the decrypted vault.
+- Drive Changes polling detects edits made by another device and schedules a sync while the app is visible and online.
 
-Web builds keep the browser OAuth flow.
+## Storage Protocol
 
-## What You Need
+Current clients use immutable v2 records:
 
-- A Google Cloud project
-- Google Drive API enabled
-- An OAuth 2.0 **Web application** client for the web build
-- An OAuth 2.0 **Desktop app** client for macOS and Windows builds
-- A local `.env` file with the correct client IDs
+- `locoris-v2.checkpoint.<vault>.<id>.json` contains a complete recoverable state;
+- `locoris-v2.commit.<vault>.<id>.json` contains one plain or encrypted change batch;
+- a deterministic cursor identifies the selected checkpoint and every known commit;
+- concurrent commits are retained until a later checkpoint proves they were applied;
+- large records use resumable upload;
+- old `vault-*.json`, journal, and manifest files remain dual-read migration inputs and compatibility mirrors during the transition;
+- if an older Locoris client changes a legacy vault after v2 migration, the next current client promotes that write into a new checkpoint and merges any still-unapplied v2 commits.
 
-## 1. Enable Google Drive API
+Do not manually edit files in `appDataFolder`. An invalid manifest or journal produces a visible recovery error; Locoris does not silently replace damaged metadata with an empty file.
 
-In Google Cloud Console:
+## 1. Google Cloud Project
 
-1. Create or open your project.
-2. Open **APIs & Services**.
-3. Enable **Google Drive API**.
+Use separate Google Cloud projects for production and local/test builds when possible. In the production project:
 
-## 2. Create OAuth Clients
+1. Enable **Google Drive API**.
+2. Configure the OAuth consent screen with the production Locoris name and logo.
+3. Add a monitored support email and developer contact email.
+4. Add the real product home page, Privacy Policy, and Terms URLs.
+5. Verify every domain used by the web app and legal pages.
+6. Keep requested scopes limited to `https://www.googleapis.com/auth/drive.appdata`.
+7. Move the app from testing to production only after the branding, domains, legal pages, and support contact are final.
 
-In Google Cloud Console:
+Official references:
 
-1. Open **APIs & Services → Credentials**.
-2. Create **OAuth client ID** for the web app.
-3. Choose **Web application**.
-4. Add your local dev origins to **Authorized JavaScript origins**.
+- [Drive app data](https://developers.google.com/workspace/drive/api/guides/appdata)
+- [OAuth production readiness](https://developers.google.com/identity/protocols/oauth2/production-readiness/brand-verification)
+- [OAuth for installed apps](https://developers.google.com/identity/protocols/oauth2/native-app)
 
-Typical local origins:
+## 2. OAuth Clients
 
-- `http://localhost:4173`
-- `http://127.0.0.1:4173`
+Create clients in the same production project.
 
-If you use a different Vite port, add that origin too.
+### Web application
 
-Then create a second client:
+Create a **Web application** client and register every exact production and development origin. Examples:
 
-1. Create another **OAuth client ID**.
-2. Choose **Desktop app**.
-3. Keep that client ID for the native macOS and Windows builds.
+- `https://app.locoris.com`
+- `http://localhost:5173`
+- `http://127.0.0.1:5173`
 
-## 3. Configure Local Env
+Do not use wildcard origins. The web client ID is public and is compiled into the frontend.
 
-Create a local `.env` file in `apps/app`:
+### Desktop app
 
-```bash
-cp apps/app/.env.example apps/app/.env
-```
+Create a **Desktop app** client for macOS and Windows. Locoris uses PKCE and a random local loopback port. No desktop client secret is accepted or bundled by the app.
 
-Then set:
+### Android
+
+Create Android OAuth clients for every shipped application ID and signing certificate pair:
+
+- release: `com.locoris.android` plus the release certificate SHA-1;
+- debug: `com.locoris.android.debug` plus the debug certificate SHA-1, if debug Google sign-in is required.
+
+The Android clients, web client, and desktop client must belong to the Google Cloud project where Drive API is enabled.
+
+## 3. Local Configuration
+
+Create `apps/app/.env` from the example and set only public client IDs:
 
 ```env
 VITE_GOOGLE_DRIVE_CLIENT_ID=your-web-client-id.apps.googleusercontent.com
 VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_ID=your-desktop-client-id.apps.googleusercontent.com
-VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_SECRET=optional-desktop-client-secret
 ```
 
-Notes:
+Android resolves authorization through the application ID, signing certificate, and Google Cloud configuration; it does not consume either browser client ID.
 
-- web uses `VITE_GOOGLE_DRIVE_CLIENT_ID`
-- desktop prefers `VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_ID`
-- if the desktop variable is missing, desktop falls back to `VITE_GOOGLE_DRIVE_CLIENT_ID`
-- some Google Desktop clients also issue a companion secret; Locoris can use it through `VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_SECRET`, but leaves it optional because Google documents it as optional for installed apps
+## 4. GitHub Actions
 
-## 4. Configure GitHub Actions Builds
+Add these repository **Variables**, not secrets:
 
-GitHub desktop builds do not see your local `apps/app/.env`, so release workflows must get the same values from repository variables.
+- `VITE_GOOGLE_DRIVE_CLIENT_ID`
+- `VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_ID`
 
-In your GitHub repository:
+The release workflows validate required client IDs before packaging. Never add an OAuth client secret to `VITE_*`, because every Vite variable is readable in the shipped frontend bundle.
 
-1. Open `Settings`
-2. Open `Secrets and variables` → `Actions`
-3. Open the `Variables` tab
-4. Add:
-   - `VITE_GOOGLE_DRIVE_CLIENT_ID`
-   - `VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_ID`
-   - `VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_SECRET` if your Desktop client includes one
+## 5. Account Actions
 
-Locoris release workflows inject these variables into Vite at build time. If either variable is missing, CI now fails early with a clear error instead of shipping a build with broken Google Drive sync.
+- **Sign in again** refreshes or recreates the platform session while preserving vault bindings.
+- **Delete connection** removes the local Locoris connection and bindings. On Android it also clears the cached access token.
+- **Revoke Google access** calls Google's revoke API, clears local access/refresh state, and leaves the connection visible for an intentional re-login.
 
-## 5. Run The App
+Revocation affects every Locoris device authorized through that Google grant. The hidden Drive data is not deleted by revocation.
 
-### Web
+## 6. Release Verification
+
+Run the following matrix before shipping a production build:
+
+1. Connect a new account on web, macOS, Windows, and Android.
+2. Close and reopen desktop/Android; confirm refresh happens without another login.
+3. Let a web token expire; confirm background sync does not open a popup and **Sign in again** repairs the same connection.
+4. Create, rename, sync, import, and delete a remote vault.
+5. Sync one regular and one private vault between two devices.
+6. Edit the same vault while both devices are offline, reconnect together, and confirm both immutable commits are merged.
+7. Interrupt a large upload, restore the network, and confirm retry/resumable upload completes.
+8. Test Drive storage quota, revoked permission, rate limiting, offline mode, and a damaged legacy manifest against non-production test data.
+9. Revoke access, verify the connection reports authorization required, then sign in again without deleting the local vault.
+10. Confirm another device change is detected while Locoris is visible without requiring a local edit.
+
+Automated v2 protocol tests run with:
 
 ```bash
-npm install
-npm run dev
+npm run test --workspace @locoris/app
 ```
-
-### Desktop
-
-```bash
-npm install
-npm run desktop:dev
-```
-
-Open the app, then:
-
-1. Go to `Settings`
-2. Open `Synchronization`
-3. Click `Add connection`
-4. Choose `Google Drive`
-5. Authorize access in the system browser
-
-After authorization, Locoris stores vault data in Google Drive `appDataFolder`, not in the user-visible Drive UI.
-
-## 6. Desktop Callback Details
-
-Native builds complete Google OAuth through a local loopback callback.
-
-- Locoris opens the system browser
-- Google redirects back to `http://127.0.0.1:<random-port>/`
-- Locoris captures the authorization code locally
-- the refresh token is stored in native secure storage
-
-This keeps desktop OAuth out of embedded webviews and avoids browser-only popup flows.
-
-## 7. What To Expect
-
-- Google Drive becomes a regular sync method inside the existing multi-vault UI.
-- Each remote vault gets its own file in `appDataFolder`.
-- A manifest file tracks available remote vaults.
-- Desktop builds can refresh Google sessions silently by using the stored refresh token.
-
-## Current Limitation
-
-At the current stage:
-
-- Google Drive sync works through snapshot sync
-- delta sync for Google Drive is not implemented yet
-- encrypted Google Drive payload import is not enabled yet
-
-The payload contract is already prepared for future E2EE rollout.

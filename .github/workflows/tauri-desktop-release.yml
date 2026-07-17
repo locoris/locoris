@@ -39,7 +39,6 @@ jobs:
     runs-on: ${{ matrix.platform }}
     env:
       LOCORIS_DESKTOP_BUILD: "true"
-      VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_SECRET: ${{ secrets.VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_SECRET }}
 
     steps:
       - uses: actions/checkout@v7
@@ -72,6 +71,12 @@ jobs:
             fi
             sleep $((attempt * 20))
           done
+
+      - name: Test application contracts
+        run: npm run test --workspace @locoris/app
+
+      - name: Validate localization catalogs
+        run: npm run i18n:check
 
       - name: Validate Google Drive OAuth env
         run: >
@@ -152,6 +157,12 @@ jobs:
             fi
             sleep $((attempt * 20))
           done
+
+      - name: Test application contracts
+        run: npm run test --workspace @locoris/app
+
+      - name: Validate localization catalogs
+        run: npm run i18n:check
 
       - name: Typecheck
         run: npm run typecheck --workspace @locoris/app

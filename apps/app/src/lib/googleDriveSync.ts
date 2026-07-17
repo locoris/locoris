@@ -4,14 +4,29 @@ import {
   desktopGoogleDriveOAuthReady,
   isDesktopGoogleDriveOauthRuntime,
   prepareGoogleDriveDesktopOAuth,
-  refreshGoogleDriveDesktopAccountSession
+  refreshGoogleDriveDesktopAccountSession,
+  revokeGoogleDriveDesktopAccess
 } from "./googleDriveDesktopOAuth";
 import {
   androidGoogleDriveOAuthReady,
+  clearGoogleDriveAndroidAccessToken,
   isAndroidGoogleDriveOauthRuntime,
   prepareGoogleDriveAndroidOAuth,
-  requestGoogleDriveAndroidAccessToken
+  requestGoogleDriveAndroidAccessToken,
+  revokeGoogleDriveAndroidAccess
 } from "./googleDriveAndroidOAuth";
+import {
+  buildGoogleDriveV2Cursor,
+  buildGoogleDriveV2FileName,
+  collectGoogleDriveV2UnappliedCommits,
+  GOOGLE_DRIVE_V2_CHECKPOINT_RETENTION_COUNT,
+  GOOGLE_DRIVE_V2_FILE_PREFIX,
+  parseGoogleDriveV2FileName,
+  planGoogleDriveV2CommitRetention,
+  selectGoogleDriveV2Checkpoint,
+  sortGoogleDriveV2Files,
+  type GoogleDriveV2FileMeta
+} from "./googleDriveSyncV2";
 import type {
   SyncChangeFeed,
   SyncChangeSet,
@@ -36,10 +51,16 @@ export const GOOGLE_DRIVE_MANIFEST_FILE = "zen-sync-manifest.json";
 export const GOOGLE_DRIVE_VAULT_PREFIX = "vault-";
 export const GOOGLE_DRIVE_VAULT_JOURNAL_SUFFIX = ".journal.json";
 export const GOOGLE_DRIVE_BINDING_TOKEN = "google-drive-session";
+export const GOOGLE_DRIVE_TOKEN_REFRESH_SKEW_MS = 3 * 60 * 1000;
 const GOOGLE_IDENTITY_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
 const GOOGLE_IDENTITY_LOAD_TIMEOUT_MS = 10_000;
 const GOOGLE_IDENTITY_POLL_INTERVAL_MS = 50;
+const GOOGLE_TOKEN_REQUEST_TIMEOUT_MS = 20_000;
 const GOOGLE_DRIVE_CHANGE_HISTORY_LIMIT = 240;
+const GOOGLE_DRIVE_REQUEST_TIMEOUT_MS = 30_000;
+const GOOGLE_DRIVE_MAX_RETRY_ATTEMPTS = 4;
+const GOOGLE_DRIVE_MULTIPART_UPLOAD_LIMIT_BYTES = 5 * 1024 * 1024;
+const GOOGLE_DRIVE_RESUMABLE_CHUNK_BYTES = 4 * 1024 * 1024;
 
 type GoogleTokenResponse = {
   access_token?: string;
@@ -68,12 +89,19 @@ type GoogleTokenClient = {
   }) => void;
 };
 
+type GoogleRevokeResponse = {
+  successful?: boolean;
+  error?: string;
+  error_description?: string;
+};
+
 declare global {
   interface Window {
     google?: {
       accounts?: {
         oauth2?: {
           initTokenClient: (config: GoogleTokenClientConfig) => GoogleTokenClient;
+          revoke: (token: string, callback: (response: GoogleRevokeResponse) => void) => void;
         };
       };
     };
@@ -89,11 +117,13 @@ type GoogleDriveAboutResponse = {
 };
 
 type GoogleDriveListResponse = {
+  nextPageToken?: string;
   files?: Array<{
     id?: string;
     name?: string;
     createdTime?: string;
     modifiedTime?: string;
+    size?: string;
   }>;
 };
 
@@ -102,7 +132,76 @@ type GoogleDriveFileMeta = {
   name: string;
   createdTime: string;
   modifiedTime: string;
+  size: number;
 };
+
+type GoogleDriveChangeListResponse = {
+  nextPageToken?: string;
+  newStartPageToken?: string;
+  changes?: Array<{
+    removed?: boolean;
+    fileId?: string;
+    file?: {
+      id?: string;
+      name?: string;
+      modifiedTime?: string;
+    };
+  }>;
+};
+
+interface GoogleDriveV2CheckpointBlob {
+  schemaVersion: 2;
+  provider: "googleDrive";
+  recordType: "checkpoint";
+  checkpointId: string;
+  vaultId: string;
+  vaultName: string;
+  vaultKind: "regular" | "private";
+  createdAt: number;
+  coveredCommitCount: number;
+  appliedCommitIds: string[];
+  baseCursor: string | null;
+  envelope: SyncEnvelope | SyncSecureEnvelope;
+}
+
+interface GoogleDriveV2CommitBlob {
+  schemaVersion: 2;
+  provider: "googleDrive";
+  recordType: "commit";
+  commitId: string;
+  vaultId: string;
+  vaultName: string;
+  vaultKind: "regular" | "private";
+  baseCursor: string | null;
+  createdAt: number;
+  changes: SyncChangeSet | null;
+  encryptedChanges: SyncEncryptedPayload | null;
+  metadata: SyncEnvelope["metadata"];
+}
+
+interface GoogleDriveV2CheckpointRecord extends GoogleDriveV2CheckpointBlob {
+  file: GoogleDriveFileMeta;
+}
+
+interface GoogleDriveV2CommitRecord extends GoogleDriveV2CommitBlob {
+  file: GoogleDriveFileMeta;
+}
+
+interface GoogleDriveV2VaultState {
+  checkpoint: GoogleDriveV2CheckpointRecord;
+  checkpoints: GoogleDriveV2CheckpointRecord[];
+  commits: GoogleDriveV2CommitRecord[];
+  unappliedCommits: GoogleDriveV2CommitRecord[];
+  cursor: string;
+}
+
+export interface GoogleDriveRemoteBootstrap {
+  revision: string;
+  checkpointRevision: string | null;
+  envelope: SyncEnvelope | SyncSecureEnvelope;
+  changes: SyncChangeSet | null;
+  encryptedChanges: SyncEncryptedPayload[] | null;
+}
 
 type GoogleDriveManifestFileState = {
   fileId: string | null;
@@ -169,6 +268,7 @@ export interface GoogleDriveAccountSession {
 }
 
 let googleIdentityLoadPromise: Promise<NonNullable<Window["google"]>> | null = null;
+const googleDriveRefreshPromises = new Map<string, Promise<GoogleDriveAccountSession>>();
 
 function now() {
   return Date.now();
@@ -532,6 +632,185 @@ function buildGoogleAuthHeaders(accessToken: string, extra?: HeadersInit) {
   };
 }
 
+type GoogleDriveErrorPayload = {
+  error?: {
+    code?: number;
+    message?: string;
+    errors?: Array<{
+      reason?: string;
+      message?: string;
+    }>;
+  };
+};
+
+class GoogleDriveApiError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GoogleDriveApiError";
+  }
+}
+
+function delay(milliseconds: number) {
+  return new Promise<void>((resolve) => {
+    globalThis.setTimeout(resolve, milliseconds);
+  });
+}
+
+function parseRetryAfter(response: Response) {
+  const raw = response.headers.get("retry-after")?.trim() ?? "";
+  const seconds = Number(raw);
+
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.min(30_000, seconds * 1000);
+  }
+
+  const date = Date.parse(raw);
+  return Number.isFinite(date) ? Math.max(0, Math.min(30_000, date - Date.now())) : null;
+}
+
+function getGoogleDriveErrorReason(payload: GoogleDriveErrorPayload | null) {
+  return sanitizeText(payload?.error?.errors?.[0]?.reason, "");
+}
+
+function isRetryableGoogleDriveResponse(response: Response, payload: GoogleDriveErrorPayload | null) {
+  if (response.status === 408 || response.status === 429 || response.status >= 500) {
+    return true;
+  }
+
+  if (response.status !== 403) {
+    return false;
+  }
+
+  return [
+    "rateLimitExceeded",
+    "userRateLimitExceeded",
+    "dailyLimitExceeded",
+    "backendError"
+  ].includes(getGoogleDriveErrorReason(payload));
+}
+
+function createGoogleDriveHttpError(response: Response, payload: GoogleDriveErrorPayload | null) {
+  const reason = getGoogleDriveErrorReason(payload);
+  const message = sanitizeText(payload?.error?.message, "");
+
+  if (response.status === 401) {
+    return new GoogleDriveApiError("GOOGLE_DRIVE_AUTH_REQUIRED");
+  }
+
+  if (response.status === 403) {
+    if (reason === "storageQuotaExceeded") {
+      return new GoogleDriveApiError("GOOGLE_DRIVE_STORAGE_QUOTA_EXCEEDED");
+    }
+
+    if (["rateLimitExceeded", "userRateLimitExceeded", "dailyLimitExceeded"].includes(reason)) {
+      return new GoogleDriveApiError("GOOGLE_DRIVE_RATE_LIMITED");
+    }
+
+    if (["insufficientPermissions", "insufficientFilePermissions", "forbidden"].includes(reason)) {
+      return new GoogleDriveApiError("GOOGLE_DRIVE_PERMISSION_REQUIRED");
+    }
+
+    return new GoogleDriveApiError(message || "GOOGLE_DRIVE_PERMISSION_REQUIRED");
+  }
+
+  if (response.status === 404) {
+    return new GoogleDriveApiError("GOOGLE_DRIVE_FILE_NOT_FOUND");
+  }
+
+  if (response.status === 410) {
+    return new GoogleDriveApiError("GOOGLE_DRIVE_CHANGE_TOKEN_EXPIRED");
+  }
+
+  if (response.status === 413) {
+    return new GoogleDriveApiError("GOOGLE_DRIVE_PAYLOAD_TOO_LARGE");
+  }
+
+  if (response.status === 429) {
+    return new GoogleDriveApiError("GOOGLE_DRIVE_RATE_LIMITED");
+  }
+
+  return new GoogleDriveApiError(message || `HTTP_${response.status}`);
+}
+
+async function parseGoogleDriveErrorPayload(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("application/json")) {
+    return null;
+  }
+
+  return response.clone().json().catch(() => null) as Promise<GoogleDriveErrorPayload | null>;
+}
+
+async function performGoogleDriveRequest(
+  url: string,
+  accessToken: string,
+  init: RequestInit = {},
+  options: {
+    idempotent?: boolean;
+    acceptedStatuses?: readonly number[];
+    timeoutMs?: number;
+  } = {}
+) {
+  const idempotent = options.idempotent ?? ["GET", "HEAD", "PUT", "PATCH", "DELETE"].includes(
+    (init.method ?? "GET").toUpperCase()
+  );
+  const attempts = idempotent ? GOOGLE_DRIVE_MAX_RETRY_ATTEMPTS : 1;
+  let lastNetworkError: unknown = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = globalThis.setTimeout(
+      () => controller.abort(),
+      options.timeoutMs ?? GOOGLE_DRIVE_REQUEST_TIMEOUT_MS
+    );
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        headers: buildGoogleAuthHeaders(accessToken, init.headers),
+        signal: controller.signal
+      });
+      const accepted = response.ok || options.acceptedStatuses?.includes(response.status);
+
+      if (accepted) {
+        return response;
+      }
+
+      const payload = await parseGoogleDriveErrorPayload(response);
+
+      if (attempt + 1 < attempts && isRetryableGoogleDriveResponse(response, payload)) {
+        const retryAfter = parseRetryAfter(response);
+        const backoff = retryAfter ?? Math.min(8_000, 350 * 2 ** attempt + Math.random() * 250);
+        await delay(backoff);
+        continue;
+      }
+
+      throw createGoogleDriveHttpError(response, payload);
+    } catch (error) {
+      if (error instanceof GoogleDriveApiError) {
+        throw error;
+      }
+
+      lastNetworkError = error;
+
+      if (attempt + 1 >= attempts) {
+        break;
+      }
+
+      await delay(Math.min(8_000, 350 * 2 ** attempt + Math.random() * 250));
+    } finally {
+      globalThis.clearTimeout(timeoutId);
+    }
+  }
+
+  if (lastNetworkError instanceof DOMException && lastNetworkError.name === "AbortError") {
+    throw new Error("GOOGLE_DRIVE_REQUEST_TIMEOUT");
+  }
+
+  throw new Error("SERVER_UNAVAILABLE");
+}
+
 function getGoogleIdentityApi() {
   return window.google?.accounts?.oauth2 ? window.google : null;
 }
@@ -682,6 +961,19 @@ function requestGoogleDriveAccessToken(options?: {
   }
 
   return new Promise<GoogleTokenResponse>((resolve, reject) => {
+    let settled = false;
+    const settle = (callback: () => void) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      window.clearTimeout(timeoutId);
+      callback();
+    };
+    const timeoutId = window.setTimeout(() => {
+      settle(() => reject(new Error(silent ? "GOOGLE_DRIVE_AUTH_REQUIRED" : "GOOGLE_OAUTH_FAILED")));
+    }, GOOGLE_TOKEN_REQUEST_TIMEOUT_MS);
     const tokenClient = google.accounts?.oauth2?.initTokenClient({
       client_id: clientId,
       scope: GOOGLE_DRIVE_APP_DATA_SCOPE,
@@ -690,34 +982,34 @@ function requestGoogleDriveAccessToken(options?: {
       login_hint: options?.loginHint,
       callback: (response) => {
         if (response.error) {
-          reject(new Error(silent ? "GOOGLE_DRIVE_AUTH_REQUIRED" : response.error));
+          settle(() => reject(new Error(silent ? "GOOGLE_DRIVE_AUTH_REQUIRED" : response.error)));
           return;
         }
 
-        resolve(response);
+        settle(() => resolve(response));
       },
       error_callback: (error) => {
         if (silent) {
-          reject(new Error("GOOGLE_DRIVE_AUTH_REQUIRED"));
+          settle(() => reject(new Error("GOOGLE_DRIVE_AUTH_REQUIRED")));
           return;
         }
 
         if (error.type === "popup_closed") {
-          reject(new Error("GOOGLE_OAUTH_POPUP_CLOSED"));
+          settle(() => reject(new Error("GOOGLE_OAUTH_POPUP_CLOSED")));
           return;
         }
 
         if (error.type === "popup_failed_to_open") {
-          reject(new Error("GOOGLE_OAUTH_POPUP_FAILED"));
+          settle(() => reject(new Error("GOOGLE_OAUTH_POPUP_FAILED")));
           return;
         }
 
-        reject(new Error("GOOGLE_OAUTH_FAILED"));
+        settle(() => reject(new Error("GOOGLE_OAUTH_FAILED")));
       }
     });
 
     if (!tokenClient) {
-      reject(new Error("GOOGLE_OAUTH_UNAVAILABLE"));
+      settle(() => reject(new Error("GOOGLE_OAUTH_UNAVAILABLE")));
       return;
     }
 
@@ -733,86 +1025,102 @@ async function googleDriveJsonRequest<T>(
   accessToken: string,
   init: RequestInit = {}
 ) {
-  let response: Response;
-
-  try {
-    response = await fetch(url, {
-      ...init,
-      headers: buildGoogleAuthHeaders(accessToken, init.headers)
-    });
-  } catch {
-    throw new Error("SERVER_UNAVAILABLE");
-  }
+  const response = await performGoogleDriveRequest(url, accessToken, init);
 
   const contentType = response.headers.get("content-type") ?? "";
   const payload = contentType.includes("application/json")
     ? ((await response.json().catch(() => null)) as T | { error?: { message?: string } } | null)
     : null;
 
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new Error("GOOGLE_DRIVE_AUTH_REQUIRED");
-    }
-
-    const driveMessage =
-      payload &&
-      typeof payload === "object" &&
-      "error" in payload &&
-      payload.error &&
-      typeof payload.error === "object" &&
-      "message" in payload.error &&
-      typeof payload.error.message === "string"
-        ? payload.error.message
-        : null;
-
-    throw new Error(driveMessage || `HTTP_${response.status}`);
-  }
-
   return payload as T;
 }
 
 async function googleDriveTextRequest(url: string, accessToken: string) {
-  let response: Response;
-
-  try {
-    response = await fetch(url, {
-      method: "GET",
-      headers: buildGoogleAuthHeaders(accessToken)
-    });
-  } catch {
-    throw new Error("SERVER_UNAVAILABLE");
-  }
-
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new Error("GOOGLE_DRIVE_AUTH_REQUIRED");
-    }
-
-    throw new Error(`HTTP_${response.status}`);
-  }
+  const response = await performGoogleDriveRequest(url, accessToken, { method: "GET" });
 
   return response.text();
 }
 
 async function googleDriveDeleteRequest(url: string, accessToken: string) {
-  let response: Response;
+  await performGoogleDriveRequest(url, accessToken, { method: "DELETE" }, { acceptedStatuses: [404] });
+}
 
-  try {
-    response = await fetch(url, {
-      method: "DELETE",
-      headers: buildGoogleAuthHeaders(accessToken)
-    });
-  } catch {
-    throw new Error("SERVER_UNAVAILABLE");
+async function uploadGoogleDriveJsonFileResumable<T extends object>(input: {
+  accessToken: string;
+  fileId?: string | null;
+  name: string;
+  payload: T;
+  payloadBytes: Uint8Array;
+  parents?: string[];
+}) {
+  const metadata = {
+    name: input.name,
+    mimeType: "application/json",
+    ...(input.parents?.length ? { parents: input.parents } : {})
+  };
+  const sessionUrl = input.fileId
+    ? `${GOOGLE_DRIVE_UPLOAD_BASE_URL}/${encodeURIComponent(input.fileId)}?uploadType=resumable&fields=id,name,createdTime,modifiedTime,size`
+    : `${GOOGLE_DRIVE_UPLOAD_BASE_URL}?uploadType=resumable&fields=id,name,createdTime,modifiedTime,size`;
+  const sessionResponse = await performGoogleDriveRequest(
+    sessionUrl,
+    input.accessToken,
+    {
+      method: input.fileId ? "PATCH" : "POST",
+      headers: {
+        "Content-Type": "application/json; charset=UTF-8",
+        "X-Upload-Content-Type": "application/json; charset=UTF-8",
+        "X-Upload-Content-Length": String(input.payloadBytes.byteLength)
+      },
+      body: JSON.stringify(metadata)
+    },
+    { idempotent: Boolean(input.fileId) }
+  );
+  const uploadUrl = sessionResponse.headers.get("location")?.trim() ?? "";
+
+  if (!uploadUrl) {
+    throw new Error("GOOGLE_DRIVE_RESUMABLE_UPLOAD_FAILED");
   }
 
-  if (!response.ok && response.status !== 404) {
-    if (response.status === 401 || response.status === 403) {
-      throw new Error("GOOGLE_DRIVE_AUTH_REQUIRED");
+  let offset = 0;
+
+  while (offset < input.payloadBytes.byteLength) {
+    const end = Math.min(offset + GOOGLE_DRIVE_RESUMABLE_CHUNK_BYTES, input.payloadBytes.byteLength);
+    const chunk = input.payloadBytes.slice(offset, end);
+    const response = await performGoogleDriveRequest(
+      uploadUrl,
+      input.accessToken,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json; charset=UTF-8",
+          "Content-Length": String(chunk.byteLength),
+          "Content-Range": `bytes ${offset}-${end - 1}/${input.payloadBytes.byteLength}`
+        },
+        body: chunk
+      },
+      {
+        idempotent: true,
+        acceptedStatuses: [308],
+        timeoutMs: 60_000
+      }
+    );
+
+    if (response.status === 308) {
+      const acknowledged = response.headers.get("range")?.match(/bytes=0-(\d+)/i)?.[1];
+      offset = acknowledged ? Number(acknowledged) + 1 : end;
+      continue;
     }
 
-    throw new Error(`HTTP_${response.status}`);
+    return (await response.json().catch(() => null)) as {
+      id?: string;
+      name?: string;
+      createdTime?: string;
+      modifiedTime?: string;
+      size?: string;
+    };
   }
+
+  throw new Error("GOOGLE_DRIVE_RESUMABLE_UPLOAD_FAILED");
 }
 
 async function uploadGoogleDriveJsonFile<T extends object>(input: {
@@ -822,6 +1130,16 @@ async function uploadGoogleDriveJsonFile<T extends object>(input: {
   payload: T;
   parents?: string[];
 }) {
+  const payloadJson = JSON.stringify(input.payload);
+  const payloadBytes = new TextEncoder().encode(payloadJson);
+
+  if (payloadBytes.byteLength > GOOGLE_DRIVE_MULTIPART_UPLOAD_LIMIT_BYTES) {
+    return uploadGoogleDriveJsonFileResumable({
+      ...input,
+      payloadBytes
+    });
+  }
+
   const boundary = `locoris-${crypto.randomUUID()}`;
   const metadata = {
     name: input.name,
@@ -835,18 +1153,19 @@ async function uploadGoogleDriveJsonFile<T extends object>(input: {
     `--${boundary}`,
     "Content-Type: application/json; charset=UTF-8",
     "",
-    JSON.stringify(input.payload),
+    payloadJson,
     `--${boundary}--`
   ].join("\r\n");
   const url = input.fileId
-    ? `${GOOGLE_DRIVE_UPLOAD_BASE_URL}/${encodeURIComponent(input.fileId)}?uploadType=multipart&fields=id,name,createdTime,modifiedTime`
-    : `${GOOGLE_DRIVE_UPLOAD_BASE_URL}?uploadType=multipart&fields=id,name,createdTime,modifiedTime`;
+    ? `${GOOGLE_DRIVE_UPLOAD_BASE_URL}/${encodeURIComponent(input.fileId)}?uploadType=multipart&fields=id,name,createdTime,modifiedTime,size`
+    : `${GOOGLE_DRIVE_UPLOAD_BASE_URL}?uploadType=multipart&fields=id,name,createdTime,modifiedTime,size`;
 
   return googleDriveJsonRequest<{
     id?: string;
     name?: string;
     createdTime?: string;
     modifiedTime?: string;
+    size?: string;
   }>(url, input.accessToken, {
     method: input.fileId ? "PATCH" : "POST",
     headers: {
@@ -857,25 +1176,36 @@ async function uploadGoogleDriveJsonFile<T extends object>(input: {
 }
 
 async function listGoogleDriveAppDataFiles(accessToken: string) {
-  const params = new URLSearchParams({
-    spaces: GOOGLE_DRIVE_APP_FOLDER,
-    fields: "files(id,name,createdTime,modifiedTime)",
-    pageSize: "1000"
-  });
-  const payload = await googleDriveJsonRequest<GoogleDriveListResponse>(
-    `${GOOGLE_DRIVE_FILES_BASE_URL}?${params.toString()}`,
-    accessToken,
-    {
-      method: "GET"
-    }
-  );
+  const files: NonNullable<GoogleDriveListResponse["files"]> = [];
+  let pageToken = "";
 
-  return (payload.files ?? [])
+  do {
+    const params = new URLSearchParams({
+      spaces: GOOGLE_DRIVE_APP_FOLDER,
+      fields: "nextPageToken,files(id,name,createdTime,modifiedTime,size)",
+      pageSize: "1000"
+    });
+
+    if (pageToken) {
+      params.set("pageToken", pageToken);
+    }
+
+    const payload = await googleDriveJsonRequest<GoogleDriveListResponse>(
+      `${GOOGLE_DRIVE_FILES_BASE_URL}?${params.toString()}`,
+      accessToken,
+      { method: "GET" }
+    );
+    files.push(...(payload.files ?? []));
+    pageToken = sanitizeText(payload.nextPageToken, "");
+  } while (pageToken);
+
+  return files
     .map((file) => ({
       id: sanitizeText(file.id),
       name: sanitizeText(file.name),
       createdTime: sanitizeText(file.createdTime),
-      modifiedTime: sanitizeText(file.modifiedTime)
+      modifiedTime: sanitizeText(file.modifiedTime),
+      size: Math.max(0, Number(file.size) || 0)
     }))
     .filter((file) => file.id && file.name);
 }
@@ -905,8 +1235,21 @@ async function readGoogleDriveManifestState(accessToken: string): Promise<Google
     };
   }
 
-  const payload = await readDriveFileJson<GoogleDriveManifest>(accessToken, manifestMeta.id).catch(() => null);
-  const manifest = payload && payload.provider === "googleDrive" ? payload : createDefaultManifest();
+  const payload = await readDriveFileJson<GoogleDriveManifest>(accessToken, manifestMeta.id).catch(
+    (error) => {
+      if (error instanceof Error && error.message === "GOOGLE_DRIVE_INVALID_PAYLOAD") {
+        throw new Error("GOOGLE_DRIVE_MANIFEST_CORRUPT");
+      }
+
+      throw error;
+    }
+  );
+
+  if (payload.provider !== "googleDrive" || !Array.isArray(payload.vaults)) {
+    throw new Error("GOOGLE_DRIVE_MANIFEST_CORRUPT");
+  }
+
+  const manifest = payload;
 
   return {
     fileId: manifestMeta.id,
@@ -1074,6 +1417,49 @@ async function resolveGoogleDriveCatalog(accessToken: string) {
     });
   }
 
+  const v2VaultIds = [...new Set(
+    state.files
+      .map((file) => parseGoogleDriveV2FileName(file.name)?.vaultId ?? "")
+      .filter(Boolean)
+  )];
+
+  for (const vaultId of v2VaultIds) {
+    const v2State = await readGoogleDriveV2VaultState(accessToken, vaultId, {
+      files: state.files,
+      migrateLegacy: false
+    });
+
+    if (!v2State) {
+      continue;
+    }
+
+    const currentIndex = resolvedRecords.findIndex((record) => record.id === vaultId);
+    const current = currentIndex >= 0 ? resolvedRecords[currentIndex] : null;
+    const latestCommit = v2State.commits[v2State.commits.length - 1] ?? null;
+    const envelope = v2State.checkpoint.envelope;
+    const nextRecord: GoogleDriveRemoteVaultRecord = {
+      id: vaultId,
+      name:
+        latestCommit?.vaultName ||
+        v2State.checkpoint.vaultName ||
+        sanitizeText(envelope.metadata?.vault?.name, vaultId),
+      fileId: current?.fileId ?? v2State.checkpoint.file.id,
+      journalFileId: current?.journalFileId ?? null,
+      vaultKind: envelope.metadata?.payloadMode === "encrypted" ? "private" : "regular",
+      updatedAt: Math.max(
+        v2State.checkpoint.createdAt,
+        ...v2State.commits.map((commit) => commit.createdAt)
+      ),
+      revision: v2State.cursor
+    };
+
+    if (currentIndex >= 0) {
+      resolvedRecords[currentIndex] = nextRecord;
+    } else {
+      resolvedRecords.push(nextRecord);
+    }
+  }
+
   const manifestNeedsUpdate =
     resolvedRecords.length !== state.manifest.vaults.length ||
     resolvedRecords.some((record) => {
@@ -1209,14 +1595,17 @@ async function readGoogleDriveJournalState(
   }
 
   const payload = await readDriveFileJson<GoogleDriveVaultJournalBlob>(accessToken, journalFileId).catch(
-    () => null
+    (error) => {
+      if (error instanceof Error && error.message === "GOOGLE_DRIVE_INVALID_PAYLOAD") {
+        throw new Error("GOOGLE_DRIVE_JOURNAL_CORRUPT");
+      }
+
+      throw error;
+    }
   );
 
   if (!payload || payload.provider !== "googleDrive" || !Array.isArray(payload.entries)) {
-    return {
-      fileId: journalFileId,
-      blob: createDefaultVaultJournalBlob(record.id)
-    };
+    throw new Error("GOOGLE_DRIVE_JOURNAL_CORRUPT");
   }
 
   return {
@@ -1283,6 +1672,465 @@ async function ensureGoogleDriveJournalState(
   };
 }
 
+function applyGoogleDriveChangeSetsToSnapshot(
+  snapshot: SyncSnapshot,
+  changeSets: readonly SyncChangeSet[]
+) {
+  const maps = {
+    project: new Map(snapshot.projects.map((record) => [record.id, record])),
+    folder: new Map(snapshot.folders.map((record) => [record.id, record])),
+    tag: new Map(snapshot.tags.map((record) => [record.id, record])),
+    note: new Map(snapshot.notes.map((record) => [record.id, record])),
+    asset: new Map(snapshot.assets.map((record) => [record.id, record])),
+    task: new Map(snapshot.tasks.map((record) => [record.id, record])),
+    habit: new Map(snapshot.habits.map((record) => [record.id, record])),
+    habitLog: new Map(snapshot.habitLogs.map((record) => [record.id, record])),
+    goal: new Map(snapshot.goals.map((record) => [record.id, record])),
+    timeBlock: new Map(snapshot.timeBlocks.map((record) => [record.id, record])),
+    tombstones: new Map(snapshot.tombstones.map((record) => [record.key, record]))
+  };
+  let deviceId = snapshot.deviceId;
+  let exportedAt = snapshot.exportedAt;
+
+  changeSets.forEach((rawChangeSet) => {
+    const changeSet = normalizeChangeSetPayload(rawChangeSet, deviceId);
+    applyChangeSetIntoMaps(maps, changeSet);
+    deviceId = changeSet.deviceId || deviceId;
+    exportedAt = Math.max(exportedAt, changeSet.exportedAt || 0);
+  });
+
+  return {
+    deviceId,
+    exportedAt,
+    projects: sortById([...maps.project.values()]),
+    folders: sortById([...maps.folder.values()]),
+    tags: sortById([...maps.tag.values()]),
+    notes: sortById([...maps.note.values()]),
+    assets: sortById([...maps.asset.values()]),
+    tasks: sortById([...maps.task.values()]),
+    habits: sortById([...maps.habit.values()]),
+    habitLogs: sortById([...maps.habitLog.values()]),
+    goals: sortById([...maps.goal.values()]),
+    timeBlocks: sortById([...maps.timeBlock.values()]),
+    tombstones: sortTombstones([...maps.tombstones.values()])
+  } satisfies SyncSnapshot;
+}
+
+function normalizeGoogleDriveV2Checkpoint(
+  payload: unknown,
+  file: GoogleDriveFileMeta,
+  expectedVaultId: string
+): GoogleDriveV2CheckpointRecord | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const record = payload as Partial<GoogleDriveV2CheckpointBlob>;
+  const checkpointId = sanitizeText(record.checkpointId, "");
+  const vaultId = sanitizeText(record.vaultId, "");
+
+  if (
+    record.schemaVersion !== 2 ||
+    record.provider !== "googleDrive" ||
+    record.recordType !== "checkpoint" ||
+    !checkpointId ||
+    vaultId !== expectedVaultId ||
+    !record.envelope
+  ) {
+    return null;
+  }
+
+  let envelope: SyncEnvelope | SyncSecureEnvelope;
+
+  try {
+    envelope = normalizeEnvelopePayload(record.envelope);
+  } catch {
+    return null;
+  }
+
+  return {
+    schemaVersion: 2,
+    provider: "googleDrive",
+    recordType: "checkpoint",
+    checkpointId,
+    vaultId,
+    vaultName: sanitizeText(record.vaultName, vaultId),
+    vaultKind: record.vaultKind === "private" ? "private" : "regular",
+    createdAt:
+      typeof record.createdAt === "number"
+        ? record.createdAt
+        : normalizeDriveTimestamp(file.createdTime || file.modifiedTime),
+    coveredCommitCount:
+      typeof record.coveredCommitCount === "number"
+        ? Math.max(0, Math.floor(record.coveredCommitCount))
+        : 0,
+    appliedCommitIds: Array.isArray(record.appliedCommitIds)
+      ? [...new Set(record.appliedCommitIds.map((value) => sanitizeText(value, "")).filter(Boolean))]
+      : [],
+    baseCursor: typeof record.baseCursor === "string" ? record.baseCursor : null,
+    envelope,
+    file
+  };
+}
+
+function normalizeGoogleDriveV2Commit(
+  payload: unknown,
+  file: GoogleDriveFileMeta,
+  expectedVaultId: string
+): GoogleDriveV2CommitRecord | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const record = payload as Partial<GoogleDriveV2CommitBlob>;
+  const commitId = sanitizeText(record.commitId, "");
+  const vaultId = sanitizeText(record.vaultId, "");
+  const encryptedChanges = normalizeEncryptedPayload(record.encryptedChanges);
+  const hasPlainChanges = Boolean(record.changes && typeof record.changes === "object");
+  const changes = encryptedChanges || !hasPlainChanges
+    ? null
+    : normalizeChangeSetPayload(record.changes, "google-drive");
+
+  if (
+    record.schemaVersion !== 2 ||
+    record.provider !== "googleDrive" ||
+    record.recordType !== "commit" ||
+    !commitId ||
+    vaultId !== expectedVaultId ||
+    (!changes && !encryptedChanges)
+  ) {
+    return null;
+  }
+
+  return {
+    schemaVersion: 2,
+    provider: "googleDrive",
+    recordType: "commit",
+    commitId,
+    vaultId,
+    vaultName: sanitizeText(record.vaultName, vaultId),
+    vaultKind: record.vaultKind === "private" ? "private" : "regular",
+    baseCursor: typeof record.baseCursor === "string" ? record.baseCursor : null,
+    createdAt:
+      typeof record.createdAt === "number"
+        ? record.createdAt
+        : normalizeDriveTimestamp(file.createdTime || file.modifiedTime),
+    changes,
+    encryptedChanges,
+    metadata: record.metadata ?? null,
+    file
+  };
+}
+
+async function uploadGoogleDriveV2Checkpoint(
+  accessToken: string,
+  payload: GoogleDriveV2CheckpointBlob
+) {
+  const response = await uploadGoogleDriveJsonFile({
+    accessToken,
+    name: buildGoogleDriveV2FileName("checkpoint", payload.vaultId, payload.checkpointId),
+    parents: [GOOGLE_DRIVE_APP_FOLDER],
+    payload
+  });
+
+  return {
+    ...payload,
+    file: {
+      id: sanitizeText(response.id, ""),
+      name: sanitizeText(
+        response.name,
+        buildGoogleDriveV2FileName("checkpoint", payload.vaultId, payload.checkpointId)
+      ),
+      createdTime: sanitizeText(response.createdTime, new Date(payload.createdAt).toISOString()),
+      modifiedTime: sanitizeText(response.modifiedTime, new Date(payload.createdAt).toISOString()),
+      size: Math.max(0, Number(response.size) || JSON.stringify(payload).length)
+    }
+  } satisfies GoogleDriveV2CheckpointRecord;
+}
+
+async function uploadGoogleDriveV2Commit(
+  accessToken: string,
+  payload: GoogleDriveV2CommitBlob
+) {
+  const response = await uploadGoogleDriveJsonFile({
+    accessToken,
+    name: buildGoogleDriveV2FileName("commit", payload.vaultId, payload.commitId),
+    parents: [GOOGLE_DRIVE_APP_FOLDER],
+    payload
+  });
+
+  return {
+    ...payload,
+    file: {
+      id: sanitizeText(response.id, ""),
+      name: sanitizeText(
+        response.name,
+        buildGoogleDriveV2FileName("commit", payload.vaultId, payload.commitId)
+      ),
+      createdTime: sanitizeText(response.createdTime, new Date(payload.createdAt).toISOString()),
+      modifiedTime: sanitizeText(response.modifiedTime, new Date(payload.createdAt).toISOString()),
+      size: Math.max(0, Number(response.size) || JSON.stringify(payload).length)
+    }
+  } satisfies GoogleDriveV2CommitRecord;
+}
+
+async function createGoogleDriveV2MigrationCheckpoint(
+  accessToken: string,
+  vaultId: string,
+  files: GoogleDriveFileMeta[]
+) {
+  const legacyFile = files.find((file) => deriveVaultIdFromFileName(file.name) === vaultId) ?? null;
+
+  if (!legacyFile) {
+    return null;
+  }
+
+  const legacyPayload = await readDriveFileJson<GoogleDriveVaultBlob | SyncEnvelope | SyncSecureEnvelope>(
+    accessToken,
+    legacyFile.id
+  );
+  const envelope = normalizeEnvelopePayload(legacyPayload);
+  const checkpointId = crypto.randomUUID();
+
+  return uploadGoogleDriveV2Checkpoint(accessToken, {
+    schemaVersion: 2,
+    provider: "googleDrive",
+    recordType: "checkpoint",
+    checkpointId,
+    vaultId,
+    vaultName: sanitizeText(envelope.metadata?.vault?.name, vaultId),
+    vaultKind: envelope.metadata?.payloadMode === "encrypted" ? "private" : "regular",
+    createdAt: now(),
+    coveredCommitCount: 0,
+    appliedCommitIds: [],
+    baseCursor: null,
+    envelope
+  });
+}
+
+async function promoteChangedGoogleDriveLegacyMirror(
+  accessToken: string,
+  vaultId: string,
+  files: GoogleDriveFileMeta[],
+  checkpoint: GoogleDriveV2CheckpointRecord
+) {
+  const legacyFile = files.find((file) => deriveVaultIdFromFileName(file.name) === vaultId) ?? null;
+
+  if (!legacyFile) {
+    return checkpoint;
+  }
+
+  const legacyModifiedAt = normalizeDriveTimestamp(legacyFile.modifiedTime);
+  const checkpointCreatedAt = normalizeDriveTimestamp(
+    checkpoint.file.createdTime || checkpoint.file.modifiedTime
+  );
+
+  if (legacyModifiedAt < checkpointCreatedAt) {
+    return checkpoint;
+  }
+
+  const legacyPayload = await readDriveFileJson<
+    GoogleDriveVaultBlob | SyncEnvelope | SyncSecureEnvelope
+  >(accessToken, legacyFile.id).catch(() => null);
+
+  if (!legacyPayload) {
+    // A healthy v2 checkpoint remains recoverable even if its compatibility
+    // mirror was damaged. Do not replace good data with an empty fallback.
+    return checkpoint;
+  }
+
+  let legacyEnvelope: SyncEnvelope | SyncSecureEnvelope;
+
+  try {
+    legacyEnvelope = normalizeEnvelopePayload(legacyPayload);
+  } catch {
+    return checkpoint;
+  }
+
+  if (JSON.stringify(legacyEnvelope) === JSON.stringify(checkpoint.envelope)) {
+    return checkpoint;
+  }
+
+  return uploadGoogleDriveV2Checkpoint(accessToken, {
+    schemaVersion: 2,
+    provider: "googleDrive",
+    recordType: "checkpoint",
+    checkpointId: crypto.randomUUID(),
+    vaultId,
+    vaultName: sanitizeText(legacyEnvelope.metadata?.vault?.name, checkpoint.vaultName),
+    vaultKind: legacyEnvelope.metadata?.payloadMode === "encrypted" ? "private" : "regular",
+    createdAt: now(),
+    // Treat a write from a legacy client as a new branch generation. Existing
+    // v2 commits stay unapplied and are merged by the next normal sync.
+    coveredCommitCount: checkpoint.coveredCommitCount + 1,
+    appliedCommitIds: checkpoint.appliedCommitIds,
+    baseCursor: buildGoogleDriveV2Cursor(checkpoint, []),
+    envelope: legacyEnvelope
+  });
+}
+
+async function readGoogleDriveV2VaultState(
+  accessToken: string,
+  vaultId: string,
+  options: {
+    files?: GoogleDriveFileMeta[];
+    migrateLegacy?: boolean;
+  } = {}
+): Promise<GoogleDriveV2VaultState | null> {
+  const files = options.files ?? (await listGoogleDriveAppDataFiles(accessToken));
+  const v2Files = files.filter((file) => parseGoogleDriveV2FileName(file.name)?.vaultId === vaultId);
+  const checkpointFiles = sortGoogleDriveV2Files(
+    v2Files.filter((file) => parseGoogleDriveV2FileName(file.name)?.kind === "checkpoint")
+  );
+  let checkpoints = (
+    await Promise.all(
+      checkpointFiles.map(async (file) => {
+        const checkpoint = normalizeGoogleDriveV2Checkpoint(
+          await readDriveFileJson<GoogleDriveV2CheckpointBlob>(accessToken, file.id),
+          file,
+          vaultId
+        );
+
+        if (!checkpoint) {
+          throw new Error("GOOGLE_DRIVE_V2_DATA_CORRUPT");
+        }
+
+        return checkpoint;
+      })
+    )
+  ).filter((entry): entry is GoogleDriveV2CheckpointRecord => Boolean(entry));
+
+  if (checkpoints.length === 0 && options.migrateLegacy !== false) {
+    const migrated = await createGoogleDriveV2MigrationCheckpoint(accessToken, vaultId, files);
+
+    if (migrated) {
+      checkpoints = [migrated];
+    }
+  }
+
+  let checkpoint = selectGoogleDriveV2Checkpoint(checkpoints);
+
+  if (!checkpoint) {
+    return null;
+  }
+
+  const promotedCheckpoint = await promoteChangedGoogleDriveLegacyMirror(
+    accessToken,
+    vaultId,
+    files,
+    checkpoint
+  );
+
+  if (promotedCheckpoint.checkpointId !== checkpoint.checkpointId) {
+    checkpoint = promotedCheckpoint;
+    checkpoints = [...checkpoints, promotedCheckpoint];
+  }
+
+  const commitFiles = sortGoogleDriveV2Files(
+    v2Files.filter((file) => parseGoogleDriveV2FileName(file.name)?.kind === "commit")
+  );
+  const commits = (
+    await Promise.all(
+      commitFiles.map(async (file) => {
+        const commit = normalizeGoogleDriveV2Commit(
+          await readDriveFileJson<GoogleDriveV2CommitBlob>(accessToken, file.id),
+          file,
+          vaultId
+        );
+
+        if (!commit) {
+          throw new Error("GOOGLE_DRIVE_V2_DATA_CORRUPT");
+        }
+
+        return commit;
+      })
+    )
+  ).filter((entry): entry is GoogleDriveV2CommitRecord => Boolean(entry));
+  const orderedCommitFiles = sortGoogleDriveV2Files(commits.map((entry) => entry.file));
+  const commitByFileId = new Map(commits.map((entry) => [entry.file.id, entry]));
+  const orderedCommits = orderedCommitFiles
+    .map((file) => commitByFileId.get(file.id) ?? null)
+    .filter((entry): entry is GoogleDriveV2CommitRecord => Boolean(entry));
+  const unappliedCommits = collectGoogleDriveV2UnappliedCommits(checkpoint, orderedCommits);
+
+  return {
+    checkpoint,
+    checkpoints,
+    commits: orderedCommits,
+    unappliedCommits,
+    cursor: buildGoogleDriveV2Cursor(checkpoint, orderedCommits)
+  };
+}
+
+async function cleanupGoogleDriveV2History(
+  accessToken: string,
+  state: GoogleDriveV2VaultState,
+  activeCheckpoint: GoogleDriveV2CheckpointRecord
+) {
+  const appliedCommitIds = new Set(activeCheckpoint.appliedCommitIds);
+  const retention = planGoogleDriveV2CommitRetention(
+    state.commits.map((commit) => commit.file as GoogleDriveV2FileMeta),
+    appliedCommitIds
+  );
+  const obsoleteCheckpointFileIds = sortGoogleDriveV2Files(
+    state.checkpoints
+      .filter((checkpoint) => checkpoint.checkpointId !== activeCheckpoint.checkpointId)
+      .map((checkpoint) => checkpoint.file)
+  )
+    .slice(0, -Math.max(0, GOOGLE_DRIVE_V2_CHECKPOINT_RETENTION_COUNT - 1))
+    .map((file) => file.id);
+
+  const deletionResults = await Promise.all(
+    [...retention.deleteFileIds, ...obsoleteCheckpointFileIds].map(async (fileId) => {
+      try {
+        await googleDriveDeleteRequest(
+          `${GOOGLE_DRIVE_FILES_BASE_URL}/${encodeURIComponent(fileId)}`,
+          accessToken
+        );
+        return fileId;
+      } catch {
+        return null;
+      }
+    })
+  );
+  const deletedFileIds = new Set(deletionResults.filter((fileId): fileId is string => Boolean(fileId)));
+
+  return state.commits.filter((commit) => !deletedFileIds.has(commit.file.id));
+}
+
+export async function loadGoogleDriveRemoteBootstrap(
+  accessToken: string,
+  vaultId: string
+): Promise<GoogleDriveRemoteBootstrap> {
+  const state = await readGoogleDriveV2VaultState(accessToken, vaultId, { migrateLegacy: true });
+
+  if (!state) {
+    const envelope = await loadGoogleDriveRemoteEnvelope(accessToken, vaultId);
+    return {
+      revision: envelope.revision ?? "",
+      checkpointRevision: envelope.revision ?? null,
+      envelope,
+      changes: null,
+      encryptedChanges: null
+    };
+  }
+
+  const plainChanges = state.unappliedCommits
+    .map((commit) => commit.changes)
+    .filter((entry): entry is SyncChangeSet => Boolean(entry));
+  const encryptedChanges = state.unappliedCommits
+    .map((commit) => commit.encryptedChanges)
+    .filter((entry): entry is SyncEncryptedPayload => Boolean(entry));
+
+  return {
+    revision: state.cursor,
+    checkpointRevision: state.checkpoint.envelope.revision ?? null,
+    envelope: state.checkpoint.envelope,
+    changes: plainChanges.length > 0 ? collapseChangeSetBatches(plainChanges) : null,
+    encryptedChanges: encryptedChanges.length > 0 ? encryptedChanges : null
+  };
+}
+
 export async function connectGoogleDriveAccount(options?: {
   clientId?: string;
   loginHint?: string;
@@ -1335,7 +2183,7 @@ export async function connectGoogleDriveAccount(options?: {
   } satisfies GoogleDriveAccountSession;
 }
 
-export async function refreshGoogleDriveAccountSession(options: {
+async function refreshGoogleDriveAccountSessionInternal(options: {
   connectionId?: string;
   clientId?: string;
   loginHint?: string;
@@ -1385,6 +2233,155 @@ export async function refreshGoogleDriveAccountSession(options: {
     userName: sanitizeText(about.user?.displayName),
     userEmail: sanitizeText(about.user?.emailAddress)
   } satisfies GoogleDriveAccountSession;
+}
+
+export function refreshGoogleDriveAccountSession(options: {
+  connectionId?: string;
+  clientId?: string;
+  loginHint?: string;
+}) {
+  const refreshKey = [
+    isDesktopGoogleDriveOauthRuntime() ? "desktop" : isAndroidGoogleDriveOauthRuntime() ? "android" : "web",
+    sanitizeText(options.connectionId, "anonymous"),
+    sanitizeText(options.loginHint, "account")
+  ].join(":");
+  const current = googleDriveRefreshPromises.get(refreshKey);
+
+  if (current) {
+    return current;
+  }
+
+  const pending = refreshGoogleDriveAccountSessionInternal(options).finally(() => {
+    if (googleDriveRefreshPromises.get(refreshKey) === pending) {
+      googleDriveRefreshPromises.delete(refreshKey);
+    }
+  });
+
+  googleDriveRefreshPromises.set(refreshKey, pending);
+  return pending;
+}
+
+export async function clearGoogleDriveAccountSession(accessToken: string) {
+  const token = accessToken.trim();
+
+  if (!token) {
+    return;
+  }
+
+  if (isAndroidGoogleDriveOauthRuntime()) {
+    await clearGoogleDriveAndroidAccessToken(token);
+  }
+}
+
+export async function revokeGoogleDriveAccountAccess(
+  accessToken: string,
+  connectionId?: string
+) {
+  const token = accessToken.trim();
+
+  if (isDesktopGoogleDriveOauthRuntime()) {
+    await revokeGoogleDriveDesktopAccess(token, connectionId);
+    return;
+  }
+
+  if (isAndroidGoogleDriveOauthRuntime()) {
+    await revokeGoogleDriveAndroidAccess();
+    return;
+  }
+
+  if (!token) {
+    return;
+  }
+
+  const google = getGoogleIdentityApi();
+
+  if (!google?.accounts?.oauth2?.revoke) {
+    throw new Error("GOOGLE_OAUTH_NOT_READY");
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    google.accounts?.oauth2?.revoke(token, (response) => {
+      if (response.error || response.successful === false) {
+        reject(new Error("GOOGLE_OAUTH_REVOKE_FAILED"));
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
+export async function pollGoogleDriveRemoteChanges(
+  accessToken: string,
+  pageToken?: string | null
+) {
+  let cursor = sanitizeText(pageToken, "");
+
+  const loadStartPageToken = async () => {
+    const payload = await googleDriveJsonRequest<{ startPageToken?: string }>(
+      `${GOOGLE_DRIVE_API_BASE_URL}/drive/v3/changes/startPageToken`,
+      accessToken,
+      { method: "GET" }
+    );
+
+    return sanitizeText(payload.startPageToken, "") || null;
+  };
+
+  if (!cursor) {
+    return {
+      changed: false,
+      nextPageToken: await loadStartPageToken()
+    };
+  }
+
+  let changed = false;
+  let nextPageToken: string | null = null;
+
+  do {
+    const params = new URLSearchParams({
+      pageToken: cursor,
+      spaces: GOOGLE_DRIVE_APP_FOLDER,
+      pageSize: "1000",
+      fields: "nextPageToken,newStartPageToken,changes(removed,fileId,file(id,name,modifiedTime))"
+    });
+    let payload: GoogleDriveChangeListResponse;
+
+    try {
+      payload = await googleDriveJsonRequest<GoogleDriveChangeListResponse>(
+        `${GOOGLE_DRIVE_API_BASE_URL}/drive/v3/changes?${params.toString()}`,
+        accessToken,
+        { method: "GET" }
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message === "GOOGLE_DRIVE_CHANGE_TOKEN_EXPIRED") {
+        return {
+          // A pruned change history cannot be replayed safely. Force the
+          // normal snapshot reconciliation and continue from a fresh cursor.
+          changed: true,
+          nextPageToken: await loadStartPageToken()
+        };
+      }
+
+      throw error;
+    }
+
+    changed ||= (payload.changes ?? []).some((change) => {
+      const name = sanitizeText(change.file?.name, "");
+      return (
+        change.removed === true ||
+        name === GOOGLE_DRIVE_MANIFEST_FILE ||
+        name.startsWith(GOOGLE_DRIVE_VAULT_PREFIX) ||
+        name.startsWith(`${GOOGLE_DRIVE_V2_FILE_PREFIX}.`)
+      );
+    });
+    cursor = sanitizeText(payload.nextPageToken, "");
+    nextPageToken = sanitizeText(payload.newStartPageToken, "") || nextPageToken;
+  } while (cursor);
+
+  return {
+    changed,
+    nextPageToken
+  };
 }
 
 export async function listGoogleDriveRemoteVaults(accessToken: string) {
@@ -1441,27 +2438,52 @@ export async function createGoogleDriveRemoteVault(
     }
   });
 
-  return normalizeRemoteVaultRecord(record);
+  const checkpoint = await uploadGoogleDriveV2Checkpoint(accessToken, {
+    schemaVersion: 2,
+    provider: "googleDrive",
+    recordType: "checkpoint",
+    checkpointId: crypto.randomUUID(),
+    vaultId,
+    vaultName,
+    vaultKind: "regular",
+    createdAt: now(),
+    coveredCommitCount: 0,
+    appliedCommitIds: [],
+    baseCursor: null,
+    envelope: blob.envelope
+  });
+
+  return normalizeRemoteVaultRecord({
+    ...record,
+    revision: buildGoogleDriveV2Cursor(checkpoint, [])
+  });
 }
 
 export async function deleteGoogleDriveRemoteVault(accessToken: string, vaultId: string) {
-  const record = await getRemoteVaultRecord(accessToken, vaultId);
+  const files = await listGoogleDriveAppDataFiles(accessToken);
+  const fileIds = files
+    .filter((file) => {
+      const v2Identity = parseGoogleDriveV2FileName(file.name);
+      return (
+        v2Identity?.vaultId === vaultId ||
+        deriveVaultIdFromFileName(file.name) === vaultId ||
+        deriveVaultIdFromJournalFileName(file.name) === vaultId
+      );
+    })
+    .map((file) => file.id);
 
-  if (!record) {
+  if (fileIds.length === 0) {
     throw new Error("VAULT_NOT_FOUND");
   }
 
-  await googleDriveDeleteRequest(
-    `${GOOGLE_DRIVE_FILES_BASE_URL}/${encodeURIComponent(record.fileId)}`,
-    accessToken
+  await Promise.all(
+    [...new Set(fileIds)].map((fileId) =>
+      googleDriveDeleteRequest(
+        `${GOOGLE_DRIVE_FILES_BASE_URL}/${encodeURIComponent(fileId)}`,
+        accessToken
+      )
+    )
   );
-
-  if (record.journalFileId) {
-    await googleDriveDeleteRequest(
-      `${GOOGLE_DRIVE_FILES_BASE_URL}/${encodeURIComponent(record.journalFileId)}`,
-      accessToken
-    );
-  }
 
   const state = await readGoogleDriveManifestState(accessToken);
   await writeGoogleDriveManifest(accessToken, {
@@ -1493,7 +2515,10 @@ export async function renameGoogleDriveRemoteVault(
     throw new Error("VAULT_NAME_REQUIRED");
   }
 
-  const envelope = await loadGoogleDriveRemoteEnvelope(accessToken, input.vaultId);
+  const state = await readGoogleDriveV2VaultState(accessToken, input.vaultId, {
+    migrateLegacy: true
+  });
+  const envelope = state?.checkpoint.envelope ?? await loadGoogleDriveRemoteEnvelope(accessToken, input.vaultId);
   const nextEnvelope =
     envelope.metadata
       ? {
@@ -1511,16 +2536,78 @@ export async function renameGoogleDriveRemoteVault(
           metadata: createPlainSyncDescriptor(buildVaultDescriptor(input.vaultId, nextName))
         };
 
-  const nextRecord = await saveGoogleDriveRemoteEnvelope(accessToken, {
+  if (!state) {
+    const nextRecord = await saveGoogleDriveRemoteEnvelope(accessToken, {
+      vaultId: input.vaultId,
+      vaultName: nextName,
+      envelope: nextEnvelope
+    });
+
+    return normalizeRemoteVaultRecord(nextRecord);
+  }
+
+  const checkpoint = await uploadGoogleDriveV2Checkpoint(accessToken, {
+    schemaVersion: 2,
+    provider: "googleDrive",
+    recordType: "checkpoint",
+    checkpointId: crypto.randomUUID(),
+    vaultId: input.vaultId,
+    vaultName: nextName,
+    vaultKind: state.checkpoint.vaultKind,
+    createdAt: now(),
+    coveredCommitCount: state.checkpoint.coveredCommitCount,
+    appliedCommitIds: state.checkpoint.appliedCommitIds,
+    baseCursor: state.cursor,
+    envelope: nextEnvelope
+  });
+  const legacyRecord = await saveGoogleDriveLegacyRemoteEnvelope(accessToken, {
     vaultId: input.vaultId,
     vaultName: nextName,
     envelope: nextEnvelope
   });
+  const retainedCommits = await cleanupGoogleDriveV2History(
+    accessToken,
+    {
+      ...state,
+      checkpoint,
+      checkpoints: [...state.checkpoints, checkpoint]
+    },
+    checkpoint
+  );
+  const nextRecord = {
+    ...legacyRecord,
+    name: nextName,
+    updatedAt: checkpoint.createdAt,
+    revision: buildGoogleDriveV2Cursor(checkpoint, retainedCommits)
+  };
 
   return normalizeRemoteVaultRecord(nextRecord);
 }
 
 export async function loadGoogleDriveRemoteEnvelope(accessToken: string, vaultId: string) {
+  const v2State = await readGoogleDriveV2VaultState(accessToken, vaultId, { migrateLegacy: true });
+
+  if (v2State) {
+    const checkpointEnvelope = v2State.checkpoint.envelope;
+
+    if (!isEncryptedEnvelope(checkpointEnvelope)) {
+      const plainChanges = v2State.unappliedCommits
+        .map((commit) => commit.changes)
+        .filter((entry): entry is SyncChangeSet => Boolean(entry));
+
+      return {
+        ...checkpointEnvelope,
+        revision: v2State.cursor,
+        snapshot: applyGoogleDriveChangeSetsToSnapshot(checkpointEnvelope.snapshot, plainChanges)
+      } satisfies SyncEnvelope;
+    }
+
+    return {
+      ...checkpointEnvelope,
+      revision: v2State.cursor
+    } satisfies SyncSecureEnvelope;
+  }
+
   const record = await getRemoteVaultRecord(accessToken, vaultId);
 
   if (!record) {
@@ -1535,7 +2622,7 @@ export async function loadGoogleDriveRemoteEnvelope(accessToken: string, vaultId
   return normalizeEnvelopePayload(payload);
 }
 
-export async function saveGoogleDriveRemoteEnvelope(
+async function saveGoogleDriveLegacyRemoteEnvelope(
   accessToken: string,
   input: {
     vaultId: string;
@@ -1583,6 +2670,81 @@ export async function saveGoogleDriveRemoteEnvelope(
   });
 
   return record;
+}
+
+export async function saveGoogleDriveRemoteEnvelope(
+  accessToken: string,
+  input: {
+    vaultId: string;
+    vaultName: string;
+    envelope: SyncEnvelope | SyncSecureEnvelope;
+    baseRevision?: string | null;
+  }
+) {
+  let state = await readGoogleDriveV2VaultState(accessToken, input.vaultId, {
+    migrateLegacy: true
+  });
+
+  if (
+    Object.prototype.hasOwnProperty.call(input, "baseRevision") &&
+    (state?.cursor ?? null) !== (input.baseRevision ?? null)
+  ) {
+    throw new Error("SYNC_REVISION_CONFLICT");
+  }
+
+  if (state) {
+    const refreshedState = await readGoogleDriveV2VaultState(accessToken, input.vaultId, {
+      migrateLegacy: true
+    });
+
+    if (!refreshedState || refreshedState.cursor !== state.cursor) {
+      throw new Error("SYNC_REVISION_CONFLICT");
+    }
+
+    state = refreshedState;
+  }
+  const appliedCommitIds = state
+    ? [...new Set(state.commits.map((commit) => commit.commitId))]
+    : [];
+  const checkpoint = await uploadGoogleDriveV2Checkpoint(accessToken, {
+    schemaVersion: 2,
+    provider: "googleDrive",
+    recordType: "checkpoint",
+    checkpointId: crypto.randomUUID(),
+    vaultId: input.vaultId,
+    vaultName: sanitizeText(input.vaultName, input.vaultId),
+    vaultKind: input.envelope.metadata?.payloadMode === "encrypted" ? "private" : "regular",
+    createdAt: now(),
+    coveredCommitCount:
+      (state?.checkpoint.coveredCommitCount ?? 0) + (state?.unappliedCommits.length ?? 0),
+    appliedCommitIds,
+    baseCursor: state?.cursor ?? null,
+    envelope: input.envelope
+  });
+  const legacyRecord = await saveGoogleDriveLegacyRemoteEnvelope(accessToken, input);
+  const commits = state?.commits ?? [];
+  let revision = buildGoogleDriveV2Cursor(checkpoint, commits);
+
+  if (state) {
+    const retainedCommits = await cleanupGoogleDriveV2History(
+      accessToken,
+      {
+        ...state,
+        checkpoint,
+        checkpoints: [...state.checkpoints, checkpoint],
+        cursor: revision,
+        unappliedCommits: []
+      },
+      checkpoint
+    );
+    revision = buildGoogleDriveV2Cursor(checkpoint, retainedCommits);
+  }
+
+  return {
+    ...legacyRecord,
+    updatedAt: checkpoint.createdAt,
+    revision
+  };
 }
 
 export async function appendGoogleDriveJournalEntry(
@@ -1662,22 +2824,22 @@ export async function loadGoogleDriveRemoteChangeFeed(
   vaultId: string,
   sinceRevision: string
 ) {
-  const record = await getRemoteVaultRecord(accessToken, vaultId);
+  const state = await readGoogleDriveV2VaultState(accessToken, vaultId, { migrateLegacy: true });
 
-  if (!record) {
+  if (!state) {
     throw new Error("VAULT_NOT_FOUND");
   }
 
   const envelope = await loadGoogleDriveRemoteEnvelope(accessToken, vaultId);
 
-  if (!sinceRevision.trim() || !envelope.revision) {
+  if (!sinceRevision.trim()) {
     return buildSnapshotFallbackFeed(envelope);
   }
 
-  if (sinceRevision === envelope.revision) {
+  if (sinceRevision === state.cursor) {
     return {
       mode: "delta",
-      revision: envelope.revision,
+      revision: state.cursor,
       baseRevision: sinceRevision,
       changes: envelope.metadata?.payloadMode === "encrypted" ? null : createEmptyChangeSet("google-drive"),
       encryptedChanges: envelope.metadata?.payloadMode === "encrypted" ? [] : null,
@@ -1686,54 +2848,10 @@ export async function loadGoogleDriveRemoteChangeFeed(
     } satisfies SyncChangeFeed;
   }
 
-  const journalState = await readGoogleDriveJournalState(accessToken, record);
-  const journal = journalState.blob.entries;
-
-  if (journal.length > 0 && journal[journal.length - 1]?.revision !== envelope.revision) {
-    return buildSnapshotFallbackFeed(envelope);
-  }
-
-  const cursorIndex = journal.findIndex((entry) => entry.revision === sinceRevision);
-
-  if (cursorIndex === -1) {
-    return buildSnapshotFallbackFeed(envelope);
-  }
-
-  const slice = journal.slice(cursorIndex + 1);
-
-  if (envelope.metadata?.payloadMode === "encrypted") {
-    const batches = slice
-      .map((entry) => entry.encryptedChanges)
-      .filter((entry): entry is SyncEncryptedPayload => Boolean(entry));
-
-    if (batches.length !== slice.length) {
-      return buildSnapshotFallbackFeed(envelope);
-    }
-
-    return {
-      mode: "delta",
-      revision: envelope.revision,
-      baseRevision: sinceRevision,
-      changes: null,
-      encryptedChanges: batches,
-      snapshot: null,
-      metadata: envelope.metadata ?? null
-    } satisfies SyncChangeFeed;
-  }
-
-  return {
-    mode: "delta",
-    revision: envelope.revision,
-    baseRevision: sinceRevision,
-    changes: collapseChangeSetBatches(
-      slice
-        .map((entry) => entry.changes)
-        .filter((entry): entry is SyncChangeSet => Boolean(entry))
-    ),
-    encryptedChanges: null,
-    snapshot: null,
-    metadata: envelope.metadata ?? null
-  } satisfies SyncChangeFeed;
+  // A cursor is a digest of the active checkpoint and all immutable commits.
+  // If it differs, returning a complete snapshot is safer than guessing a
+  // journal slice after retention or a concurrent-device branch.
+  return buildSnapshotFallbackFeed(envelope);
 }
 
 export async function pushGoogleDriveRemoteChanges(
@@ -1747,81 +2865,109 @@ export async function pushGoogleDriveRemoteChanges(
     encryptedChanges?: SyncEncryptedPayload | null;
   }
 ) {
-  const record = await getRemoteVaultRecord(accessToken, input.vaultId);
+  const state = await readGoogleDriveV2VaultState(accessToken, input.vaultId, {
+    migrateLegacy: true
+  });
 
-  if (!record) {
+  if (!state) {
     throw new Error("VAULT_NOT_FOUND");
   }
 
-  const currentEnvelope = await loadGoogleDriveRemoteEnvelope(accessToken, input.vaultId);
+  const commitId = sanitizeText(
+    input.envelope.revision,
+    `rev-${now()}-${crypto.randomUUID()}`
+  );
+  const existingCommit = state.commits.find((commit) => commit.commitId === commitId) ?? null;
 
-  if (currentEnvelope.revision !== input.baseRevision) {
+  if (state.cursor !== input.baseRevision && !existingCommit) {
     return {
       conflict: true as const,
-      revision: currentEnvelope.revision ?? null
+      revision: state.cursor
     };
   }
 
-  const journalState = await readGoogleDriveJournalState(accessToken, record);
-  const nextJournal = [...journalState.blob.entries];
-
-  if (isEncryptedEnvelope(currentEnvelope)) {
+  if (isEncryptedEnvelope(state.checkpoint.envelope)) {
     if (!input.encryptedChanges || !isEncryptedEnvelope(input.envelope)) {
       throw new Error("ENCRYPTED_DELTA_PAYLOAD_REQUIRED");
     }
-
-    nextJournal.push({
-      revision: input.envelope.revision ?? `rev-${now()}-${crypto.randomUUID()}`,
-      baseRevision: input.baseRevision,
-      createdAt: now(),
-      changes: null,
-      encryptedChanges: input.encryptedChanges
-    });
-  } else {
-    const normalizedChanges = normalizeChangeSetPayload(input.changes, "google-drive");
-
-    nextJournal.push({
-      revision: input.envelope.revision ?? `rev-${now()}-${crypto.randomUUID()}`,
-      baseRevision: input.baseRevision,
-      createdAt: now(),
-      changes: normalizedChanges,
-      encryptedChanges: null
-    });
+  } else if (!input.changes || isEncryptedEnvelope(input.envelope)) {
+    throw new Error("GOOGLE_DRIVE_DELTA_PAYLOAD_REQUIRED");
   }
 
-  const stateRecord = await saveGoogleDriveRemoteEnvelope(accessToken, {
+  const commit = existingCommit ?? await uploadGoogleDriveV2Commit(accessToken, {
+    schemaVersion: 2,
+    provider: "googleDrive",
+    recordType: "commit",
+    commitId,
     vaultId: input.vaultId,
-    vaultName: input.vaultName,
+    vaultName: sanitizeText(input.vaultName, input.vaultId),
+    vaultKind: isEncryptedEnvelope(input.envelope) ? "private" : "regular",
+    baseCursor: input.baseRevision,
+    createdAt: now(),
+    changes: input.encryptedChanges ? null : normalizeChangeSetPayload(input.changes, "google-drive"),
+    encryptedChanges: input.encryptedChanges ?? null,
+    metadata: input.envelope.metadata ?? null
+  });
+  const refreshedState = await readGoogleDriveV2VaultState(accessToken, input.vaultId, {
+    migrateLegacy: true
+  });
+  const expectedCommitIds = new Set([
+    ...state.commits.map((entry) => entry.commitId),
+    commit.commitId
+  ]);
+  const hasUnexpectedCommit = refreshedState?.commits.some(
+    (entry) => !expectedCommitIds.has(entry.commitId)
+  );
+
+  if (
+    !refreshedState ||
+    refreshedState.checkpoint.checkpointId !== state.checkpoint.checkpointId ||
+    hasUnexpectedCommit
+  ) {
+    return {
+      conflict: true as const,
+      revision: refreshedState?.cursor ?? state.cursor
+    };
+  }
+
+  const commits = refreshedState.commits;
+  const appliedCommitIds = [...new Set(commits.map((entry) => entry.commitId))];
+  const checkpoint = await uploadGoogleDriveV2Checkpoint(accessToken, {
+    schemaVersion: 2,
+    provider: "googleDrive",
+    recordType: "checkpoint",
+    checkpointId: crypto.randomUUID(),
+    vaultId: input.vaultId,
+    vaultName: sanitizeText(input.vaultName, input.vaultId),
+    vaultKind: isEncryptedEnvelope(input.envelope) ? "private" : "regular",
+    createdAt: now(),
+    coveredCommitCount:
+      state.checkpoint.coveredCommitCount + state.unappliedCommits.length + (existingCommit ? 0 : 1),
+    appliedCommitIds,
+    baseCursor: input.baseRevision,
     envelope: input.envelope
   });
-  const journalFileId = await writeGoogleDriveJournalState(
+  let revision = buildGoogleDriveV2Cursor(checkpoint, commits);
+
+  // Keep a readable legacy mirror during the migration window. New clients do
+  // not use it for conflict resolution.
+  await saveGoogleDriveLegacyRemoteEnvelope(accessToken, input);
+  const retainedCommits = await cleanupGoogleDriveV2History(
     accessToken,
     {
-      id: input.vaultId,
-      journalFileId: stateRecord.journalFileId ?? record.journalFileId ?? null
+      checkpoint,
+      checkpoints: [...state.checkpoints, checkpoint],
+      commits,
+      unappliedCommits: [],
+      cursor: revision
     },
-    nextJournal
+    checkpoint
   );
-  const state = await readGoogleDriveManifestState(accessToken);
-
-  await writeGoogleDriveManifest(accessToken, {
-    ...state,
-    manifest: {
-      ...state.manifest,
-      updatedAt: now(),
-      vaults: [
-        ...state.manifest.vaults.filter((entry) => entry.id !== input.vaultId),
-        {
-          ...stateRecord,
-          journalFileId
-        }
-      ]
-    }
-  });
+  revision = buildGoogleDriveV2Cursor(checkpoint, retainedCommits);
 
   return {
     conflict: false as const,
-    revision: input.envelope.revision ?? null
+    revision
   };
 }
 
@@ -1843,6 +2989,8 @@ export async function probeGoogleDriveConnection(connection: Pick<SyncConnection
     return "available" as const;
   } catch (error) {
     const message = error instanceof Error ? error.message : "GOOGLE_DRIVE_AUTH_REQUIRED";
-    return message === "GOOGLE_DRIVE_AUTH_REQUIRED" ? ("authError" as const) : ("unavailable" as const);
+    return ["GOOGLE_DRIVE_AUTH_REQUIRED", "GOOGLE_DRIVE_INTERACTION_REQUIRED"].includes(message)
+      ? ("authError" as const)
+      : ("unavailable" as const);
   }
 }

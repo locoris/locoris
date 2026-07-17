@@ -3,13 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   isDesktopPersistentStorageActive,
   readPersistentString,
-  removePersistentString,
-  writePersistentString
+  removePersistentString
 } from "./persistentClientStorage";
-import {
-  isDesktopRuntime,
-  isTauriRuntime
-} from "./runtime";
+import { isTauriRuntime } from "./runtime";
 import type {
   AppSettings,
   SyncConnection,
@@ -19,8 +15,9 @@ import type {
 const secureSecretCache = new Map<string, string>();
 const loadedSecureSecretKeys = new Set<string>();
 const secureSecretListeners = new Set<() => void>();
-// Legacy fallback prefix. Native secure storage should remain preferred when available.
+// Legacy fallback prefix. It is read once only to migrate existing installations.
 const SECURE_SECRET_FALLBACK_PREFIX = "zen-notes.secure-secret-fallback:";
+const WEB_SESSION_SECRET_PREFIX = "locoris.web-session-secret:";
 
 export const APP_SETTINGS_SECRET_FIELDS = [
   "selfHostedToken",
@@ -50,9 +47,9 @@ function buildSecureSecretFallbackKey(key: string) {
   return `${SECURE_SECRET_FALLBACK_PREFIX}${key.trim()}`;
 }
 
-function canUseDesktopSecretFallback() {
-  if (isDesktopPersistentStorageActive()) {
-    return true;
+function canUseLegacySecretFallback() {
+  if (isTauriRuntime()) {
+    return isDesktopPersistentStorageActive();
   }
 
   if (typeof window === "undefined") {
@@ -66,27 +63,67 @@ function canUseDesktopSecretFallback() {
   }
 }
 
-function readDesktopSecretFallback(key: string) {
-  if (!canUseDesktopSecretFallback()) {
+function readLegacySecretFallback(key: string) {
+  if (!canUseLegacySecretFallback()) {
     return "";
   }
 
   return normalizeSecretValue(readPersistentString(buildSecureSecretFallbackKey(key)));
 }
 
-function writeDesktopSecretFallback(key: string, value: string) {
-  if (!canUseDesktopSecretFallback()) {
+function clearLegacySecretFallback(key: string) {
+  if (!canUseLegacySecretFallback()) {
     return;
   }
 
   const storageKey = buildSecureSecretFallbackKey(key);
+  removePersistentString(storageKey);
+}
 
-  if (value) {
-    writePersistentString(storageKey, value);
+function canUseWebSessionSecrets() {
+  if (isTauriRuntime() || typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    return typeof window.sessionStorage !== "undefined";
+  } catch {
+    return false;
+  }
+}
+
+function buildWebSessionSecretKey(key: string) {
+  return `${WEB_SESSION_SECRET_PREFIX}${key.trim()}`;
+}
+
+function readWebSessionSecret(key: string) {
+  if (!canUseWebSessionSecrets()) {
+    return "";
+  }
+
+  try {
+    return normalizeSecretValue(window.sessionStorage.getItem(buildWebSessionSecretKey(key)));
+  } catch {
+    return "";
+  }
+}
+
+function writeWebSessionSecret(key: string, value: string) {
+  if (!canUseWebSessionSecrets()) {
     return;
   }
 
-  removePersistentString(storageKey);
+  try {
+    const storageKey = buildWebSessionSecretKey(key);
+
+    if (value) {
+      window.sessionStorage.setItem(storageKey, value);
+    } else {
+      window.sessionStorage.removeItem(storageKey);
+    }
+  } catch {
+    // Keep the runtime cache usable when browser session storage is unavailable.
+  }
 }
 
 function notifySecureSecretListeners() {
@@ -133,24 +170,34 @@ async function ensureSecureSecretLoaded(key: string) {
   }
 
   const nativeValue = normalizeSecretValue(await readNativeSecureSecret(normalizedKey));
-  const fallbackValue = readDesktopSecretFallback(normalizedKey);
-  const resolvedValue = nativeValue || fallbackValue;
+  const legacyValue = readLegacySecretFallback(normalizedKey);
+  const sessionValue = readWebSessionSecret(normalizedKey);
+  let resolvedValue = nativeValue || sessionValue;
+
+  if (isTauriRuntime()) {
+    if (nativeValue) {
+      clearLegacySecretFallback(normalizedKey);
+    } else if (legacyValue) {
+      // Existing desktop installations used an encrypted platform secret plus a
+      // plaintext recovery copy. Move it once, then remove the recovery copy.
+      await writeNativeSecureSecret(normalizedKey, legacyValue);
+      clearLegacySecretFallback(normalizedKey);
+      resolvedValue = legacyValue;
+    }
+  } else if (!resolvedValue && legacyValue) {
+    // Browser sessions deliberately do not persist bearer credentials across
+    // restarts. Migrate an old localStorage value into the current tab only.
+    writeWebSessionSecret(normalizedKey, legacyValue);
+    clearLegacySecretFallback(normalizedKey);
+    resolvedValue = legacyValue;
+  }
+
   loadedSecureSecretKeys.add(normalizedKey);
 
   if (resolvedValue) {
     secureSecretCache.set(normalizedKey, resolvedValue);
   } else {
     secureSecretCache.delete(normalizedKey);
-  }
-
-  if (nativeValue && !fallbackValue) {
-    writeDesktopSecretFallback(normalizedKey, nativeValue);
-  }
-
-  if (!nativeValue && fallbackValue && isDesktopRuntime()) {
-    void writeNativeSecureSecret(normalizedKey, fallbackValue).catch(() => {
-      // Keep the fallback copy in the desktop store even if the native secure backend is unavailable.
-    });
   }
 
   return resolvedValue;
@@ -204,19 +251,15 @@ export async function writeSecureSecret(key: string, value: string) {
   }
 
   setCachedSecureSecret(normalizedKey, normalizedValue);
-  writeDesktopSecretFallback(normalizedKey, normalizedValue);
 
   if (!isTauriRuntime()) {
+    writeWebSessionSecret(normalizedKey, normalizedValue);
+    clearLegacySecretFallback(normalizedKey);
     return;
   }
 
-  try {
-    await writeNativeSecureSecret(normalizedKey, normalizedValue);
-  } catch (error) {
-    if (!canUseDesktopSecretFallback()) {
-      throw error;
-    }
-  }
+  await writeNativeSecureSecret(normalizedKey, normalizedValue);
+  clearLegacySecretFallback(normalizedKey);
 }
 
 export async function deleteSecureSecret(key: string) {
@@ -227,19 +270,15 @@ export async function deleteSecureSecret(key: string) {
   }
 
   setCachedSecureSecret(normalizedKey, "");
-  writeDesktopSecretFallback(normalizedKey, "");
 
   if (!isTauriRuntime()) {
+    writeWebSessionSecret(normalizedKey, "");
+    clearLegacySecretFallback(normalizedKey);
     return;
   }
 
-  try {
-    await writeNativeSecureSecret(normalizedKey, "");
-  } catch (error) {
-    if (!canUseDesktopSecretFallback()) {
-      throw error;
-    }
-  }
+  await writeNativeSecureSecret(normalizedKey, "");
+  clearLegacySecretFallback(normalizedKey);
 }
 
 export function buildAppSettingsSecretKey(
@@ -309,6 +348,9 @@ export function hydrateCachedSyncConnection(connection: SyncConnection): SyncCon
     ),
     sessionToken: readCachedSecureSecret(
       buildSyncConnectionSecretKey(connection.id, "sessionToken")
+    ),
+    refreshToken: readCachedSecureSecret(
+      buildSyncConnectionSecretKey(connection.id, "refreshToken")
     )
   };
 }

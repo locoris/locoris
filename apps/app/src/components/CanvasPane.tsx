@@ -1,3 +1,5 @@
+import { translateInline } from "../localization/translateInline";
+import { getLocaleLanguageCode } from "../localization";
 import {
   bumpVersion,
   CaptureUpdateAction,
@@ -39,7 +41,7 @@ import {
   shouldMigrateLegacyCanvasStrokeColor,
   shouldAutoAdaptCanvasStrokeColor
 } from "../lib/canvas";
-import { getDisplayNoteTitle } from "../lib/displayNames";
+import { getDisplayNoteTitle } from "../localization/displayNames";
 import {
   persistExcalidrawLibrary,
   readPersistedExcalidrawLibrary
@@ -2257,7 +2259,7 @@ export default function CanvasPane({
 	    const selectedRecord = toCanvasAiSelectedRecord(ownSelectionIds);
 	    const selectedText = collectCanvasText(elements, selectedRecord);
 	    const firstElementId = selectedIds[0] ?? null;
-	    const fallbackTitle = language === "ru" ? "Задача из холста" : "Task from canvas";
+	    const fallbackTitle = translateInline(language, "canvasPane.taskFromCanvas");
 
 	    try {
 	      await onCreateTaskFromContext({
@@ -2267,7 +2269,7 @@ export default function CanvasPane({
 	        folderId: note.folderId,
 	        canvasId: note.id,
 	        canvasElementId: firstElementId,
-	        sourceLabel: language === "ru" ? "Выделение на холсте" : "Canvas selection"
+	        sourceLabel: translateInline(language, "canvasPane.canvasSelection")
 	      });
 	      showCanvasTaskStatus("created");
 	    } catch (error) {
@@ -3153,7 +3155,7 @@ export default function CanvasPane({
 	              </span>
 	            ) : null}
             <span className="canvas-pane-contextmeta">
-              {t("note.updated")}: {formatTimestamp(note.updatedAt, language)}
+              {t("note.updated")}: {formatTimestamp(note.updatedAt)}
             </span>
           </div>
         </div>
@@ -3376,7 +3378,7 @@ export default function CanvasPane({
                   });
                 }}
                 name={getDisplayNoteTitle(note, language)}
-                langCode={language === "ru" ? "ru-RU" : "en"}
+                langCode={getLocaleLanguageCode(language)}
                 theme="light"
                 UIOptions={EXCALIDRAW_UI_OPTIONS}
                 initialData={async (): Promise<ExcalidrawInitialDataState> => ({

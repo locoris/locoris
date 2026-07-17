@@ -4246,6 +4246,13 @@ button {
   width: min(1240px, calc(100vw - 40px));
 }
 
+.orbital-modal-window.orbital-utility-modal-window.is-settings-mode:has(.settings-panel-shell),
+.orbital-modal-window.orbital-utility-modal-window.is-trash-mode:has(.settings-panel-shell) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
 @media (min-width: 721px) {
   .orbital-modal-window.orbital-utility-modal-window.is-settings-mode:has(.settings-panel-shell.is-backup-settings) {
     height: auto;

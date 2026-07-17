@@ -1,5 +1,5 @@
-import type { AppLanguage, Folder, Note, Project, TaskLink } from "../types";
-import { getDisplayNoteTitle } from "./displayNames";
+import type { Folder, Note, Project, TaskLink } from "../types";
+import { deriveDisplayTitleFromText, normalizeDisplayName } from "./displayNames";
 
 export const EDITOR_CREATE_TASK_EVENT = "locoris:editor-create-task";
 
@@ -38,10 +38,9 @@ export function buildPlannerTaskLinks(input: {
   projects: Project[];
   folders: Folder[];
   notes: Note[];
-  language: AppLanguage;
   createdAt?: number;
 }) {
-  const { context, projects, folders, notes, language } = input;
+  const { context, projects, folders, notes } = input;
   const createdAt = input.createdAt ?? Date.now();
   const projectMap = new Map(projects.map((project) => [project.id, project]));
   const folderMap = new Map(folders.map((folder) => [folder.id, folder]));
@@ -61,7 +60,7 @@ export function buildPlannerTaskLinks(input: {
     const project = projectMap.get(context.projectId);
     add(`project:${context.projectId}`, {
       kind: "project",
-      label: project?.name ?? (language === "ru" ? "Проект" : "Project"),
+      label: normalizeDisplayName(project?.name),
       projectId: context.projectId,
       folderId: null,
       noteId: null,
@@ -76,7 +75,7 @@ export function buildPlannerTaskLinks(input: {
     const folder = folderMap.get(context.folderId);
     add(`folder:${context.folderId}`, {
       kind: "folder",
-      label: folder?.name ?? (language === "ru" ? "Папка" : "Folder"),
+      label: normalizeDisplayName(folder?.name),
       projectId: context.projectId ?? folder?.projectId ?? null,
       folderId: context.folderId,
       noteId: null,
@@ -91,7 +90,9 @@ export function buildPlannerTaskLinks(input: {
     const note = noteMap.get(context.noteId);
     add(`note:${context.noteId}`, {
       kind: "note",
-      label: note ? getDisplayNoteTitle(note, language) : language === "ru" ? "Заметка" : "Note",
+      label: note
+        ? normalizeDisplayName(note.title) || deriveDisplayTitleFromText(note.plainText || note.excerpt)
+        : "",
       projectId: context.projectId ?? note?.projectId ?? null,
       folderId: context.folderId ?? note?.folderId ?? null,
       noteId: context.noteId,
@@ -106,7 +107,9 @@ export function buildPlannerTaskLinks(input: {
     const canvas = noteMap.get(context.canvasId);
     add(`canvas:${context.canvasId}`, {
       kind: "canvas",
-      label: canvas ? getDisplayNoteTitle(canvas, language) : language === "ru" ? "Холст" : "Canvas",
+      label: canvas
+        ? normalizeDisplayName(canvas.title) || deriveDisplayTitleFromText(canvas.plainText || canvas.excerpt)
+        : "",
       projectId: context.projectId ?? canvas?.projectId ?? null,
       folderId: context.folderId ?? canvas?.folderId ?? null,
       noteId: null,
@@ -120,7 +123,7 @@ export function buildPlannerTaskLinks(input: {
   if (context.sourceBlockId) {
     add(`block:${context.sourceBlockId}`, {
       kind: "block",
-      label: context.sourceLabel || (language === "ru" ? "Блок заметки" : "Note block"),
+      label: normalizeDisplayName(context.sourceLabel),
       projectId: context.projectId ?? null,
       folderId: context.folderId ?? null,
       noteId: context.noteId ?? null,
@@ -134,7 +137,7 @@ export function buildPlannerTaskLinks(input: {
   if (context.canvasElementId) {
     add(`canvasElement:${context.canvasElementId}`, {
       kind: "canvasElement",
-      label: context.sourceLabel || (language === "ru" ? "Объект холста" : "Canvas object"),
+      label: normalizeDisplayName(context.sourceLabel),
       projectId: context.projectId ?? null,
       folderId: context.folderId ?? null,
       noteId: null,

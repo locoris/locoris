@@ -1,0 +1,165 @@
+.settings-subpage-layer,
+.settings-subpage-layer * {
+  box-sizing: border-box;
+}
+
+.settings-subpage-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2600;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  isolation: isolate;
+}
+
+.settings-subpage-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 12%, transparent), transparent 44%),
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 8%, transparent), transparent 42%),
+    rgb(var(--surface-deep-rgb) / 0.76);
+  backdrop-filter: blur(20px) saturate(128%);
+  -webkit-backdrop-filter: blur(20px) saturate(128%);
+  opacity: 0;
+  transition: opacity var(--motion-duration-standard, 260ms) ease-out;
+}
+
+.settings-subpage-surface.settings-surface {
+  position: relative;
+  z-index: 1;
+  width: min(900px, 100%);
+  height: min(780px, calc(100dvh - 40px));
+  padding: 12px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 30px;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  opacity: 0;
+  transform: translateX(24px) scale(0.99);
+  transform-origin: 100% 50%;
+  transition:
+    opacity var(--motion-duration-spatial, 360ms) ease,
+    transform var(--motion-duration-spatial, 360ms) var(--motion-ease-emphasized, cubic-bezier(0.16, 1, 0.3, 1));
+  will-change: transform, opacity;
+}
+
+.settings-subpage-layer.is-open .settings-subpage-backdrop,
+.settings-subpage-layer.is-exiting .settings-subpage-backdrop {
+  opacity: 1;
+}
+
+.settings-subpage-layer.is-open .settings-subpage-surface.settings-surface {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.settings-subpage-layer.is-exiting .settings-subpage-backdrop {
+  opacity: 0;
+  transition-duration: 220ms;
+}
+
+.settings-subpage-layer.is-exiting .settings-subpage-surface.settings-surface {
+  opacity: 0;
+  transform: translateX(16px) scale(0.992);
+  transition-duration: 220ms;
+  transition-timing-function: var(--motion-ease-standard, cubic-bezier(0.2, 0.72, 0.2, 1));
+}
+
+.settings-subpage-content {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 18%, rgb(var(--line-rgb) / 0.12));
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 10%, transparent), transparent 44%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 10%, transparent), transparent 42%),
+    linear-gradient(155deg, rgb(var(--surface-rgb) / 0.86), rgb(var(--surface-deep-rgb) / 0.8)),
+    rgb(var(--surface-deep-rgb) / 0.88);
+  box-shadow:
+    0 28px 78px rgba(2, 5, 15, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.065);
+  backdrop-filter: blur(24px) saturate(128%);
+  -webkit-backdrop-filter: blur(24px) saturate(128%);
+}
+
+@media (max-width: 920px) and (orientation: portrait) {
+  .settings-subpage-layer {
+    place-items: stretch center;
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+  }
+
+  .settings-subpage-backdrop {
+    background: transparent;
+    backdrop-filter: blur(24px) saturate(118%) brightness(0.72);
+    -webkit-backdrop-filter: blur(24px) saturate(118%) brightness(0.72);
+  }
+
+  .settings-subpage-surface.settings-surface {
+    width: min(var(--orbital-mobile-page-max-width, 720px), 100%);
+    height: 100%;
+    max-height: none;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 12px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .settings-subpage-surface.settings-surface::before,
+  .settings-subpage-surface.settings-surface::after {
+    content: none;
+  }
+
+  .settings-subpage-header.mobile-glass-header {
+    position: relative;
+    top: auto;
+    z-index: 2;
+    margin: 0;
+  }
+
+  .settings-subpage-content {
+    overflow: hidden;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .settings-subpage-backdrop,
+  .settings-subpage-surface.settings-surface {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-subpage-backdrop,
+  .settings-subpage-surface.settings-surface {
+    transition-duration: 1ms;
+  }
+}

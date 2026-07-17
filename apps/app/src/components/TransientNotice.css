@@ -1,0 +1,114 @@
+.transient-notice,
+.transient-notice * {
+  box-sizing: border-box;
+}
+
+.transient-notice {
+  --transient-notice-color: var(--settings-accent-secondary, var(--accent-theme-secondary, var(--cyan)));
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--transient-notice-color) 28%, rgba(255, 255, 255, 0.12));
+  border-radius: 17px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--transient-notice-color) 14%, transparent), transparent 58%),
+    linear-gradient(180deg, rgb(var(--surface-rgb) / 0.9), rgb(var(--surface-deep-rgb) / 0.84));
+  color: color-mix(in srgb, var(--text) 88%, var(--transient-notice-color) 12%);
+  box-shadow:
+    0 18px 46px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(22px) saturate(138%);
+  -webkit-backdrop-filter: blur(22px) saturate(138%);
+  animation: transient-notice-enter 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes transient-notice-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.992);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transient-notice {
+    animation: none;
+  }
+}
+
+.transient-notice.is-success {
+  --transient-notice-color: #8fe8be;
+}
+
+.transient-notice.is-error {
+  --transient-notice-color: #ff8cab;
+}
+
+.transient-notice.is-info {
+  --transient-notice-color: var(--settings-accent, var(--accent-theme-primary, var(--gold)));
+}
+
+.transient-notice-mark {
+  width: 27px;
+  height: 27px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--transient-notice-color) 36%, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--transient-notice-color) 13%, rgba(255, 255, 255, 0.025));
+  color: color-mix(in srgb, var(--transient-notice-color) 78%, #fff 22%);
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.transient-notice-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.78rem;
+  font-weight: 680;
+  line-height: 1.38;
+}
+
+.transient-notice-dismiss {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.035);
+  color: color-mix(in srgb, var(--text) 82%, var(--transient-notice-color) 18%);
+  cursor: pointer;
+}
+
+.transient-notice-dismiss:hover,
+.transient-notice-dismiss:focus-visible {
+  border-color: color-mix(in srgb, var(--transient-notice-color) 34%, rgba(255, 255, 255, 0.14));
+  background: color-mix(in srgb, var(--transient-notice-color) 10%, rgba(255, 255, 255, 0.04));
+  outline: none;
+}
+
+.transient-notice-dismiss svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .transient-notice {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

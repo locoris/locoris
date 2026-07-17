@@ -1,0 +1,192 @@
+.account-cloud-device-list {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: 10px;
+}
+
+.account-cloud-device {
+  --account-device-accent: var(--settings-accent, var(--accent-theme-primary, var(--gold)));
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--account-device-accent) 19%, rgba(255, 255, 255, 0.09));
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--account-device-accent) 11%, transparent), transparent 54%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.044), rgba(255, 255, 255, 0.014)),
+    rgba(255, 255, 255, 0.02);
+}
+
+.account-cloud-device.is-mac { --account-device-accent: #7ee9e1; }
+.account-cloud-device.is-windows { --account-device-accent: #76b7ff; }
+.account-cloud-device.is-android { --account-device-accent: #91e57f; }
+.account-cloud-device.is-ios { --account-device-accent: #c7a4ff; }
+.account-cloud-device.is-linux { --account-device-accent: #ffd078; }
+.account-cloud-device.is-web { --account-device-accent: #ff9fc7; }
+.account-cloud-device.is-desktop { --account-device-accent: #aab8ff; }
+
+.account-cloud-device.is-current {
+  border-color: color-mix(in srgb, var(--account-device-accent) 38%, rgba(255, 255, 255, 0.13));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.account-cloud-device-icon {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--account-device-accent) 32%, rgba(255, 255, 255, 0.12));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--account-device-accent) 12%, rgba(255, 255, 255, 0.025));
+  color: color-mix(in srgb, var(--account-device-accent) 72%, #fff 28%);
+}
+
+.account-cloud-device-icon svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.account-cloud-device.is-windows .account-cloud-device-icon svg path {
+  fill: currentColor;
+  stroke: none;
+}
+
+.account-cloud-device-copy {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.account-cloud-device-titleline {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.account-cloud-device-titleline strong {
+  min-width: 0;
+  color: rgba(250, 252, 255, 0.96);
+  font-size: 0.84rem;
+  font-weight: 820;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+.account-cloud-device-state,
+.account-cloud-device-vaults {
+  width: fit-content;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--account-device-accent) 20%, rgba(255, 255, 255, 0.09));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--account-device-accent) 8%, rgba(255, 255, 255, 0.02));
+  color: color-mix(in srgb, var(--text) 78%, var(--account-device-accent) 22%);
+  font-size: 0.62rem;
+  font-weight: 760;
+  line-height: 1.15;
+}
+
+.account-cloud-device-state {
+  flex: 0 0 auto;
+}
+
+.account-cloud-device-state.is-inactive {
+  --account-device-accent: #ff9bab;
+}
+
+.account-cloud-device-meta {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  color: rgba(195, 204, 233, 0.72);
+  font-size: 0.69rem;
+  line-height: 1.35;
+}
+
+.account-cloud-device-meta > span + span::before {
+  content: "·";
+  margin-right: 8px;
+  color: color-mix(in srgb, var(--account-device-accent) 42%, rgba(255, 255, 255, 0.3));
+}
+
+.account-cloud-device-revoke {
+  min-height: 38px;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, #ff8fb0 26%, rgba(255, 255, 255, 0.1));
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #ff8fb0 10%, rgba(255, 255, 255, 0.03)), rgba(255, 255, 255, 0.012)),
+    rgba(255, 255, 255, 0.022);
+  color: color-mix(in srgb, #ffacc3 72%, #fff 28%);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 790;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.account-cloud-device-revoke.is-current {
+  border-color: color-mix(in srgb, var(--account-device-accent) 25%, rgba(255, 255, 255, 0.1));
+  background: color-mix(in srgb, var(--account-device-accent) 7%, rgba(255, 255, 255, 0.025));
+  color: color-mix(in srgb, var(--account-device-accent) 58%, #fff 42%);
+}
+
+.account-cloud-device-revoke svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.account-cloud-device-revoke:hover,
+.account-cloud-device-revoke:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, #ff8fb0 42%, rgba(255, 255, 255, 0.16));
+}
+
+.account-cloud-device-revoke:disabled {
+  cursor: default;
+  opacity: 0.46;
+  transform: none;
+}
+
+@media (max-width: 520px) {
+  .account-cloud-device {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .account-cloud-device-titleline {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .account-cloud-device-revoke {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 42px;
+  }
+}

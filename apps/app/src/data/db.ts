@@ -1,3 +1,5 @@
+import { translateInline } from "../localization/translateInline";
+import { getResolvedTimeZone } from "../localization/formatters";
 import Dexie, { type EntityTable } from "dexie";
 
 import {
@@ -53,6 +55,7 @@ import type {
   Goal,
   Habit,
   HabitLog,
+  LegacyAppSettings,
   Note,
   NoteContent,
   Project,
@@ -482,10 +485,9 @@ function hydrateDesktopBackupNote(record: Note): Note {
   };
 }
 
-function buildDefaultAppSettings(language: AppLanguage, lastOpenedNoteId: string | null): AppSettings {
+function buildDefaultAppSettings(lastOpenedNoteId: string | null): AppSettings {
   return {
     id: "app",
-    language,
     syncEnabled: false,
     syncStatus: "idle",
     syncProvider: "none",
@@ -518,16 +520,18 @@ function buildDefaultAppSettings(language: AppLanguage, lastOpenedNoteId: string
   };
 }
 
-function normalizeAppSettings(settings: AppSettings): AppSettings {
+function normalizeAppSettings(settings: LegacyAppSettings): AppSettings {
+  const { language: _legacyLanguage, ...currentSettings } = settings;
+
   return {
-    ...settings,
+    ...currentSettings,
     plannerDefaultSurface: settings.plannerDefaultSurface ?? "planner",
     plannerWeekStartsOn: settings.plannerWeekStartsOn ?? "monday",
     plannerDefaultCalendarView: settings.plannerDefaultCalendarView ?? "week"
   };
 }
 
-function stripAppSettingsSecrets(settings: AppSettings | null | undefined): AppSettings | null {
+function stripAppSettingsSecrets(settings: LegacyAppSettings | null | undefined): AppSettings | null {
   if (!settings) {
     return null;
   }
@@ -875,7 +879,7 @@ export class LocorisDatabase extends Dexie {
 
         await transaction.table("projects").add({
           id: projectId,
-          name: language === "ru" ? "Проект 1" : "Project 1",
+          name: translateInline(language, "db.project1"),
           x: 0,
           y: 0,
           createdAt: timestamp,
@@ -1261,7 +1265,7 @@ function clearScheduledLocalVaultPersistence(localVaultId: string) {
   desktopVaultPersistenceTimers.delete(localVaultId);
 }
 
-function scheduleLocalVaultPersistence(localVaultId: string, delayMs = 400) {
+function scheduleLocalVaultPersistence(localVaultId: string, delayMs = 3_000) {
   if (typeof window === "undefined") {
     return;
   }
@@ -1288,7 +1292,7 @@ function scheduleActiveLocalVaultDesktopBackup() {
   scheduleActiveLocalVaultPersistence();
 }
 
-function cloneSettingsForBackup(settings: AppSettings | null) {
+function cloneSettingsForBackup(settings: LegacyAppSettings | null) {
   const sanitizedSettings = stripAppSettingsSecrets(settings);
   return sanitizedSettings ? { ...sanitizedSettings } : null;
 }
@@ -1405,7 +1409,7 @@ export async function restoreLocalVaultDesktopBackup(
                 ? backupSettings.lastOpenedNoteId
                 : notes[0]?.id ?? null
           }
-        : buildDefaultAppSettings(detectLanguage(), notes[0]?.id ?? null);
+        : buildDefaultAppSettings(notes[0]?.id ?? null);
 
     resetResolvedAssetCache();
 
@@ -1603,10 +1607,10 @@ export async function persistLocalVaultStorage(localVaultId: string) {
   const nextTask = previousTask
     .catch(() => undefined)
     .then(async () => {
-      await Promise.all([
-        persistLocalVaultNativeSnapshot(localVaultId),
-        persistLocalVaultDesktopBackup(localVaultId)
-      ]);
+      // IndexedDB is the live query store. The native SQLite copy is a durable
+      // recovery checkpoint, while user-visible backups are created explicitly.
+      // Avoid serializing every attachment twice after each small edit.
+      await persistLocalVaultNativeSnapshot(localVaultId);
     });
 
   desktopVaultPersistenceTasks.set(localVaultId, nextTask);
@@ -1684,7 +1688,7 @@ export async function ensureSeedData() {
         ...demoSeed.timeBlocks.map((timeBlock) => createSyncDirtyEntry("timeBlock", timeBlock.id, timeBlock.updatedAt))
       ]);
       await db.settings.add({
-        ...stripAppSettingsSecrets(buildDefaultAppSettings(language, demoSeed.activeNoteId))!,
+        ...stripAppSettingsSecrets(buildDefaultAppSettings(demoSeed.activeNoteId))!,
         syncStatus: "disabled"
       });
     }
@@ -1779,10 +1783,23 @@ export async function readLocalVaultSettings(localVaultId: string) {
   });
 }
 
+export async function consumeLegacyLocalVaultLanguage(localVaultId: string) {
+  return withLocalVaultDatabase(localVaultId, async (database) => {
+    const settings = await database.settings.get("app") as LegacyAppSettings | undefined;
+    const legacyLanguage = typeof settings?.language === "string" ? settings.language : null;
+
+    if (settings && "language" in settings) {
+      await database.settings.put(normalizeAppSettings(settings));
+      scheduleLocalVaultDesktopBackup(localVaultId);
+    }
+
+    return legacyLanguage;
+  });
+}
+
 export async function ensureLocalVaultSettingsRecord(
   localVaultId: string,
   options?: {
-    language?: AppLanguage;
     lastOpenedNoteId?: string | null;
   }
 ) {
@@ -1795,7 +1812,7 @@ export async function ensureLocalVaultSettingsRecord(
 
     const nextSettings = {
       ...stripAppSettingsSecrets(
-        buildDefaultAppSettings(options?.language ?? detectLanguage(), options?.lastOpenedNoteId ?? null)
+        buildDefaultAppSettings(options?.lastOpenedNoteId ?? null)
       )!,
       syncStatus: "disabled" as const
     };
@@ -1828,12 +1845,10 @@ export async function writeImportedVaultSnapshot(
   input: {
     snapshot: SyncSnapshot;
     revision: string | null;
-    language?: AppLanguage;
   }
 ) {
   await withLocalVaultDatabase(localVaultId, async (database) => {
     const existingSettings = stripAppSettingsSecrets(await database.settings.get("app"));
-    const language = input.language ?? existingSettings?.language ?? detectLanguage();
     const folders = input.snapshot.folders.map((folder) => hydrateFolderRecord(folder));
     const notes = input.snapshot.notes.map((note) => hydrateImportedNote(note));
     const assets = input.snapshot.assets.map((asset) => hydrateImportedAsset(asset));
@@ -1930,8 +1945,7 @@ export async function writeImportedVaultSnapshot(
         }
 
         const nextSettings = {
-          ...(existingSettings ?? stripAppSettingsSecrets(buildDefaultAppSettings(language, nextOpenedNoteId))!),
-          language,
+          ...(existingSettings ?? stripAppSettingsSecrets(buildDefaultAppSettings(nextOpenedNoteId))!),
           syncStatus: "idle" as const,
           lastSyncAt: now(),
           syncCursor: input.revision,
@@ -1999,6 +2013,18 @@ export async function sanitizePersistedLocalVaultSecrets(localVaultIds: readonly
       ) {
         return;
       }
+
+      // Older builds stored these fields inside IndexedDB. Move each value to
+      // the secure store first; never erase a credential before its protected
+      // replacement has been written successfully.
+      await Promise.all(
+        APP_SETTINGS_SECRET_FIELDS.map((field) => {
+          const value = settings[field];
+          return value
+            ? writeSecureSecret(buildAppSettingsSecretKey(localVaultId, field), value)
+            : Promise.resolve();
+        })
+      );
 
       await database.settings.update("app", {
         selfHostedToken: "",
@@ -2876,7 +2902,6 @@ export async function removeTag(tagId: string) {
 }
 
 export async function createNote(
-  language: AppLanguage,
   folderId: string | null,
   tagIds: string[],
   projectId?: string
@@ -2928,7 +2953,6 @@ export async function createNote(
 }
 
 export async function createCanvas(
-  language: AppLanguage,
   folderId: string | null,
   tagIds: string[],
   projectId?: string
@@ -3670,7 +3694,7 @@ export async function createPlannerHabit(input: PlannerHabitCreateInput) {
       color: input.color ?? DEFAULT_PROJECT_COLOR,
       icon: input.icon?.trim() || "spark",
       frequencyRule: input.frequencyRule?.trim() || "FREQ=DAILY;INTERVAL=1",
-      frequencyTimezone: input.frequencyTimezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+      frequencyTimezone: input.frequencyTimezone ?? getResolvedTimeZone(),
       targetCount: normalizePlannerHabitTargetCount(input.targetCount),
       targetUnit: normalizePlannerHabitTargetUnit(input.targetUnit),
       targetPeriod: input.targetPeriod ?? "day",

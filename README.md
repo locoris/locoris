@@ -72,11 +72,9 @@ Site media slots live in:
 
 ## Personal Sync Server
 
-```bash
-SYNC_TOKEN=local-dev-token npm run sync-server
-```
+Self-hosted sync is distributed in two user-facing forms: the Docker/NAS image for an always-on server and Locoris Server installers for Windows, macOS, and Linux. Both use the same data format and the same one-time device invitations; normal setup does not expose a permanent management token.
 
-By default the personal server stores runtime data in an OS-appropriate app data directory:
+The self-hosted server uses SQLite for metadata and token hashes, plus atomic snapshot and journal files in one persistent data directory. By default it uses an OS-appropriate app data directory:
 
 - macOS: `~/Library/Application Support/Locoris/Personal Server`
 - Windows: `%LOCALAPPDATA%\\Locoris\\Personal Server`
@@ -88,9 +86,11 @@ Override it with:
 SYNC_DATA_DIR=/absolute/path
 ```
 
+Existing `personal-config.json` and `registry.json` metadata is imported once and archived automatically. Back up the complete data directory, not individual files. See [apps/personal-server/README.md](apps/personal-server/README.md) for installation, pairing, guest access, Docker Compose, migration, backup, restore, and operational guidance.
+
 ## Google Drive Setup
 
-Google Drive sync stores remote vaults in the hidden `appDataFolder`.
+Google Drive sync stores remote vaults in the hidden `appDataFolder`. Current clients use immutable checkpoints and commits, resumable uploads, client-side encrypted private-vault payloads, background change detection, and platform-native reconnect/revoke flows.
 
 Detailed guide:
 

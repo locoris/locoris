@@ -573,6 +573,22 @@
   transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
 }
 
+.planner-habit-card.is-completing {
+  border-color: color-mix(in srgb, var(--planner-habit-done) 68%, rgba(255, 255, 255, 0.18));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--planner-habit-done) 24%, transparent),
+    0 14px 34px color-mix(in srgb, var(--planner-habit-done) 14%, transparent);
+}
+
+.planner-habit-card.is-completing::before {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  pointer-events: none;
+  background: radial-gradient(circle at 10% 24%, color-mix(in srgb, var(--planner-habit-done) 30%, transparent), transparent 34%);
+  animation: planner-habit-completion-wash 520ms var(--motion-ease-emphasized, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
 .planner-habit-card::after {
   content: "";
   position: absolute;
@@ -677,6 +693,10 @@
     0 12px 30px color-mix(in srgb, var(--planner-habit-done) 18%, transparent);
 }
 
+.planner-habit-card.is-completing .planner-habit-check {
+  animation: planner-habit-check-complete 420ms var(--motion-ease-spring, cubic-bezier(0.2, 0.92, 0.14, 1)) both;
+}
+
 .planner-habit-check[aria-pressed="true"]::before {
   opacity: 1;
   transform: scale(1);
@@ -686,6 +706,26 @@
   border-color: var(--planner-habit-done-ink);
   opacity: 1;
   transform: rotate(-45deg) scale(1);
+}
+
+@keyframes planner-habit-check-complete {
+  0% { transform: scale(0.88); }
+  52% { transform: scale(1.13); }
+  100% { transform: scale(1); }
+}
+
+@keyframes planner-habit-completion-wash {
+  0% { opacity: 0; transform: scale(0.82); }
+  42% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planner-habit-card.is-completing,
+  .planner-habit-card.is-completing::before,
+  .planner-habit-card.is-completing .planner-habit-check {
+    animation-duration: 1ms;
+  }
 }
 
 .planner-habit-card-main,

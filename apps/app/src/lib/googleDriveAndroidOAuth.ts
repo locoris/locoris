@@ -98,3 +98,15 @@ export async function clearGoogleDriveAndroidAccessToken(token: string) {
     throw normalizeAndroidInvokeError(error);
   }
 }
+
+export async function revokeGoogleDriveAndroidAccess() {
+  if (!isAndroidGoogleDriveOauthRuntime()) {
+    return;
+  }
+
+  try {
+    await invoke("android_google_drive_revoke_access");
+  } catch (error) {
+    throw normalizeAndroidInvokeError(error);
+  }
+}

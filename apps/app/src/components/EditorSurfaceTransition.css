@@ -1,0 +1,146 @@
+.editor-surface-transition {
+  --editor-transition-enter-duration: 290ms;
+  --editor-transition-exit-duration: 220ms;
+  --editor-transition-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  isolation: isolate;
+}
+
+.editor-surface-transition.is-exiting {
+  pointer-events: none;
+}
+
+.editor-surface-transition.is-entering .editor-surface-transition-dim {
+  animation: editor-surface-dim-in var(--editor-transition-enter-duration) ease-out both;
+}
+
+.editor-surface-transition.is-exiting .editor-surface-transition-dim {
+  animation: editor-surface-dim-out var(--editor-transition-exit-duration) ease-in both;
+}
+
+.editor-surface-transition.is-entering .editor-surface-transition-window {
+  animation: editor-surface-window-in var(--editor-transition-enter-duration)
+    var(--editor-transition-ease) both;
+  transform-origin: 50% 42%;
+}
+
+.editor-surface-transition.is-exiting .editor-surface-transition-window {
+  animation: editor-surface-window-out var(--editor-transition-exit-duration)
+    cubic-bezier(0.4, 0, 0.8, 0.2) both;
+  transform-origin: 50% 42%;
+}
+
+.editor-surface-transition-content {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation: editor-surface-content-in 210ms var(--editor-transition-ease) both;
+}
+
+.editor-surface-transition-content.is-canvas-mode {
+  height: 100%;
+  animation-name: editor-surface-canvas-content-in;
+}
+
+@keyframes editor-surface-dim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes editor-surface-dim-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes editor-surface-window-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes editor-surface-window-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.992);
+  }
+}
+
+@keyframes editor-surface-content-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes editor-surface-canvas-content-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 980px), (orientation: portrait) {
+  .editor-surface-transition {
+    --editor-transition-enter-duration: 330ms;
+    --editor-transition-exit-duration: 230ms;
+  }
+
+  .editor-surface-transition.is-entering .editor-surface-transition-window {
+    animation-name: editor-surface-mobile-window-in;
+    transform-origin: 100% 50%;
+  }
+
+  .editor-surface-transition.is-exiting .editor-surface-transition-window {
+    animation-name: editor-surface-mobile-window-out;
+    transform-origin: 100% 50%;
+  }
+
+  @keyframes editor-surface-mobile-window-in {
+    from {
+      opacity: 0;
+      transform: translateX(min(8vw, 44px));
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes editor-surface-mobile-window-out {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(min(6vw, 32px));
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-surface-transition {
+    --editor-transition-enter-duration: 1ms;
+    --editor-transition-exit-duration: 1ms;
+  }
+
+  .editor-surface-transition-window,
+  .editor-surface-transition-content,
+  .editor-surface-transition-dim {
+    animation-duration: 1ms !important;
+    transform: none !important;
+  }
+}

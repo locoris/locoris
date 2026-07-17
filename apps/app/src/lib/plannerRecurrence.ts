@@ -1,6 +1,6 @@
 import { RRule, rrulestr } from "rrule";
 
-import type { AppLanguage, PlannerRecurrenceOverride, Task } from "../types";
+import type { PlannerRecurrenceOverride, Task } from "../types";
 
 export type PlannerRecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
 export type PlannerRecurringTaskAction = "skipOccurrence" | "completeOccurrence" | "completeAllFuture";
@@ -81,35 +81,6 @@ export function buildPlannerRRule(input: {
 
 export function isRecurringPlannerRule(rule: string | null | undefined) {
   return Boolean(normalizeRecurrenceRule(rule));
-}
-
-export function summarizePlannerRecurrence(rule: string | null | undefined, language: AppLanguage) {
-  const normalized = normalizeRecurrenceRule(rule);
-
-  if (!normalized) {
-    return language === "ru" ? "Без повтора" : "No repeat";
-  }
-
-  const frequency = normalized.match(/FREQ=([A-Z]+)/)?.[1] ?? "";
-  const interval = Number(normalized.match(/INTERVAL=(\d+)/)?.[1] ?? "1");
-  const every = interval > 1 ? interval : 1;
-
-  const labels =
-    language === "ru"
-      ? {
-          DAILY: every === 1 ? "Каждый день" : `Каждые ${every} дн.`,
-          WEEKLY: every === 1 ? "Каждую неделю" : `Каждые ${every} нед.`,
-          MONTHLY: every === 1 ? "Каждый месяц" : `Каждые ${every} мес.`,
-          YEARLY: every === 1 ? "Каждый год" : `Каждые ${every} г.`
-        }
-      : {
-          DAILY: every === 1 ? "Daily" : `Every ${every} days`,
-          WEEKLY: every === 1 ? "Weekly" : `Every ${every} weeks`,
-          MONTHLY: every === 1 ? "Monthly" : `Every ${every} months`,
-          YEARLY: every === 1 ? "Yearly" : `Every ${every} years`
-        };
-
-  return labels[frequency as keyof typeof labels] ?? normalized;
 }
 
 export interface PlannerTaskOccurrence {

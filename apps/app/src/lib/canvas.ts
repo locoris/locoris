@@ -1,9 +1,4 @@
-import type { AppLanguage, CanvasContent, CanvasSceneAppState, CanvasSceneElement } from "../types";
-
-const UNTITLED_CANVAS_TITLE: Record<AppLanguage, string> = {
-  en: "Untitled canvas",
-  ru: "Новый канвас"
-};
+import type { CanvasContent, CanvasSceneAppState, CanvasSceneElement } from "../types";
 
 export const DEFAULT_CANVAS_BACKGROUND = "#000000";
 export const DEFAULT_CANVAS_STROKE_LIGHT = "#f8fafc";
@@ -161,10 +156,6 @@ export function shouldAutoAdaptCanvasStrokeColor(
   const previousAutomatic = getCanvasStrokeColorForBackground(previousBackground).toLowerCase();
 
   return normalizedStroke === legacyDefault || normalizedStroke === previousAutomatic;
-}
-
-export function getUntitledCanvasTitle(language: AppLanguage) {
-  return UNTITLED_CANVAS_TITLE[language];
 }
 
 export function createStarterCanvasContent(): CanvasContent {

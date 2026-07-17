@@ -1,21 +1,29 @@
 package com.locoris.android
 
-import android.content.Intent
+import android.app.PendingIntent
 import android.os.Bundle
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 
 class MainActivity : TauriActivity() {
+  private val googleDriveAuthorizationLauncher = registerForActivityResult(
+    ActivityResultContracts.StartIntentSenderForResult()
+  ) { result ->
+    LocorisAndroidPlugin.handleGoogleDriveAuthorizationActivityResult(
+      result.resultCode,
+      result.data
+    )
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
   }
 
-  @Deprecated("Deprecated by Android, but still required as a compatibility bridge for Tauri Android OAuth results.")
-  override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-    if (LocorisAndroidPlugin.handleGoogleDriveAuthorizationActivityResult(requestCode, resultCode, data)) {
-      return
-    }
-
-    super.onActivityResult(requestCode, resultCode, data)
+  fun launchGoogleDriveAuthorization(pendingIntent: PendingIntent) {
+    googleDriveAuthorizationLauncher.launch(
+      IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+    )
   }
 }

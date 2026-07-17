@@ -1,0 +1,62 @@
+.locale-change-notice {
+  position: fixed;
+  z-index: 30000;
+  top: max(18px, env(safe-area-inset-top));
+  left: 50%;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 12px;
+  width: min(620px, calc(100vw - 28px));
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--danger, var(--red, #ff678c)) 58%, var(--line));
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--panel-strong) 93%, var(--danger, var(--red, #ff678c)) 7%);
+  box-shadow: 0 18px 52px rgb(0 0 0 / 0.36);
+  backdrop-filter: blur(22px) saturate(1.2);
+  transform: translateX(-50%);
+  animation: locale-change-notice-in 180ms ease-out both;
+}
+
+.locale-change-notice-icon,
+.locale-change-notice button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid color-mix(in srgb, var(--danger, var(--red, #ff678c)) 54%, var(--line));
+  border-radius: 8px;
+  color: var(--danger, var(--red, #ff678c));
+  background: color-mix(in srgb, var(--danger, var(--red, #ff678c)) 13%, transparent);
+  font: inherit;
+  font-weight: 800;
+}
+
+.locale-change-notice p {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.locale-change-notice button {
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.locale-change-notice button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@keyframes locale-change-notice-in {
+  from { opacity: 0; transform: translate(-50%, -8px) scale(0.985); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .locale-change-notice {
+    animation: none;
+  }
+}

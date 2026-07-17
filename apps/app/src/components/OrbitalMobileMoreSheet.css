@@ -3,11 +3,9 @@
   --mobile-more-accent-soft: color-mix(in srgb, var(--mobile-more-accent) 16%, transparent);
   --mobile-more-accent-line: color-mix(in srgb, var(--mobile-more-accent) 28%, rgb(var(--line-rgb) / 0.12));
   gap: 12px;
-  max-height: min(780px, calc(100dvh - 28px));
-  overflow: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: none;
+  overflow: hidden;
 }
 
 .orbital-mobile-more-sheet::-webkit-scrollbar {
@@ -23,31 +21,21 @@
   min-width: 0;
 }
 
-.orbital-mobile-more-header {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.orbital-mobile-more-content {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  align-content: start;
   gap: 12px;
-  padding: 13px;
-  border: 1px solid color-mix(in srgb, var(--mobile-more-accent) 22%, rgb(var(--line-rgb) / 0.13));
-  border-radius: 25px;
-  background:
-    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 13%, transparent), transparent 48%),
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--mobile-more-accent) 13%, transparent), transparent 46%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.064), rgba(255, 255, 255, 0.022)),
-    rgb(var(--surface-rgb) / 0.18);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.075),
-    0 18px 42px rgba(2, 5, 15, 0.22);
-  backdrop-filter: blur(22px) saturate(136%);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1px 2px 16px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
-.orbital-mobile-more-header-copy {
-  display: grid;
-  gap: 6px;
+.orbital-mobile-more-content::-webkit-scrollbar {
+  display: none;
 }
 
 .orbital-mobile-more-header h2,
@@ -691,11 +679,6 @@
 }
 
 @media (max-width: 420px) {
-  .orbital-mobile-more-sheet {
-    padding: 14px;
-    border-radius: 30px 30px 24px 24px;
-  }
-
   .orbital-mobile-more-vault-actions,
   .orbital-mobile-more-kind-grid {
     grid-template-columns: 1fr;

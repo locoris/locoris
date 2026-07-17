@@ -1,3 +1,4 @@
+import { translateInline } from "../../localization/translateInline";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
@@ -11,20 +12,23 @@ import type {
   PlannerCalendarDefaultView,
   PlannerDefaultSurface,
   PlannerTaskPriority,
-  PlannerWeekStartsOn,
   Project,
   Tag,
   Task,
   TimeBlock
 } from "../../types";
+import type { WeekdayNumber } from "../../localization";
 import {
   formatPlannerDate,
-  getEndOfLocalDay,
   getPlannerPriorityLabel,
+  getPlannerTaskDateDraftSummary,
+  getPlannerViewLabels
+} from "../../localization/plannerPresentation";
+import {
+  getEndOfLocalDay,
   getPlannerProjectName,
   getPlannerStats,
   getPlannerTasksForView,
-  getPlannerViewLabels,
   isPlannerTaskActive,
   isPlannerTaskDone,
   isPlannerTaskDueToday,
@@ -49,12 +53,12 @@ import { normalizePlannerQuickAddTagName } from "../../lib/plannerQuickAdd";
 import {
   buildPlannerTaskScheduleFields,
   createPlannerTaskDateDraft,
-  getPlannerTaskDateDraftSummary,
   type PlannerTaskDateDraft
 } from "../../lib/plannerTaskSchedule";
 import { buildPlannerHabitSummaries, type PlannerHabitSummary } from "../../lib/plannerHabits";
 import { buildPlannerReview } from "../../lib/plannerReview";
 import { useVisualKeyboardInset } from "../../lib/useVisualKeyboardInset";
+import { useFlipListMotion } from "../../lib/useFlipListMotion";
 import PlannerRail from "./PlannerRail";
 import PlannerCalendarSurface from "./PlannerCalendarSurface";
 import PlannerDateDialog from "./PlannerDateDialog";
@@ -77,7 +81,7 @@ interface PlannerSurfaceProps {
   adaptiveLayout: AppRuntimeLayoutSnapshot;
   defaultSurface: PlannerDefaultSurface;
   defaultCalendarView: PlannerCalendarDefaultView;
-  weekStartsOn: PlannerWeekStartsOn;
+  weekStartsOn: WeekdayNumber;
   focusProjectId?: string | null;
   navigationRequest?: {
     viewId: PlannerViewId;
@@ -107,6 +111,7 @@ interface TaskCardProps {
   tagNames: string[];
   language: AppLanguage;
   isMobile: boolean;
+  feedbackDone: boolean;
   onSelect: () => void;
   onOpenActions: () => void;
   onToggleDone: (done: boolean, occurrenceStartAt?: number) => void;
@@ -282,13 +287,14 @@ function TaskCard({
   tagNames,
   language,
   isMobile,
+  feedbackDone,
   onSelect,
   onOpenActions,
   onToggleDone
 }: TaskCardProps) {
   const longPressRef = useRef<number | null>(null);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
-  const done = isPlannerTaskDone(task);
+  const done = isPlannerTaskDone(task) || feedbackDone;
   const overdue = isPlannerTaskOverdue(task);
   const dueToday = isPlannerTaskDueToday(task);
   const recurring = Boolean(task.recurrenceRule);
@@ -336,11 +342,12 @@ function TaskCard({
 
   return (
     <article
+      data-motion-key={task.id}
       role="button"
       tabIndex={0}
       className={`planner-task-card ${task.description ? "has-description" : ""} ${
         selected ? "is-selected" : ""
-      } ${done ? "is-done" : ""} ${overdue ? "is-overdue" : ""} ${dueToday ? "is-today" : ""} ${
+      } ${done ? "is-done" : ""} ${feedbackDone ? "is-completing" : ""} ${overdue ? "is-overdue" : ""} ${dueToday ? "is-today" : ""} ${
         recurring ? "is-recurring" : ""
       }`}
       onClick={onSelect}
@@ -366,8 +373,11 @@ function TaskCard({
       <button
         type="button"
         className="planner-task-check"
+        disabled={feedbackDone}
         aria-pressed={done}
-        aria-label={done ? "Отметить задачу невыполненной" : "Отметить задачу выполненной"}
+        aria-label={done
+          ? translateInline(language, "plannerSurface.markTaskIncomplete")
+          : translateInline(language, "plannerSurface.markTaskComplete")}
         onClick={(event) => {
           event.stopPropagation();
           onToggleDone(!done, primaryOccurrence?.originalStartAt);
@@ -379,10 +389,10 @@ function TaskCard({
           {hasSourceBadges ? (
             <div className="planner-task-badges" aria-hidden={!hasSourceBadges}>
               {hasNoteSource ? (
-                <span className="planner-task-source-icon is-note" title={language === "ru" ? "Связана с заметкой" : "Linked note"} />
+                <span className="planner-task-source-icon is-note" title={translateInline(language, "plannerSurface.linkedNote")} />
               ) : null}
               {hasCanvasSource ? (
-                <span className="planner-task-source-icon is-canvas" title={language === "ru" ? "Связана с холстом" : "Linked canvas"} />
+                <span className="planner-task-source-icon is-canvas" title={translateInline(language, "plannerSurface.linkedCanvas")} />
               ) : null}
             </div>
           ) : null}
@@ -390,9 +400,9 @@ function TaskCard({
         {task.description ? <p className="planner-task-description">{task.description}</p> : null}
         <div className="planner-task-meta">
           {overdue ? (
-            <span className="planner-task-chip is-overdue-status">{language === "ru" ? "Просрочено" : "Overdue"}</span>
+            <span className="planner-task-chip is-overdue-status">{translateInline(language, "plannerSurface.overdue")}</span>
           ) : dueToday ? (
-            <span className="planner-task-chip is-today-status">{language === "ru" ? "Сегодня" : "Today"}</span>
+            <span className="planner-task-chip is-today-status">{translateInline(language, "plannerSurface.today")}</span>
           ) : null}
           {displayDateAt ? (
             <span className={`planner-task-chip is-date ${overdue ? "is-overdue" : ""}`}>
@@ -400,7 +410,7 @@ function TaskCard({
             </span>
           ) : null}
           {recurring ? (
-            <span className="planner-task-chip is-recurring-status">{language === "ru" ? "Повтор" : "Repeats"}</span>
+            <span className="planner-task-chip is-recurring-status">{translateInline(language, "plannerSurface.repeats")}</span>
           ) : null}
           {task.priority !== "none" ? (
             <span className={`planner-task-chip planner-priority-chip is-${task.priority}`}>
@@ -470,8 +480,10 @@ export default function PlannerSurface({
   const [isComposerDateOpen, setIsComposerDateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [undoAction, setUndoAction] = useState<PlannerUndoSnackbarAction | null>(null);
+  const [completingTaskIds, setCompletingTaskIds] = useState<Set<string>>(() => new Set());
   const composerTitleInputRef = useRef<HTMLInputElement | null>(null);
   const composerRef = useRef<HTMLFormElement | null>(null);
+  const taskListRef = useRef<HTMLElement | null>(null);
   const undoTimerRef = useRef<number | null>(null);
   const isHabitView = activeViewId === "habits";
   const isReviewView = activeViewId === "review";
@@ -573,6 +585,10 @@ export default function PlannerSurface({
     },
     [activeViewId, focusProjectId, projectFilterId, projects, searchQuery, tags, tasks]
   );
+  const taskLayoutKey = visibleTasks
+    .map((task) => `${task.id}:${isPlannerTaskDone(task) ? "done" : "open"}`)
+    .join("|");
+  useFlipListMotion(taskListRef, taskLayoutKey);
   const selectedTask = useMemo(
     () => tasks.find((task) => task.id === selectedTaskId) ?? null,
     [selectedTaskId, tasks]
@@ -747,12 +763,28 @@ export default function PlannerSurface({
     const task = tasks.find((candidate) => candidate.id === taskId);
     const undoPatch = task ? getTaskUndoPatch(task) : null;
     const undoLabel = done
-      ? language === "ru"
-        ? "Задача отмечена выполненной"
-        : "Task completed"
-      : language === "ru"
-        ? "Отметка снята"
-        : "Task reopened";
+      ? translateInline(language, "plannerSurface.taskCompleted")
+      : translateInline(language, "plannerSurface.taskReopened");
+
+    if (done && completingTaskIds.has(taskId)) {
+      return;
+    }
+
+    if (done && task && !isPlannerTaskDone(task)) {
+      setCompletingTaskIds((current) => new Set(current).add(taskId));
+
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 170));
+      }
+
+      window.setTimeout(() => {
+        setCompletingTaskIds((current) => {
+          const next = new Set(current);
+          next.delete(taskId);
+          return next;
+        });
+      }, 520);
+    }
 
     if (!task || !isRecurringPlannerRule(task.recurrenceRule)) {
       await onToggleTaskDone(taskId, done);
@@ -799,7 +831,7 @@ export default function PlannerSurface({
       return;
     }
 
-    showUndoAction(language === "ru" ? "Задача удалена" : "Task deleted", async () => {
+    showUndoAction(translateInline(language, "plannerSurface.taskDeleted"), async () => {
       const restoredTask = await onCreateTask(getTaskRestoreInput(task));
       setSelectedTaskId(restoredTask.id);
     });
@@ -813,7 +845,7 @@ export default function PlannerSurface({
     }
 
     await onToggleHabitLog(habitId);
-    showUndoAction(language === "ru" ? "Отметка привычки изменена" : "Habit check changed", () => onToggleHabitLog(habitId));
+    showUndoAction(translateInline(language, "plannerSurface.habitCheckChanged"), () => onToggleHabitLog(habitId));
   };
 
   const handleUpdateHabitWithUndo = async (
@@ -833,12 +865,8 @@ export default function PlannerSurface({
         status: summary.habit.status === "paused" ? "active" : "paused"
       },
       summary.habit.status === "paused"
-        ? language === "ru"
-          ? "Привычка возобновлена"
-          : "Habit resumed"
-        : language === "ru"
-          ? "Привычка поставлена на паузу"
-          : "Habit paused"
+        ? translateInline(language, "plannerSurface.habitResumed")
+        : translateInline(language, "plannerSurface.habitPaused")
     );
   };
 
@@ -848,7 +876,7 @@ export default function PlannerSurface({
       {
         status: "archived"
       },
-      language === "ru" ? "Привычка отправлена в архив" : "Habit archived"
+      translateInline(language, "plannerSurface.habitArchived")
     );
   };
 
@@ -856,14 +884,14 @@ export default function PlannerSurface({
     await handleUpdateHabitWithUndo(
       summary,
       { title },
-      language === "ru" ? "Привычка переименована" : "Habit renamed"
+      translateInline(language, "plannerSurface.habitRenamed")
     );
   };
 
   const handleDeleteHabitWithUndo = async (summary: PlannerHabitSummary) => {
     await onDeleteHabit(summary.habit.id);
     setSelectedHabitId(null);
-    showUndoAction(language === "ru" ? "Привычка удалена" : "Habit deleted", async () => {
+    showUndoAction(translateInline(language, "plannerSurface.habitDeleted"), async () => {
       const restoredHabit = await onCreateHabit(getHabitRestoreInput(summary.habit));
       setSelectedHabitId(restoredHabit.id);
     });
@@ -967,13 +995,9 @@ export default function PlannerSurface({
     const isNoProjectContext = !focusedProject && activeViewId === "projects" && projectFilterId === PROJECT_FILTER_NONE;
     const contextColor = contextProject?.color ?? (isNoProjectContext ? "var(--planner-accent-2)" : "var(--planner-accent)");
     const contextLabel = contextProject
-      ? language === "ru"
-        ? `Контекст: ${contextProject.name}`
-        : `Context: ${contextProject.name}`
+      ? translateInline(language, "plannerSurface.context", { value0: contextProject.name })
       : isNoProjectContext
-        ? language === "ru"
-          ? "Без проекта"
-          : "No project"
+        ? translateInline(language, "plannerSurface.noProject")
         : "Inbox";
 
     return (
@@ -992,40 +1016,38 @@ export default function PlannerSurface({
       >
         <div className="planner-composer-title-row">
           <div>
-            <span className="planner-kicker">{language === "ru" ? "Новая задача" : "New task"}</span>
+            <span className="planner-kicker">{translateInline(language, "plannerSurface.newTask")}</span>
           </div>
           <button
             type="button"
             className="planner-icon-button"
             onClick={closeComposer}
-            aria-label={language === "ru" ? "Закрыть" : "Close"}
+            aria-label={translateInline(language, "plannerSurface.close")}
           >
             ×
           </button>
         </div>
         <div className="planner-composer-capture">
           <label className="planner-composer-title-field">
-            <span>{language === "ru" ? "Задача" : "Task"}</span>
+            <span>{translateInline(language, "plannerSurface.task")}</span>
             <input
               ref={composerTitleInputRef}
               value={titleDraft}
               onChange={(event) => setTitleDraft(event.target.value)}
               placeholder={
-                language === "ru"
-                  ? "Например: собрать план релиза завтра"
-                  : "For example: prepare tomorrow's release plan"
+                translateInline(language, "plannerSurface.forExamplePrepareTomorrowSReleasePlan")
               }
             />
           </label>
           <section className="planner-composer-date-card">
-            <span>{language === "ru" ? "Дата" : "Date"}</span>
+            <span>{translateInline(language, "plannerSurface.date")}</span>
             <button type="button" onClick={() => setIsComposerDateOpen(true)}>
               <span className="planner-action-glyph is-calendar" aria-hidden="true" />
               <strong>{getPlannerTaskDateDraftSummary(dateDraft, language)}</strong>
             </button>
           </section>
           <section className="planner-composer-choice is-project">
-            <span>{language === "ru" ? "Проект" : "Project"}</span>
+            <span>{translateInline(language, "plannerSurface.project")}</span>
             <div className="planner-composer-chip-row">
               <button
                 type="button"
@@ -1044,7 +1066,7 @@ export default function PlannerSurface({
                   style={{ "--planner-composer-chip-color": "var(--planner-accent)" } as CSSProperties}
                 >
                   <span />
-                  <strong>{language === "ru" ? "Без проекта" : "No project"}</strong>
+                  <strong>{translateInline(language, "plannerSurface.noProject2")}</strong>
                 </button>
               ) : null}
               {projects.map((project) => (
@@ -1062,7 +1084,7 @@ export default function PlannerSurface({
             </div>
           </section>
           <section className="planner-composer-choice is-priority">
-            <span>{language === "ru" ? "Приоритет" : "Priority"}</span>
+            <span>{translateInline(language, "plannerSurface.priority")}</span>
             <div className="planner-composer-priority-row">
               {PRIORITIES.map((priority) => (
                 <button
@@ -1083,7 +1105,7 @@ export default function PlannerSurface({
             disabled={!titleDraft.trim() || isCreating}
           >
             <span className="planner-action-glyph is-plus" aria-hidden="true" />
-            <span>{language === "ru" ? "Создать" : "Create"}</span>
+            <span>{translateInline(language, "plannerSurface.create")}</span>
           </button>
         </div>
         <PlannerDateDialog
@@ -1106,11 +1128,11 @@ export default function PlannerSurface({
       return null;
     }
 
-    const allLabel = language === "ru" ? "Все" : "All";
-    const noProjectLabel = language === "ru" ? "Без проекта" : "No project";
+    const allLabel = translateInline(language, "plannerSurface.all");
+    const noProjectLabel = translateInline(language, "plannerSurface.noProject3");
 
     return (
-      <nav className="planner-project-filter-row" aria-label={language === "ru" ? "Фильтр проектов" : "Project filter"}>
+      <nav className="planner-project-filter-row" aria-label={translateInline(language, "plannerSurface.projectFilter")}>
         <button
           type="button"
           className={projectFilterId === PROJECT_FILTER_ALL ? "is-active" : ""}
@@ -1170,16 +1192,12 @@ export default function PlannerSurface({
         {activeViewId !== "review" ? (
           <header className="planner-main-head">
             <div>
-              <span className="planner-kicker">{language === "ru" ? "Planner" : "Planner"}</span>
+              <span className="planner-kicker">{translateInline(language, "plannerSurface.planner")}</span>
               <h1>{labels[activeViewId]}</h1>
               <p>
                 {activeViewId === "habits"
-                  ? language === "ru"
-                    ? "Отмечай ритмы дня, держи streak и ставь паузу без штрафа."
-                    : "Check in daily rhythms, keep streaks, and pause without penalty."
-                  : language === "ru"
-                    ? "Собирай Inbox, расставляй даты и держи фокус по проектам."
-                    : "Capture inbox items, set dates, and keep project focus clear."}
+                  ? translateInline(language, "plannerSurface.checkInDailyRhythmsKeepStreaksAnd")
+                  : translateInline(language, "plannerSurface.captureInboxItemsSetDatesAndKeep")}
               </p>
             </div>
             {isTaskView || isHabitView ? (
@@ -1190,7 +1208,7 @@ export default function PlannerSurface({
                   onClick={openCalendar}
                 >
                   <span className="planner-action-glyph is-calendar" aria-hidden="true" />
-                  <span>{language === "ru" ? "Календарь" : "Calendar"}</span>
+                  <span>{translateInline(language, "plannerSurface.calendar")}</span>
                 </button>
                 <button
                   type="button"
@@ -1199,7 +1217,7 @@ export default function PlannerSurface({
                   data-planner-composer-trigger={isHabitView ? undefined : "true"}
                 >
                   <span className="planner-action-glyph is-plus" aria-hidden="true" />
-                  <span>{language === "ru" ? "Новая" : "New"}</span>
+                  <span>{translateInline(language, "plannerSurface.new")}</span>
                 </button>
               </div>
             ) : null}
@@ -1210,7 +1228,7 @@ export default function PlannerSurface({
           <div className="planner-context-row" role="status">
             <span className="planner-context-chip">
               <span className="planner-context-dot" style={{ "--planner-project-color": focusedProject.color } as CSSProperties} />
-              {language === "ru" ? "План проекта" : "Project plan"} · {focusedProject.name}
+              {translateInline(language, "plannerSurface.projectPlan")} · {focusedProject.name}
             </span>
             {onClearProjectFocus ? (
               <button
@@ -1221,14 +1239,14 @@ export default function PlannerSurface({
                   onClearProjectFocus();
                 }}
               >
-                {language === "ru" ? "Показать все" : "Show all"}
+                {translateInline(language, "plannerSurface.showAll")}
               </button>
             ) : null}
           </div>
         ) : null}
 
         {isMobile ? (
-          <nav className="planner-mobile-view-tabs" aria-label={language === "ru" ? "Разделы плана" : "Plan views"}>
+          <nav className="planner-mobile-view-tabs" aria-label={translateInline(language, "plannerSurface.planViews")}>
             {(Object.keys(labels) as PlannerViewId[]).map((viewId) => (
               <button
                 key={viewId}
@@ -1245,7 +1263,7 @@ export default function PlannerSurface({
               className="is-calendar-entry"
               onClick={openCalendar}
             >
-              <span>{language === "ru" ? "Календарь" : "Calendar"}</span>
+              <span>{translateInline(language, "plannerSurface.calendar2")}</span>
               <strong>{calendarCount}</strong>
             </button>
           </nav>
@@ -1292,14 +1310,14 @@ export default function PlannerSurface({
                 <input
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder={language === "ru" ? "Поиск задач, проектов и тегов" : "Search tasks, projects, tags"}
+                  placeholder={translateInline(language, "plannerSurface.searchTasksProjectsTags")}
                 />
               </label>
             </div>
 
             {renderProjectFilters()}
 
-            <section className="planner-task-list" aria-label={labels[activeViewId]}>
+            <section ref={taskListRef} className="planner-task-list" aria-label={labels[activeViewId]}>
               {visibleTasks.length > 0 ? (
                 visibleTasks.map((task) => {
                   const projectName = getPlannerProjectName(projects, task.projectId);
@@ -1314,6 +1332,7 @@ export default function PlannerSurface({
                       tagNames={tagNames}
                       language={language}
                       isMobile={isMobile}
+                      feedbackDone={completingTaskIds.has(task.id)}
                       onSelect={() => setSelectedTaskId(task.id)}
                       onOpenActions={() => setSelectedTaskId(task.id)}
                       onToggleDone={(done, occurrenceStartAt) => void handleToggleTaskDone(task.id, done, occurrenceStartAt)}
@@ -1323,11 +1342,9 @@ export default function PlannerSurface({
               ) : (
                 <div className="planner-empty-state">
                   <span className="planner-empty-glyph" aria-hidden="true" />
-                  <h2>{language === "ru" ? "Здесь спокойно" : "Nothing here yet"}</h2>
+                  <h2>{translateInline(language, "plannerSurface.nothingHereYet")}</h2>
                   <p>
-                    {language === "ru"
-                      ? "Создай первую задачу или измени фильтр поиска."
-                      : "Create the first task or change the search filter."}
+                    {translateInline(language, "plannerSurface.createTheFirstTaskOrChangeThe")}
                   </p>
                 </div>
               )}
@@ -1375,12 +1392,8 @@ export default function PlannerSurface({
           <span className="planner-action-glyph is-plus" aria-hidden="true" />
           <span>
             {isHabitView
-              ? language === "ru"
-                ? "Привычка"
-                : "Habit"
-              : language === "ru"
-                ? "Задача"
-                : "Task"}
+              ? translateInline(language, "plannerSurface.habit")
+              : translateInline(language, "plannerSurface.task2")}
           </span>
         </button>
       ) : null}
@@ -1396,7 +1409,7 @@ export default function PlannerSurface({
             type="button"
             className="planner-mobile-sheet-backdrop"
             onClick={closeComposer}
-            aria-label={language === "ru" ? "Закрыть" : "Close"}
+            aria-label={translateInline(language, "plannerSurface.close2")}
           />
           {renderComposer("sheet")}
         </div>
@@ -1413,7 +1426,7 @@ export default function PlannerSurface({
             type="button"
             className="planner-mobile-sheet-backdrop"
             onClick={() => setSelectedTaskId(null)}
-            aria-label={language === "ru" ? "Закрыть" : "Close"}
+            aria-label={translateInline(language, "plannerSurface.close3")}
           />
           <PlannerTaskInspector
             task={selectedTask}
@@ -1445,7 +1458,7 @@ export default function PlannerSurface({
             type="button"
             className="planner-mobile-sheet-backdrop"
             onClick={() => setSelectedHabitId(null)}
-            aria-label={language === "ru" ? "Закрыть" : "Close"}
+            aria-label={translateInline(language, "plannerSurface.close4")}
           />
           <section key={selectedHabitSummary.habit.id} className="planner-habit-mobile-detail-sheet">
             <PlannerHabitInspectorPanel

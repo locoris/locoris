@@ -1,3 +1,5 @@
+import { translateApp, translateInline } from "../../localization/translateInline";
+import { formatDateValue, formatPlannerDate, getCurrentLocaleRuntime } from "../../localization";
 import { useMemo, useState } from "react";
 
 import type { AppLanguage } from "../../types";
@@ -8,7 +10,7 @@ import {
   type PlannerTaskDateDraft,
   type PlannerTaskDateRepeat
 } from "../../lib/plannerTaskSchedule";
-import { formatPlannerDate, getEndOfLocalDay, getStartOfLocalDay } from "../../lib/planner";
+import { getEndOfLocalDay, getStartOfLocalDay } from "../../lib/planner";
 import PlannerTimeField from "./PlannerTimeField";
 import "./PlannerDateSelector.css";
 
@@ -75,39 +77,23 @@ function getCalendarDays(cursorAt: number): PlannerCalendarDay[] {
 }
 
 function getMonthTitle(value: number, language: AppLanguage) {
-  return new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", {
+  void language;
+  return formatDateValue(value, getCurrentLocaleRuntime(), {
     month: "long",
     year: "numeric"
-  }).format(value);
+  });
 }
 
 function getWeekdayLabels(language: AppLanguage) {
+  void language;
   const base = new Date(2024, 0, 1).getTime();
   return Array.from({ length: 7 }, (_item, index) =>
-    new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", { weekday: "short" }).format(addDays(base, index))
+    formatDateValue(addDays(base, index), getCurrentLocaleRuntime(), { weekday: "short" })
   );
 }
 
 function getRepeatLabel(repeat: PlannerTaskDateRepeat, language: AppLanguage) {
-  if (language === "ru") {
-    return {
-      none: "Не повторять",
-      daily: "Каждый день",
-      weekly: "Каждую неделю",
-      monthly: "Каждый месяц",
-      yearly: "Каждый год",
-      customDaily: "Каждые N дней"
-    }[repeat];
-  }
-
-  return {
-    none: "No repeat",
-    daily: "Daily",
-    weekly: "Weekly",
-    monthly: "Monthly",
-    yearly: "Yearly",
-    customDaily: "Every N days"
-  }[repeat];
+  return translateApp(language, `plannerCore.repeats.${repeat}`);
 }
 
 function getQuickDateOptions(language: AppLanguage) {
@@ -116,17 +102,17 @@ function getQuickDateOptions(language: AppLanguage) {
   return [
     {
       id: "today",
-      label: language === "ru" ? "Сегодня" : "Today",
+      label: translateInline(language, "plannerDateSelector.today"),
       value: today
     },
     {
       id: "tomorrow",
-      label: language === "ru" ? "Завтра" : "Tomorrow",
+      label: translateInline(language, "plannerDateSelector.tomorrow"),
       value: addDays(today, 1)
     },
     {
       id: "weekend",
-      label: language === "ru" ? "Выходные" : "Weekend",
+      label: translateInline(language, "plannerDateSelector.weekend"),
       value: addDays(today, (6 - new Date(today).getDay() + 7) % 7 || 6)
     }
   ];
@@ -222,18 +208,16 @@ export default function PlannerDateSelector({
     <section className={`planner-date-selector ${isMobile ? "is-mobile" : "is-desktop"}`}>
       <header className="planner-date-selector-head">
         <div>
-          <span className="planner-date-selector-kicker">{language === "ru" ? "Дата" : "Date"}</span>
+          <span className="planner-date-selector-kicker">{translateInline(language, "plannerDateSelector.date")}</span>
           <strong>
             {draft.startDateAt
               ? draft.endDateAt
                 ? `${formatPlannerDate(draft.startDateAt, language)} - ${formatPlannerDate(draft.endDateAt, language)}`
                 : formatPlannerDate(draft.startDateAt, language)
-              : language === "ru"
-                ? "Без даты"
-                : "No date"}
+              : translateInline(language, "plannerDateSelector.noDate")}
           </strong>
         </div>
-        <button type="button" onClick={onCancel} aria-label={language === "ru" ? "Закрыть" : "Close"}>
+        <button type="button" onClick={onCancel} aria-label={translateInline(language, "plannerDateSelector.close")}>
           ×
         </button>
       </header>
@@ -253,17 +237,17 @@ export default function PlannerDateSelector({
           </button>
         ))}
         <button type="button" className={!draft.startDateAt ? "is-active" : ""} onClick={clearDate}>
-          {language === "ru" ? "Без даты" : "No date"}
+          {translateInline(language, "plannerDateSelector.noDate2")}
         </button>
       </div>
 
       <div className="planner-date-selector-calendar">
         <div className="planner-date-selector-monthbar">
-          <button type="button" onClick={() => setCursorAt((current) => addMonths(current, -1))} aria-label={language === "ru" ? "Предыдущий месяц" : "Previous month"}>
+          <button type="button" onClick={() => setCursorAt((current) => addMonths(current, -1))} aria-label={translateInline(language, "plannerDateSelector.previousMonth")}>
             ‹
           </button>
           <strong>{getMonthTitle(cursorAt, language)}</strong>
-          <button type="button" onClick={() => setCursorAt((current) => addMonths(current, 1))} aria-label={language === "ru" ? "Следующий месяц" : "Next month"}>
+          <button type="button" onClick={() => setCursorAt((current) => addMonths(current, 1))} aria-label={translateInline(language, "plannerDateSelector.nextMonth")}>
             ›
           </button>
         </div>
@@ -310,7 +294,7 @@ export default function PlannerDateSelector({
           }}
         >
           <span className="planner-date-option-icon is-range" aria-hidden="true" />
-          <span>{language === "ru" ? "Диапазон" : "Range"}</span>
+          <span>{translateInline(language, "plannerDateSelector.range")}</span>
         </button>
         <button
           type="button"
@@ -324,7 +308,7 @@ export default function PlannerDateSelector({
           }
         >
           <span className="planner-date-option-icon is-time" aria-hidden="true" />
-          <span>{language === "ru" ? "Время" : "Time"}</span>
+          <span>{translateInline(language, "plannerDateSelector.time")}</span>
         </button>
       </div>
 
@@ -332,22 +316,22 @@ export default function PlannerDateSelector({
         <div className="planner-date-selector-time-block">
           <div className="planner-date-selector-time">
             <label>
-              <span>{language === "ru" ? "Начало" : "Starts"}</span>
+              <span>{translateInline(language, "plannerDateSelector.starts")}</span>
               <PlannerTimeField
                 valueMinutes={draft.startTimeMinutes}
                 language={language}
-                ariaLabel={language === "ru" ? "Время начала" : "Start time"}
+                ariaLabel={translateInline(language, "plannerDateSelector.startTime")}
                 minMinutes={0}
                 maxMinutes={MAX_START_TIME_MINUTES}
                 onChange={updateStartTime}
               />
             </label>
             <label>
-              <span>{language === "ru" ? "Конец" : "Ends"}</span>
+              <span>{translateInline(language, "plannerDateSelector.ends")}</span>
               <PlannerTimeField
                 valueMinutes={draft.endTimeMinutes}
                 language={language}
-                ariaLabel={language === "ru" ? "Время окончания" : "End time"}
+                ariaLabel={translateInline(language, "plannerDateSelector.endTime")}
                 minMinutes={Math.min(MAX_TIME_MINUTES, draft.startTimeMinutes + MIN_TIME_DURATION_MINUTES)}
                 maxMinutes={MAX_TIME_MINUTES}
                 onChange={updateEndTime}
@@ -358,7 +342,7 @@ export default function PlannerDateSelector({
       ) : null}
 
       <div className="planner-date-selector-repeat">
-        <span>{language === "ru" ? "Повтор" : "Repeat"}</span>
+        <span>{translateInline(language, "plannerDateSelector.repeat")}</span>
         <div>
           {REPEAT_OPTIONS.map((repeat) => (
             <button
@@ -381,24 +365,22 @@ export default function PlannerDateSelector({
 
       {draft.repeat === "customDaily" ? (
         <div className="planner-date-selector-custom-repeat">
-          <span>{language === "ru" ? "Интервал" : "Interval"}</span>
+          <span>{translateInline(language, "plannerDateSelector.interval")}</span>
           <div>
             <button
               type="button"
               onClick={() => updateDraft({ repeatIntervalDays: shiftRepeatIntervalDays(draft.repeatIntervalDays, -1) })}
-              aria-label={language === "ru" ? "Уменьшить интервал" : "Decrease interval"}
+              aria-label={translateInline(language, "plannerDateSelector.decreaseInterval")}
             >
               −
             </button>
             <strong>
-              {language === "ru"
-                ? `Каждые ${draft.repeatIntervalDays} дн.`
-                : `Every ${draft.repeatIntervalDays} days`}
+              {translateInline(language, "plannerDateSelector.everyDays", { value0: draft.repeatIntervalDays })}
             </strong>
             <button
               type="button"
               onClick={() => updateDraft({ repeatIntervalDays: shiftRepeatIntervalDays(draft.repeatIntervalDays, 1) })}
-              aria-label={language === "ru" ? "Увеличить интервал" : "Increase interval"}
+              aria-label={translateInline(language, "plannerDateSelector.increaseInterval")}
             >
               +
             </button>
@@ -408,22 +390,19 @@ export default function PlannerDateSelector({
 
       {draft.repeat !== "none" ? (
         <p className="planner-date-selector-note">
-          {language === "ru"
-            ? draft.endDateAt
-              ? "Повтор будет ограничен выбранным диапазоном."
-              : "Выбери диапазон, если повтор должен закончиться в конкретную дату."
-            : draft.endDateAt
-              ? "Repeat is limited by the selected range."
-              : "Choose a range if the repeat should end on a specific date."}
+          {translateApp(
+            language,
+            draft.endDateAt ? "plannerCore.repeatRangeLimited" : "plannerCore.repeatRangeHint"
+          )}
         </p>
       ) : null}
 
       <footer className="planner-date-selector-actions">
         <button type="button" onClick={onCancel}>
-          {language === "ru" ? "Отмена" : "Cancel"}
+          {translateInline(language, "plannerDateSelector.cancel")}
         </button>
         <button type="button" className="is-primary" onClick={apply}>
-          {language === "ru" ? "Применить" : "Apply"}
+          {translateInline(language, "plannerDateSelector.apply")}
         </button>
       </footer>
     </section>

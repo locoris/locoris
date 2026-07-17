@@ -1,13 +1,15 @@
+import { translateApp, translateInline } from "../../localization/translateInline";
+import {
+  formatPlannerFullDateTime,
+  getPlannerPriorityLabel,
+  getPlannerStatusLabel,
+  getPlannerTaskScheduleSummary
+} from "../../localization/plannerPresentation";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 
 import type { AppLanguage, Folder, Note, PlannerTaskPriority, Project, Reminder, Tag, Task } from "../../types";
-import { getDisplayNoteTitle } from "../../lib/displayNames";
-import {
-  formatPlannerFullDateTime,
-  getPlannerPriorityLabel,
-  getPlannerStatusLabel
-} from "../../lib/planner";
+import { getDisplayNoteTitle } from "../../localization/displayNames";
 import {
   buildRescheduleOccurrencePatch,
   buildRescheduleRecurringSeriesPatch,
@@ -17,7 +19,6 @@ import {
 import {
   buildPlannerTaskSchedulePatch,
   getPlannerTaskDateDraft,
-  getPlannerTaskScheduleSummary,
   type PlannerTaskDateDraft
 } from "../../lib/plannerTaskSchedule";
 import TagInputField from "../TagInputField";
@@ -65,28 +66,7 @@ type PlannerTaskScopedDateAction = {
 };
 
 function getBacklinkKindLabel(kind: PlannerBacklink["kind"], language: AppLanguage) {
-  const labels =
-    language === "ru"
-      ? {
-          project: "Проект",
-          folder: "Папка",
-          note: "Заметка",
-          canvas: "Холст",
-          block: "Блок",
-          canvasElement: "Элемент",
-          url: "Ссылка"
-        }
-      : {
-          project: "Project",
-          folder: "Folder",
-          note: "Note",
-          canvas: "Canvas",
-          block: "Block",
-          canvasElement: "Element",
-          url: "Link"
-        };
-
-  return labels[kind];
+  return translateApp(language, `plannerCore.backlinkKinds.${kind}`);
 }
 
 function getShortId(value: string | null | undefined) {
@@ -168,7 +148,7 @@ function buildPlannerBacklinks(input: {
     addBacklink({
       key: `project:${task.projectId}`,
       kind: "project",
-      title: project?.name ?? (language === "ru" ? "Проект" : "Project"),
+      title: project?.name ?? (translateInline(language, "plannerTaskInspectorView.project")),
       subtitle: getBacklinkKindLabel("project", language),
       projectId: task.projectId
     });
@@ -179,7 +159,7 @@ function buildPlannerBacklinks(input: {
     addBacklink({
       key: `folder:${task.folderId}`,
       kind: "folder",
-      title: folder?.name ?? (language === "ru" ? "Папка" : "Folder"),
+      title: folder?.name ?? (translateInline(language, "plannerTaskInspectorView.folder")),
       subtitle: getBacklinkKindLabel("folder", language)
     });
   }
@@ -189,7 +169,7 @@ function buildPlannerBacklinks(input: {
     addBacklink({
       key: `note:${task.noteId}`,
       kind: "note",
-      title: note ? getDisplayNoteTitle(note, language) : language === "ru" ? "Заметка" : "Note",
+      title: note ? getDisplayNoteTitle(note, language) : translateInline(language, "plannerTaskInspectorView.note"),
       subtitle: getBacklinkKindLabel("note", language),
       noteId: task.noteId
     });
@@ -200,7 +180,7 @@ function buildPlannerBacklinks(input: {
     addBacklink({
       key: `canvas:${task.canvasId}`,
       kind: "canvas",
-      title: canvas ? getDisplayNoteTitle(canvas, language) : language === "ru" ? "Холст" : "Canvas",
+      title: canvas ? getDisplayNoteTitle(canvas, language) : translateInline(language, "plannerTaskInspectorView.canvas"),
       subtitle: getBacklinkKindLabel("canvas", language),
       noteId: task.canvasId
     });
@@ -211,8 +191,8 @@ function buildPlannerBacklinks(input: {
     addBacklink({
       key: `block:${task.sourceBlockId}`,
       kind: "block",
-      title: sourceLink?.label || (language === "ru" ? `Блок ${getShortId(task.sourceBlockId)}` : `Block ${getShortId(task.sourceBlockId)}`),
-      subtitle: language === "ru" ? "Исходный блок заметки" : "Source note block",
+      title: sourceLink?.label || (translateInline(language, "plannerTaskInspectorView.block", { value0: getShortId(task.sourceBlockId) })),
+      subtitle: translateInline(language, "plannerTaskInspectorView.sourceNoteBlock"),
       noteId: task.noteId
     });
   }
@@ -224,8 +204,8 @@ function buildPlannerBacklinks(input: {
     addBacklink({
       key: `canvasElement:${task.canvasElementId}`,
       kind: "canvasElement",
-      title: sourceLink?.label || (language === "ru" ? `Элемент ${getShortId(task.canvasElementId)}` : `Element ${getShortId(task.canvasElementId)}`),
-      subtitle: language === "ru" ? "Исходный объект холста" : "Source canvas object",
+      title: sourceLink?.label || (translateInline(language, "plannerTaskInspectorView.element", { value0: getShortId(task.canvasElementId) })),
+      subtitle: translateInline(language, "plannerTaskInspectorView.sourceCanvasObject"),
       noteId: task.canvasId
     });
   }
@@ -273,23 +253,14 @@ function getReminderPreset(task: Task): PlannerReminderPreset {
 }
 
 function getReminderLabel(preset: PlannerReminderPreset, language: AppLanguage) {
-  if (language === "ru") {
-    return {
-      none: "Нет",
-      "0": "В момент",
-      "15": "За 15 мин",
-      "60": "За час",
-      "1440": "За день"
-    }[preset];
-  }
-
-  return {
-    none: "None",
-    "0": "At time",
-    "15": "15 min",
-    "60": "1 hour",
-    "1440": "1 day"
-  }[preset];
+  const keys: Record<PlannerReminderPreset, string> = {
+    none: "none",
+    "0": "atTime",
+    "15": "min15",
+    "60": "hour1",
+    "1440": "day1"
+  };
+  return translateApp(language, `plannerCore.reminders.${keys[preset]}`);
 }
 
 function buildReminder(task: Task, preset: PlannerReminderPreset, language: AppLanguage): Reminder[] {
@@ -309,7 +280,7 @@ function buildReminder(task: Task, preset: PlannerReminderPreset, language: AppL
   return [
     {
       id: crypto.randomUUID(),
-      title: language === "ru" ? "Напоминание" : "Reminder",
+      title: translateInline(language, "plannerTaskInspectorView.reminder"),
       remindAt: task.scheduledStartAt ? null : baseAt - offsetMinutes * 60_000,
       offsetMinutes,
       channel: "system",
@@ -363,12 +334,10 @@ export default function PlannerTaskInspectorView({
     return (
       <aside className={`planner-task-inspector planner-task-panel is-empty ${isMobile ? "is-mobile-sheet" : ""}`}>
         <div className="planner-task-panel-empty">
-          <span className="planner-task-panel-kicker">{language === "ru" ? "Инспектор" : "Inspector"}</span>
-          <h2>{language === "ru" ? "Выбери задачу" : "Select a task"}</h2>
+          <span className="planner-task-panel-kicker">{translateInline(language, "plannerTaskInspectorView.inspector")}</span>
+          <h2>{translateInline(language, "plannerTaskInspectorView.selectATask")}</h2>
           <p>
-            {language === "ru"
-              ? "Здесь появятся статус, дата, напоминания, теги и связи с контекстом."
-              : "Status, date, reminders, tags, and linked context will appear here."}
+            {translateInline(language, "plannerTaskInspectorView.statusDateRemindersTagsAndLinkedContext")}
           </p>
         </div>
       </aside>
@@ -384,9 +353,7 @@ export default function PlannerTaskInspectorView({
   const createdAtLabel =
     task.createdAt > 0
       ? formatPlannerFullDateTime(task.createdAt, language)
-      : language === "ru"
-        ? "Неизвестно"
-        : "Unknown";
+      : translateInline(language, "plannerTaskInspectorView.unknown");
 
   const commitTitle = () => {
     const nextTitle = titleDraft.trim();
@@ -478,7 +445,7 @@ export default function PlannerTaskInspectorView({
           aria-hidden="true"
         />
         <div className="planner-task-inspector-title">
-          <span className="planner-task-panel-kicker">{language === "ru" ? "Задача" : "Task"}</span>
+          <span className="planner-task-panel-kicker">{translateInline(language, "plannerTaskInspectorView.task")}</span>
           <input
             type="text"
             value={titleDraft}
@@ -490,12 +457,12 @@ export default function PlannerTaskInspectorView({
                 event.currentTarget.blur();
               }
             }}
-            placeholder={language === "ru" ? "Что нужно сделать?" : "What needs to happen?"}
+            placeholder={translateInline(language, "plannerTaskInspectorView.whatNeedsToHappen")}
           />
           <small>{scheduleSummary}</small>
         </div>
         {onClose ? (
-          <button type="button" className="planner-task-panel-close" onClick={onClose} aria-label={language === "ru" ? "Закрыть" : "Close"}>
+          <button type="button" className="planner-task-panel-close" onClick={onClose} aria-label={translateInline(language, "plannerTaskInspectorView.close")}>
             ×
           </button>
         ) : null}
@@ -508,7 +475,7 @@ export default function PlannerTaskInspectorView({
           onClick={() => void onToggleDone(task.id, !done, primaryOccurrence?.originalStartAt)}
         >
           <span className={`planner-task-action-icon ${done ? "is-return" : "is-check"}`} aria-hidden="true" />
-          <span>{done ? (language === "ru" ? "Вернуть" : "Reopen") : language === "ru" ? "Готово" : "Done"}</span>
+          <span>{done ? (translateInline(language, "plannerTaskInspectorView.reopen")) : translateInline(language, "plannerTaskInspectorView.done")}</span>
         </button>
         <button
           type="button"
@@ -522,13 +489,13 @@ export default function PlannerTaskInspectorView({
           }}
         >
           <span className={`planner-task-action-icon ${deleteArmed ? "is-confirm-delete" : "is-trash"}`} aria-hidden="true" />
-          <span>{deleteArmed ? (language === "ru" ? "Подтвердить" : "Confirm") : language === "ru" ? "Удалить" : "Delete"}</span>
+          <span>{deleteArmed ? (translateInline(language, "plannerTaskInspectorView.confirm")) : translateInline(language, "plannerTaskInspectorView.delete")}</span>
         </button>
       </div>
 
       <section className="planner-task-choice-section">
         <div className="planner-task-section-title">
-          <span>{language === "ru" ? "Проект" : "Project"}</span>
+          <span>{translateInline(language, "plannerTaskInspectorView.project2")}</span>
         </div>
         <div className="planner-task-chip-row is-projects">
           <button
@@ -537,7 +504,7 @@ export default function PlannerTaskInspectorView({
             onClick={() => void onUpdate(task.id, { projectId: null })}
           >
             <span className="planner-task-project-dot" style={{ "--planner-task-project-color": "var(--planner-task-accent)" } as CSSProperties} />
-            <strong>{language === "ru" ? "Без проекта" : "No project"}</strong>
+            <strong>{translateInline(language, "plannerTaskInspectorView.noProject")}</strong>
           </button>
           {projects.map((project) => (
             <button
@@ -555,7 +522,7 @@ export default function PlannerTaskInspectorView({
 
       <section className="planner-task-choice-section">
         <div className="planner-task-section-title">
-          <span>{language === "ru" ? "Статус" : "Status"}</span>
+          <span>{translateInline(language, "plannerTaskInspectorView.status")}</span>
         </div>
         <div className="planner-task-chip-row is-status">
           {STATUSES.map((status) => (
@@ -573,7 +540,7 @@ export default function PlannerTaskInspectorView({
 
       <section className="planner-task-choice-section">
         <div className="planner-task-section-title">
-          <span>{language === "ru" ? "Приоритет" : "Priority"}</span>
+          <span>{translateInline(language, "plannerTaskInspectorView.priority")}</span>
         </div>
         <div className="planner-task-chip-row planner-task-priority-row">
           {PRIORITIES.map((priority) => (
@@ -594,28 +561,28 @@ export default function PlannerTaskInspectorView({
         <button type="button" className="planner-task-date-summary" onClick={() => setIsDateSelectorOpen((current) => !current)}>
           <span className="planner-task-date-icon" aria-hidden="true" />
           <span>
-            <small>{language === "ru" ? "Дата" : "Date"}</small>
+            <small>{translateInline(language, "plannerTaskInspectorView.date")}</small>
             <strong>{scheduleSummary}</strong>
           </span>
         </button>
         <div className="planner-task-date-stepper-row">
           <button type="button" onClick={() => shiftDate(-1)} disabled={!hasAnyDate}>
-            {language === "ru" ? "− день" : "- day"}
+            {translateInline(language, "plannerTaskInspectorView.day")}
           </button>
           <button type="button" onClick={() => shiftDate(1)} disabled={!hasAnyDate}>
-            {language === "ru" ? "+ день" : "+ day"}
+            {translateInline(language, "plannerTaskInspectorView.day2")}
           </button>
         </div>
         <div className="planner-task-date-meta">
-          <span>{language === "ru" ? "Создано" : "Created"}</span>
+          <span>{translateInline(language, "plannerTaskInspectorView.created")}</span>
           <strong>{createdAtLabel}</strong>
         </div>
       </section>
 
       <section className="planner-task-choice-section">
         <div className="planner-task-section-title">
-          <span>{language === "ru" ? "Напоминание" : "Reminder"}</span>
-          {!hasAnyDate ? <small>{language === "ru" ? "Сначала дата" : "Choose date first"}</small> : null}
+          <span>{translateInline(language, "plannerTaskInspectorView.reminder2")}</span>
+          {!hasAnyDate ? <small>{translateInline(language, "plannerTaskInspectorView.chooseDateFirst")}</small> : null}
         </div>
         <button
           type="button"
@@ -625,7 +592,7 @@ export default function PlannerTaskInspectorView({
         >
           <span className="planner-task-reminder-icon" aria-hidden="true" />
           <span>
-            <small>{reminderPreset === "none" ? (language === "ru" ? "Добавить" : "Add") : language === "ru" ? "Выбрано" : "Selected"}</small>
+            <small>{reminderPreset === "none" ? (translateInline(language, "plannerTaskInspectorView.add")) : translateInline(language, "plannerTaskInspectorView.selected")}</small>
             <strong>{getReminderLabel(reminderPreset, language)}</strong>
           </span>
         </button>
@@ -648,20 +615,20 @@ export default function PlannerTaskInspectorView({
 
       <section className="planner-task-description-block">
         <div className="planner-task-section-title">
-          <span>{language === "ru" ? "Описание" : "Description"}</span>
+          <span>{translateInline(language, "plannerTaskInspectorView.description")}</span>
         </div>
         <textarea
           value={descriptionDraft}
           rows={descriptionDraft ? 4 : 2}
           onChange={(event) => setDescriptionDraft(event.target.value)}
           onBlur={commitDescription}
-          placeholder={language === "ru" ? "Контекст, критерии готовности, ссылки..." : "Context, acceptance notes, links..."}
+          placeholder={translateInline(language, "plannerTaskInspectorView.contextAcceptanceNotesLinks")}
         />
       </section>
 
       <section className="planner-task-choice-section">
         <div className="planner-task-section-title">
-          <span>{language === "ru" ? "Теги" : "Tags"}</span>
+          <span>{translateInline(language, "plannerTaskInspectorView.tags")}</span>
           <small>{task.tagIds.length}</small>
         </div>
         {onCreateTag ? (
@@ -675,14 +642,14 @@ export default function PlannerTaskInspectorView({
             onChangeTagIds={(tagIds) => onUpdate(task.id, { tagIds })}
           />
         ) : (
-          <p className="planner-task-muted">{language === "ru" ? "Теги можно добавить в документах." : "Tags can be added in documents."}</p>
+          <p className="planner-task-muted">{translateInline(language, "plannerTaskInspectorView.tagsCanBeAddedInDocuments")}</p>
         )}
       </section>
 
       {backlinks.length > 0 ? (
         <section className="planner-task-links-section">
           <div className="planner-task-section-title">
-            <span>{language === "ru" ? "Связи" : "Links"}</span>
+            <span>{translateInline(language, "plannerTaskInspectorView.links")}</span>
             <small>{backlinks.length}</small>
           </div>
           <div className="planner-task-calendar-link-list">
@@ -747,28 +714,26 @@ export default function PlannerTaskInspectorView({
                 type="button"
                 className="planner-task-scope-backdrop"
                 onClick={() => setScopedDateAction(null)}
-                aria-label={language === "ru" ? "Отмена" : "Cancel"}
+                aria-label={translateInline(language, "plannerTaskInspectorView.cancel")}
               />
               <section className="planner-task-scope-dialog">
-                <span className="planner-task-panel-kicker">{language === "ru" ? "Повторяющаяся задача" : "Recurring task"}</span>
-                <h3>{language === "ru" ? "Перенести повтор?" : "Move repeating event?"}</h3>
+                <span className="planner-task-panel-kicker">{translateInline(language, "plannerTaskInspectorView.recurringTask")}</span>
+                <h3>{translateInline(language, "plannerTaskInspectorView.moveRepeatingEvent")}</h3>
                 <p>
-                  {language === "ru"
-                    ? "Выбери, применить перенос только к ближайшему событию, к будущим повторам или ко всей серии."
-                    : "Choose whether to move only the nearest event, future events, or the whole series."}
+                  {translateInline(language, "plannerTaskInspectorView.chooseWhetherToMoveOnlyTheNearest")}
                 </p>
                 <div>
                   <button type="button" onClick={() => applyScopedDateAction("this")}>
-                    <strong>{language === "ru" ? "Только это" : "Only this"}</strong>
-                    <small>{language === "ru" ? "Аккуратный override выбранного повтора" : "A precise override for this occurrence"}</small>
+                    <strong>{translateInline(language, "plannerTaskInspectorView.onlyThis")}</strong>
+                    <small>{translateInline(language, "plannerTaskInspectorView.aPreciseOverrideForThisOccurrence")}</small>
                   </button>
                   <button type="button" onClick={() => applyScopedDateAction("future")}>
-                    <strong>{language === "ru" ? "Это и будущие" : "This and future"}</strong>
-                    <small>{language === "ru" ? "Остается одна задача без дублей" : "Keeps one task without duplicates"}</small>
+                    <strong>{translateInline(language, "plannerTaskInspectorView.thisAndFuture")}</strong>
+                    <small>{translateInline(language, "plannerTaskInspectorView.keepsOneTaskWithoutDuplicates")}</small>
                   </button>
                   <button type="button" onClick={() => applyScopedDateAction("all")}>
-                    <strong>{language === "ru" ? "Вся серия" : "Whole series"}</strong>
-                    <small>{language === "ru" ? "Перенести регулярность целиком" : "Move the recurrence as a whole"}</small>
+                    <strong>{translateInline(language, "plannerTaskInspectorView.wholeSeries")}</strong>
+                    <small>{translateInline(language, "plannerTaskInspectorView.moveTheRecurrenceAsAWhole")}</small>
                   </button>
                 </div>
               </section>

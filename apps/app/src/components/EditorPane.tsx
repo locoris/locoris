@@ -1,3 +1,4 @@
+import { translateInline } from "../localization/translateInline";
 import {
   useEffect,
   useMemo,
@@ -9,7 +10,6 @@ import {
 } from "react";
 import { BlockNoteView } from "@blocknote/mantine";
 import { FilePanelExtension, FormattingToolbarExtension } from "@blocknote/core/extensions";
-import { en, ru } from "@blocknote/core/locales";
 import {
   FilePanelController,
   FormattingToolbarController,
@@ -32,6 +32,7 @@ import {
 } from "./PrivateVaultWarningDialog";
 import TagInputField from "./TagInputField";
 import { COLOR_PALETTE, DEFAULT_NOTE_COLOR } from "../lib/palette";
+import { isCommitEnterKey } from "../lib/keyboardInput";
 import { editorBlockNoteSchema } from "../lib/blocknoteSchema";
 import {
   readPersistentString,
@@ -82,6 +83,12 @@ import {
   type NoteExportFormat
 } from "../lib/exportImport/noteExport";
 import type { AppLanguage, Asset, Folder, Note, NoteContent, SaveState, StoredBlock, Tag } from "../types";
+import {
+  createSpellcheckConfiguration,
+  useBlockNoteDictionary,
+  useLocale,
+  useSpellcheckCapability
+} from "../localization";
 
 type MarkdownStatus = "copied" | "exported" | "imported" | "error" | null;
 type NoteTransferStatus = {
@@ -1236,6 +1243,7 @@ export default function EditorPane({
   onClose
 }: EditorPaneProps) {
   const { t } = useTranslation();
+  const { preferences: localePreferences, runtime: localeRuntime } = useLocale();
   const [titleDraft, setTitleDraft] = useState(note.title);
   const [typographyMode, setTypographyMode] = useState<EditorTypographyMode>(() => {
     const storedMode = readPersistentString(EDITOR_TYPOGRAPHY_MODE_STORAGE_KEY);
@@ -1255,6 +1263,7 @@ export default function EditorPane({
   const [aiPanel, setAiPanel] = useState<AiPanelState | null>(null);
   const [aiPreview, setAiPreview] = useState<AiPreviewState | null>(null);
   const aiPanelRef = useRef<HTMLDivElement | null>(null);
+  const spellcheckStageRef = useRef<HTMLDivElement | null>(null);
   const titleTimeoutRef = useRef<number | null>(null);
   const contentTimeoutRef = useRef<number | null>(null);
   const markdownStatusTimeoutRef = useRef<number | null>(null);
@@ -1318,7 +1327,12 @@ export default function EditorPane({
     writePersistentString(EDITOR_TYPOGRAPHY_MODE_STORAGE_KEY, typographyMode);
   }, [typographyMode]);
 
-  const editorDictionary = language === "ru" ? ru : en;
+  const editorDictionary = useBlockNoteDictionary(localeRuntime.interfaceLocale);
+  const spellcheckConfiguration = useMemo(
+    () => createSpellcheckConfiguration(localePreferences, localeRuntime.interfaceLocale),
+    [localePreferences, localeRuntime.interfaceLocale]
+  );
+  useSpellcheckCapability(spellcheckStageRef, spellcheckConfiguration);
 
   const editor = useCreateBlockNote(
     {
@@ -1355,11 +1369,15 @@ export default function EditorPane({
       },
       domAttributes: {
         editor: {
-          class: "locoris-editor-surface"
+          class: "locoris-editor-surface",
+          lang: spellcheckConfiguration.primaryLanguage,
+          spellcheck: spellcheckConfiguration.enabled ? "true" : "false",
+          "data-spellcheck-platform": spellcheckConfiguration.adapter.platform,
+          "data-spellcheck-languages": spellcheckConfiguration.languages.join(",")
         }
       }
     },
-    [note.id, language]
+    [editorDictionary, note.id, spellcheckConfiguration.signature]
   );
 
   const readActiveFloatingMediaBlock = (): FloatingMediaSelectionSnapshot | null => {
@@ -1665,13 +1683,13 @@ export default function EditorPane({
 	    if (scope === "note") {
 	      const blocks = readEditorDocumentBlocks();
 	      const noteText = extractPlainText(blocks);
-	      const fallbackTitle = language === "ru" ? "Задача из заметки" : "Task from note";
+	      const fallbackTitle = translateInline(language, "editorPane.taskFromNote");
 
 	      return {
 	        title: normalizePlannerContextTaskTitle(titleDraft || note.title || noteText, fallbackTitle),
 	        description: noteText.slice(0, 1800),
 	        sourceBlockId: null,
-	        sourceLabel: language === "ru" ? "Вся заметка" : "Whole note"
+	        sourceLabel: translateInline(language, "editorPane.wholeNote")
 	      };
 	    }
 
@@ -1683,12 +1701,8 @@ export default function EditorPane({
 	    const sourceText = selectedText || currentBlockText;
 	    const isChecklistItem = currentBlock?.type === "checkListItem";
 	    const fallbackTitle = isChecklistItem
-	      ? language === "ru"
-	        ? "Пункт чеклиста"
-	        : "Checklist item"
-	      : language === "ru"
-	        ? "Задача из блока"
-	        : "Task from block";
+	      ? translateInline(language, "editorPane.checklistItem")
+	      : translateInline(language, "editorPane.taskFromBlock");
 
 	    return {
 	      title: normalizePlannerContextTaskTitle(sourceText, fallbackTitle),
@@ -1696,16 +1710,10 @@ export default function EditorPane({
 	      sourceBlockId:
 	        typeof currentBlock?.id === "string" && currentBlock.id.length > 0 ? currentBlock.id : null,
 	      sourceLabel: isChecklistItem
-	        ? language === "ru"
-	          ? "Пункт чеклиста"
-	          : "Checklist item"
+	        ? translateInline(language, "editorPane.checklistItem2")
 	        : selectedText
-	          ? language === "ru"
-	            ? "Выделенный текст"
-	            : "Selected text"
-	          : language === "ru"
-	            ? "Текущий блок"
-	            : "Current block"
+	          ? translateInline(language, "editorPane.selectedText")
+	          : translateInline(language, "editorPane.currentBlock")
 	    };
 	  };
 
@@ -1761,7 +1769,7 @@ export default function EditorPane({
       status: "idle",
       customMode: snapshot.markdown ? "edit" : "generate",
       customPrompt: "",
-      targetLanguage: language === "ru" ? "английский" : "Russian",
+      targetLanguage: translateInline(language, "editorPane.defaultTranslationTarget"),
       error: null,
       targetBlockIds: snapshot.targetBlockIds,
       sourceMarkdown: snapshot.markdown,
@@ -2265,8 +2273,7 @@ export default function EditorPane({
     const handleKeyDownCapture = (event: KeyboardEvent) => {
       if (
         event.defaultPrevented ||
-        event.isComposing ||
-        event.key !== "Enter" ||
+        !isCommitEnterKey(event) ||
         event.shiftKey ||
         event.altKey ||
         event.ctrlKey ||
@@ -3069,7 +3076,7 @@ export default function EditorPane({
                 <span className="editor-pane-chip is-warm">{t("note.pinnedActive")}</span>
               ) : null}
               <span className="editor-pane-contextmeta">
-                {t("note.updated")}: {formatTimestamp(note.updatedAt, language)}
+                {t("note.updated")}: {formatTimestamp(note.updatedAt)}
               </span>
 	              <button
 	                type="button"
@@ -3312,7 +3319,7 @@ export default function EditorPane({
                 )
               }
               onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
+                if (isCommitEnterKey(event) && !event.shiftKey) {
                   event.preventDefault();
                   void handleRunAiAction("custom");
                 }
@@ -3450,7 +3457,7 @@ export default function EditorPane({
                     )
                   }
                   onKeyDown={(event) => {
-                    if (event.key === "Enter") {
+                    if (isCommitEnterKey(event)) {
                       event.preventDefault();
                       void handleRunAiAction("translate");
                     }
@@ -3537,7 +3544,7 @@ export default function EditorPane({
       <div className="editor-pane-shell">
         <div className="editor-stage-column">
           <div className="editor-stage-frame">
-            <div className="editor-stage-shell">
+            <div ref={spellcheckStageRef} className="editor-stage-shell">
               <BlockNoteView
                 editor={editor}
                 theme="dark"
@@ -3621,7 +3628,7 @@ export default function EditorPane({
                 {titleDraft.trim() || t("note.titlePlaceholder")}
               </strong>
               <p>
-                {t("note.updated")}: {formatTimestamp(note.updatedAt, language)}
+                {t("note.updated")}: {formatTimestamp(note.updatedAt)}
               </p>
             </div>
             <button

@@ -8,10 +8,12 @@ import {
   type CSSProperties
 } from "react";
 import { useTranslation } from "react-i18next";
+import { formatDateTimeValue, useLocale, type LocaleRuntime } from "../localization";
 
 import type { LocalVaultKind, LocalVaultProfile } from "../lib/localVaults";
-import { getDisplayVaultName } from "../lib/displayNames";
+import { getDisplayVaultName } from "../localization/displayNames";
 import { getErrorMessage } from "../lib/errors";
+import { getHostedDeviceIdentity } from "../lib/hostedDeviceIdentity";
 import {
   connectGoogleDriveAccount,
   createHostedVault,
@@ -20,6 +22,7 @@ import {
   getConfiguredGoogleDriveClientId,
   googleDriveClientConfigured,
   googleDriveOAuthReady,
+  GOOGLE_DRIVE_TOKEN_REFRESH_SKEW_MS,
   issueGoogleDriveVaultToken,
   issuePersonalServerVaultToken,
   loadHostedAccountOverview,
@@ -43,8 +46,16 @@ import type {
   SyncVaultBinding,
   VaultEncryptionSummary
 } from "../types";
+import useAutoDismissNotice from "../lib/useAutoDismissNotice";
+import {
+  consumeIncomingSelfHostedConnectionPackage,
+  SELF_HOSTED_INVITE_EVENT
+} from "../lib/selfHostedPairing";
+import ActionFeedbackToast, { useActionFeedbackAnchor } from "./ActionFeedbackToast";
 import ConfirmDialog from "./ConfirmDialog";
 import CloudConnectionWizard, { type CloudWizardAuthResult } from "./sync/CloudConnectionWizard";
+import SelfHostedAccessManager from "./sync/SelfHostedAccessManager";
+import SelfHostedConnectionWizard from "./sync/SelfHostedConnectionWizard";
 import { SyncSettingsDialog, SyncSettingsLayout } from "./sync/SyncSettingsLayout";
 import SyncSettingsMobile from "./sync/SyncSettingsMobile";
 import "./SyncSettingsPanel.css";
@@ -91,15 +102,20 @@ interface SyncSettingsPanelProps {
     userId?: string | null;
     userName?: string;
     userEmail?: string;
+    selfHostedDeviceId?: string | null;
+    selfHostedRole?: "owner" | "guest" | null;
+    selfHostedServerId?: string | null;
   }) => SyncConnection | void | Promise<SyncConnection | void>;
   onDeleteConnection: (connectionId: string) => void | Promise<void>;
+  onRevokeGoogleDriveConnection: (connectionId: string) => void | Promise<void>;
   onUpdateConnection: (
     connectionId: string,
-    patch: Partial<Omit<SyncConnection, "id" | "provider" | "createdAt">> & {
+    patch: Partial<Omit<SyncConnection, "id" | "provider" | "createdAt" | "refreshToken">> & {
       refreshToken?: string | null;
     }
   ) => void | Promise<void>;
   onRefreshHostedConnectionCredentials: (connection: SyncConnection) => void | Promise<void>;
+  onRefreshGoogleDriveConnectionCredentials: (connection: SyncConnection) => void | Promise<void>;
   onBindVault: (input: {
     localVaultId: string;
     connectionId: string;
@@ -154,6 +170,7 @@ type PanelModal =
     }
   | { kind: "addConnection" }
   | { kind: "addSelfHosted" }
+  | { kind: "manageSelfHosted"; connection: SyncConnection }
   | { kind: "hostedWizard"; connection?: SyncConnection | null }
   | { kind: "addHosted"; connection?: SyncConnection | null }
   | { kind: "addGoogleDrive" }
@@ -186,19 +203,12 @@ type ConnectionAvailabilityState =
   | "unavailable"
   | "authError";
 
-type ValidatedSelfHostedDraft = {
-  serverUrl: string;
-  managementToken: string;
-  label: string;
-  remoteVaults: RemoteVaultCatalogEntry[];
-};
-
 type RemoteVaultCatalogEntry = SyncRemoteVault;
 
 function ChevronLeftGlyph() {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M12.3 4.9 7.2 10l5.1 5.1" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="m15 6-6 6 6 6" />
     </svg>
   );
 }
@@ -309,8 +319,8 @@ function RemoteVaultCatalogGlyph() {
 
 function CloseGlyph() {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M5.4 5.4 14.6 14.6M14.6 5.4 5.4 14.6" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="m7 7 10 10M17 7 7 17" />
     </svg>
   );
 }
@@ -343,24 +353,12 @@ function buildLinkPath(x1: number, y1: number, x2: number, y2: number) {
   return `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`;
 }
 
-function maskToken(value: string) {
-  if (!value) {
-    return "••••";
-  }
-
-  if (value.length <= 8) {
-    return "••••";
-  }
-
-  return `${value.slice(0, 4)}••••${value.slice(-3)}`;
-}
-
-function formatTime(timestamp: number | null, locale: string) {
+function formatTime(timestamp: number | null, runtime: LocaleRuntime) {
   if (!timestamp) {
     return "—";
   }
 
-  return new Date(timestamp).toLocaleString(locale, {
+  return formatDateTimeValue(timestamp, runtime, {
     hour: "2-digit",
     minute: "2-digit",
     day: "2-digit",
@@ -371,11 +369,59 @@ function formatTime(timestamp: number | null, locale: string) {
 function translateSyncManagerError(message: string, t: ReturnType<typeof useTranslation>["t"]) {
   switch (message) {
     case "SELF_HOSTED_URL_REQUIRED":
+    case "SYNC_SERVER_URL_REQUIRED":
       return t("sync.urlRequired");
+    case "SYNC_TOKEN_REQUIRED":
+      return t("sync.tokenRequired");
+    case "PAIRING_PACKAGE_INVALID":
+    case "PAIRING_CODE_INVALID":
+    case "PAIRING_INVITE_INVALID":
+    case "PAIRING_INVITE_UNAVAILABLE":
+    case "PAIRING_REQUEST_NOT_FOUND":
+      return t("settings.selfHostedPairingInvalid");
+    case "PAIRING_PACKAGE_VERSION_UNSUPPORTED":
+      return t("settings.selfHostedPairingUnsupported");
+    case "PAIRING_RATE_LIMITED":
+      return t("settings.selfHostedPairingRateLimited");
+    case "PAIRING_SERVER_URL_INVALID":
+      return t("settings.selfHostedPairingServerUrlInvalid");
+    case "PAIRING_SETUP_ALREADY_COMPLETED":
+      return t("settings.selfHostedPairingInvalid");
+    case "PAIRING_REQUEST_EXPIRED":
+      return t("settings.selfHostedPairingExpired");
+    case "OWNER_ACCESS_REQUIRED":
+      return t("settings.selfHostedOwnerRequired");
+    case "CURRENT_DEVICE_REVOKE_FORBIDDEN":
+      return t("settings.selfHostedCurrentDeviceRevokeForbidden");
+    case "LAST_OWNER_DEVICE_REQUIRED":
+      return t("settings.selfHostedLastOwnerRequired");
     case "HOSTED_URL_REQUIRED":
       return t("sync.hostedUrlRequired");
     case "GOOGLE_DRIVE_AUTH_REQUIRED":
       return t("sync.googleDriveAuthRequired");
+    case "GOOGLE_DRIVE_INTERACTION_REQUIRED":
+      return t("sync.googleDriveInteractionRequired");
+    case "GOOGLE_DRIVE_STORAGE_QUOTA_EXCEEDED":
+      return t("sync.googleDriveStorageQuotaExceeded");
+    case "GOOGLE_DRIVE_RATE_LIMITED":
+      return t("sync.googleDriveRateLimited");
+    case "GOOGLE_DRIVE_PERMISSION_REQUIRED":
+      return t("sync.googleDrivePermissionRequired");
+    case "GOOGLE_DRIVE_REQUEST_TIMEOUT":
+      return t("sync.googleDriveRequestTimeout");
+    case "GOOGLE_DRIVE_FILE_NOT_FOUND":
+      return t("sync.vaultNotFound");
+    case "GOOGLE_DRIVE_PAYLOAD_TOO_LARGE":
+      return t("sync.googleDriveUploadFailed");
+    case "GOOGLE_DRIVE_INVALID_PAYLOAD":
+    case "GOOGLE_DRIVE_MANIFEST_CORRUPT":
+    case "GOOGLE_DRIVE_JOURNAL_CORRUPT":
+    case "GOOGLE_DRIVE_V2_DATA_CORRUPT":
+      return t("sync.googleDriveDataCorrupt");
+    case "GOOGLE_DRIVE_RESUMABLE_UPLOAD_FAILED":
+      return t("sync.googleDriveUploadFailed");
+    case "GOOGLE_OAUTH_REVOKE_FAILED":
+      return t("sync.googleDriveRevokeFailed");
     case "GOOGLE_DRIVE_CLIENT_ID_REQUIRED":
       return t("sync.googleDriveClientIdRequired");
     case "GOOGLE_OAUTH_ANDROID_CONFIG_INVALID":
@@ -422,6 +468,17 @@ function translateSyncManagerError(message: string, t: ReturnType<typeof useTran
       return t("sync.vaultEncryptionRemoteMigrationRequired");
     case "UNAUTHORIZED":
       return t("sync.unauthorized");
+    case "VAULT_ACCESS_DENIED":
+      return t("sync.selfHostedVaultAccessDenied");
+    case "VAULT_READ_ONLY":
+      return t("sync.selfHostedVaultReadOnly");
+    case "CLOUD_REAUTH_REQUIRED":
+    case "REFRESH_TOKEN_INVALID":
+    case "REFRESH_TOKEN_REVOKED":
+    case "REFRESH_TOKEN_EXPIRED":
+    case "REFRESH_TOKEN_REUSED":
+    case "REFRESH_TOKEN_DEVICE_MISMATCH":
+      return t("sync.hostedSessionExpired");
     case "SERVER_UNAVAILABLE":
     case "HTTP_404":
       return t("sync.serverNotFound");
@@ -441,11 +498,17 @@ function translateSyncManagerError(message: string, t: ReturnType<typeof useTran
     case "PLAN_REQUIRED":
       return t("sync.cloudPlanRequired");
     case "TRIAL_EXPIRED":
+    case "TRIAL_EXPIRED_READ_ONLY":
+    case "TRIAL_ARCHIVED":
       return t("sync.cloudTrialExpired");
+    case "TRIAL_RETENTION_EXPIRED":
+      return t("sync.cloudTrialRetentionExpired");
     case "SUBSCRIPTION_PAST_DUE":
       return t("sync.cloudSubscriptionPastDue");
     case "SUBSCRIPTION_EXPIRED_READ_ONLY":
       return t("sync.cloudReadOnly");
+    case "SUBSCRIPTION_BLOCKED":
+      return t("sync.cloudAccountBlocked");
     case "OVER_STORAGE_LIMIT":
       return t("sync.cloudStorageLimit");
     case "OVER_VAULT_LIMIT":
@@ -478,11 +541,22 @@ function translateSyncManagerError(message: string, t: ReturnType<typeof useTran
 }
 
 function isSyncBindingAuthError(binding: Pick<SyncVaultBinding, "lastError">) {
-  return (
-    binding.lastError === "UNAUTHORIZED" ||
-    binding.lastError === "INVALID_CREDENTIALS" ||
-    binding.lastError === "GOOGLE_DRIVE_AUTH_REQUIRED"
-  );
+  return isConnectionAuthErrorCode(binding.lastError);
+}
+
+function isConnectionAuthErrorCode(message: string | null | undefined) {
+  return [
+    "UNAUTHORIZED",
+    "INVALID_CREDENTIALS",
+    "CLOUD_REAUTH_REQUIRED",
+    "REFRESH_TOKEN_INVALID",
+    "REFRESH_TOKEN_REVOKED",
+    "REFRESH_TOKEN_EXPIRED",
+    "REFRESH_TOKEN_REUSED",
+    "REFRESH_TOKEN_DEVICE_MISMATCH",
+    "GOOGLE_DRIVE_AUTH_REQUIRED",
+    "GOOGLE_DRIVE_INTERACTION_REQUIRED"
+  ].includes(message ?? "");
 }
 
 function SyncConnectionIcon({
@@ -499,38 +573,6 @@ function SyncConnectionIcon({
   }
 
   return <SelfHostedGlyph />;
-}
-
-function getHostedDevicePlatform() {
-  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
-
-  if (/android/i.test(userAgent)) {
-    return "Android";
-  }
-
-  if (/iphone|ipad|ipod/i.test(userAgent)) {
-    return "iOS";
-  }
-
-  if (/macintosh|mac os x/i.test(userAgent)) {
-    return "macOS";
-  }
-
-  if (/windows/i.test(userAgent)) {
-    return "Windows";
-  }
-
-  if (/linux/i.test(userAgent)) {
-    return "Linux";
-  }
-
-  return "Locoris app";
-}
-
-function getHostedDeviceName(settings: AppSettings) {
-  const shortDeviceId = settings.localDeviceId.replace(/^device-/, "").slice(0, 6);
-
-  return `${getHostedDevicePlatform()} · ${shortDeviceId || "device"}`;
 }
 
 export default function SyncSettingsPanel({
@@ -551,8 +593,10 @@ export default function SyncSettingsPanel({
   onDeleteLocalVault,
   onCreateConnection,
   onDeleteConnection,
+  onRevokeGoogleDriveConnection,
   onUpdateConnection,
   onRefreshHostedConnectionCredentials,
+  onRefreshGoogleDriveConnectionCredentials,
   onBindVault,
   onImportRemoteVault,
   onDeleteRemoteVault,
@@ -565,6 +609,7 @@ export default function SyncSettingsPanel({
   onLockVaultEncryption
 }: SyncSettingsPanelProps) {
   const { t, i18n } = useTranslation();
+  const { runtime: localeRuntime } = useLocale();
   const sortedVaults = useMemo(
     () => [...localVaults].sort((left, right) => left.createdAt - right.createdAt),
     [localVaults]
@@ -584,32 +629,30 @@ export default function SyncSettingsPanel({
   const getVaultLabel = (vault: Pick<LocalVaultProfile, "id" | "name"> | null | undefined) =>
     getDisplayVaultName(
       vault ?? null,
-      settings.language,
+      i18n.resolvedLanguage ?? i18n.language,
       vault ? sortedVaults.findIndex((entry) => entry.id === vault.id) : undefined
     );
   const bindingsByVaultId = useMemo(
-    () => new Map(syncBindings.map((binding) => [binding.localVaultId, binding])),
-    [syncBindings]
+    () => new Map(allSyncBindings.map((binding) => [binding.localVaultId, binding])),
+    [allSyncBindings]
   );
   const connectionsById = useMemo(
-    () => new Map(syncConnections.map((connection) => [connection.id, connection])),
-    [syncConnections]
+    () => new Map(allSyncConnections.map((connection) => [connection.id, connection])),
+    [allSyncConnections]
   );
   const googleDriveConfigured = googleDriveClientConfigured();
   const googleDriveClientId = getConfiguredGoogleDriveClientId();
   const [panelModal, setPanelModal] = useState<PanelModal>(null);
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
   const [internalFeedback, setInternalFeedback] = useState<SyncFeedbackState>(null);
+  const [dismissedFeedbackKey, setDismissedFeedbackKey] = useState<string | null>(null);
   const [vaultNameDraft, setVaultNameDraft] = useState("");
   const [vaultNameError, setVaultNameError] = useState<string | null>(null);
   const [vaultKindDraft, setVaultKindDraft] = useState<LocalVaultKind>("regular");
   const [vaultPassphraseDraft, setVaultPassphraseDraft] = useState("");
   const [vaultPassphraseConfirmDraft, setVaultPassphraseConfirmDraft] = useState("");
-  const [selfHostedLabelDraft, setSelfHostedLabelDraft] = useState("");
-  const [selfHostedUrlDraft, setSelfHostedUrlDraft] = useState("");
-  const [selfHostedManagementTokenDraft, setSelfHostedManagementTokenDraft] = useState("");
-  const [selfHostedDraftError, setSelfHostedDraftError] = useState<string | null>(null);
   const [selfHostedEditingConnectionId, setSelfHostedEditingConnectionId] = useState<string | null>(null);
+  const [incomingSelfHostedPackage, setIncomingSelfHostedPackage] = useState("");
   const [hostedMode, setHostedMode] = useState<HostedMode>("login");
   const [hostedUrlDraft, setHostedUrlDraft] = useState("");
   const [hostedNameDraft, setHostedNameDraft] = useState("");
@@ -642,8 +685,32 @@ export default function SyncSettingsPanel({
   const pendingVaultEncryptionContinuationRef = useRef<(() => Promise<void>) | null>(null);
   const vaultRefs = useRef(new Map<string, HTMLElement>());
   const connectionRefs = useRef(new Map<string, HTMLElement>());
+  const feedbackAnchor = useActionFeedbackAnchor([
+    ".sync-settings-panel-shell",
+    ".sync-settings-premium-dialog"
+  ]);
 
   const feedback = internalFeedback ?? syncFeedback;
+  const feedbackKey = feedback ? `${feedback.tone}:${feedback.text}` : null;
+  const visibleFeedback = feedbackKey !== dismissedFeedbackKey ? feedback : null;
+
+  useAutoDismissNotice(internalFeedback, setInternalFeedback, {
+    enabled: !pendingBindVaultId && !bindingSheetVaultId,
+    successMs: 5200
+  });
+
+  useEffect(() => {
+    if (!feedbackKey) {
+      setDismissedFeedbackKey(null);
+    }
+  }, [feedbackKey]);
+
+  const dismissFeedback = () => {
+    setDismissedFeedbackKey(feedbackKey);
+    if (internalFeedback) {
+      setInternalFeedback(null);
+    }
+  };
   const availabilitySignature = useMemo(
     () =>
       syncConnections
@@ -747,7 +814,7 @@ export default function SyncSettingsPanel({
         if (
           targetConnection.provider === "googleDrive" &&
           targetConnection.tokenExpiresAt &&
-          targetConnection.tokenExpiresAt <= Date.now() + 15_000
+          targetConnection.tokenExpiresAt <= Date.now() + GOOGLE_DRIVE_TOKEN_REFRESH_SKEW_MS
         ) {
           try {
             targetConnection = await reauthorizeGoogleDriveConnection(targetConnection, {
@@ -765,7 +832,10 @@ export default function SyncSettingsPanel({
         } catch (error) {
           const message = getErrorMessage(error);
 
-          if (targetConnection.provider === "googleDrive" && message === "GOOGLE_DRIVE_AUTH_REQUIRED") {
+          if (
+            targetConnection.provider === "googleDrive" &&
+            ["GOOGLE_DRIVE_AUTH_REQUIRED", "GOOGLE_DRIVE_INTERACTION_REQUIRED"].includes(message)
+          ) {
             targetConnection = await reauthorizeGoogleDriveConnection(targetConnection, {
               silent: true
             });
@@ -797,9 +867,7 @@ export default function SyncSettingsPanel({
         setConnectionAvailability((current) => ({
           ...current,
           [connection.id]:
-            message === "UNAUTHORIZED" ||
-            message === "INVALID_CREDENTIALS" ||
-            message === "GOOGLE_DRIVE_AUTH_REQUIRED"
+            isConnectionAuthErrorCode(message)
               ? "authError"
               : message === "SERVER_UNAVAILABLE" || message === "HTTP_404"
                 ? "unavailable"
@@ -1095,6 +1163,7 @@ export default function SyncSettingsPanel({
   }, [syncBindings]);
 
   const showFeedback = (tone: "success" | "error", text: string) => {
+    setDismissedFeedbackKey(null);
     setInternalFeedback({
       tone,
       text
@@ -1137,10 +1206,6 @@ export default function SyncSettingsPanel({
 
   const resetConnectionDrafts = () => {
     setSelfHostedEditingConnectionId(null);
-    setSelfHostedLabelDraft("");
-    setSelfHostedUrlDraft("");
-    setSelfHostedManagementTokenDraft("");
-    setSelfHostedDraftError(null);
     setHostedMode("login");
     setHostedUrlDraft("");
     setHostedNameDraft("");
@@ -1155,12 +1220,22 @@ export default function SyncSettingsPanel({
 
   const openSelfHostedConnectionModal = (connection?: SyncConnection | null) => {
     setSelfHostedEditingConnectionId(connection?.id ?? null);
-    setSelfHostedLabelDraft(connection?.label ?? "");
-    setSelfHostedUrlDraft(connection?.serverUrl ?? "");
-    setSelfHostedManagementTokenDraft(connection?.managementToken ?? "");
-    setSelfHostedDraftError(null);
+    setIncomingSelfHostedPackage("");
     setPanelModal({ kind: "addSelfHosted" });
   };
+
+  useEffect(() => {
+    const openIncomingInvite = () => {
+      const connectionPackage = consumeIncomingSelfHostedConnectionPackage();
+      if (!connectionPackage) return;
+      setSelfHostedEditingConnectionId(null);
+      setIncomingSelfHostedPackage(connectionPackage);
+      setPanelModal({ kind: "addSelfHosted" });
+    };
+    openIncomingInvite();
+    window.addEventListener(SELF_HOSTED_INVITE_EVENT, openIncomingInvite);
+    return () => window.removeEventListener(SELF_HOSTED_INVITE_EVENT, openIncomingInvite);
+  }, []);
 
   const openHostedConnectionModal = (connection?: SyncConnection | null) => {
     setHostedMode("login");
@@ -1170,33 +1245,6 @@ export default function SyncSettingsPanel({
     setHostedPasswordDraft("");
     setHostedDraftError(null);
     setPanelModal({ kind: "hostedWizard", connection: connection ?? null });
-  };
-
-  const validateSelfHostedConnectionDraft = async (): Promise<ValidatedSelfHostedDraft | null> => {
-    const serverUrl = selfHostedUrlDraft.trim();
-    const managementToken = selfHostedManagementTokenDraft.trim();
-    const label = selfHostedLabelDraft.trim();
-
-    if (!serverUrl) {
-      setSelfHostedDraftError(t("sync.urlRequired"));
-      return null;
-    }
-
-    if (!managementToken) {
-      setSelfHostedDraftError(t("sync.tokenRequired"));
-      return null;
-    }
-
-    const remoteVaults = normalizeRemoteVaultEntries(
-      (await loadPersonalServerVaults(serverUrl, managementToken)).vaults
-    );
-
-    return {
-      serverUrl,
-      managementToken,
-      label,
-      remoteVaults
-    };
   };
 
   const handleCreateVault = async () => {
@@ -1262,80 +1310,48 @@ export default function SyncSettingsPanel({
     closeModal();
   };
 
-  const handleSaveSelfHostedConnection = async () => {
-    const busyToken = selfHostedEditingConnection
-      ? `self-hosted:${selfHostedEditingConnection.id}`
-      : "self-hosted:new";
-
-    setSelfHostedDraftError(null);
-    setBusyKey(busyToken);
-
-    try {
-      const validated = await validateSelfHostedConnectionDraft();
-
-      if (!validated) {
-        return;
-      }
-
-      if (selfHostedEditingConnection) {
-        await Promise.resolve(
-          onUpdateConnection(selfHostedEditingConnection.id, {
-            serverUrl: validated.serverUrl,
-            managementToken: validated.managementToken,
-            label: validated.label || selfHostedEditingConnection.label
-          })
-        );
-
-        setRemoteVaultsByConnectionId((current) => ({
-          ...current,
-          [selfHostedEditingConnection.id]: validated.remoteVaults
-        }));
-        setRemoteVaultErrors((current) => ({
-          ...current,
-          [selfHostedEditingConnection.id]: null
-        }));
-        setConnectionAvailability((current) => ({
-          ...current,
-          [selfHostedEditingConnection.id]: "available"
-        }));
-        showFeedback("success", t("settings.connectionUpdated"));
-      } else {
-        await Promise.resolve(
-          onCreateConnection({
-            provider: "selfHosted",
-            serverUrl: validated.serverUrl,
-            label: validated.label || undefined,
-            managementToken: validated.managementToken
-          })
-        );
-        showFeedback("success", t("settings.connectionAdded"));
-      }
-
-      closeModal();
-    } catch (error) {
-      const message = getErrorMessage(error);
-      const translated = translateSyncManagerError(message, t);
-
-      setSelfHostedDraftError(translated);
-
-      if (selfHostedEditingConnection) {
-        setRemoteVaultErrors((current) => ({
-          ...current,
-          [selfHostedEditingConnection.id]: translated
-        }));
-        setConnectionAvailability((current) => ({
-          ...current,
-          [selfHostedEditingConnection.id]:
-            message === "UNAUTHORIZED"
-              ? "authError"
-              : message === "SERVER_UNAVAILABLE" || message === "HTTP_404"
-                ? "unavailable"
-                : current[selfHostedEditingConnection.id] ?? "checking"
-        }));
-      }
-    } finally {
-      setBusyKey((current) => (current === busyToken ? null : current));
+  const handleSelfHostedConnected = async (result: {
+    serverUrl: string;
+    deviceCredential: string;
+    label: string;
+    deviceId: string | null;
+    role: "owner" | "guest" | null;
+    serverId: string | null;
+    remoteVaults: SyncRemoteVault[];
+  }) => {
+    if (selfHostedEditingConnection) {
+      await Promise.resolve(
+        onUpdateConnection(selfHostedEditingConnection.id, {
+          serverUrl: result.serverUrl,
+          managementToken: result.deviceCredential,
+          label: result.label || selfHostedEditingConnection.label,
+          selfHostedDeviceId: result.deviceId,
+          selfHostedRole: result.role,
+          selfHostedServerId: result.serverId
+        })
+      );
+      setRemoteVaultsByConnectionId((current) => ({
+        ...current,
+        [selfHostedEditingConnection.id]: normalizeRemoteVaultEntries(result.remoteVaults)
+      }));
+      setRemoteVaultErrors((current) => ({ ...current, [selfHostedEditingConnection.id]: null }));
+      setConnectionAvailability((current) => ({ ...current, [selfHostedEditingConnection.id]: "available" }));
+      showFeedback("success", t("settings.connectionUpdated"));
+    } else {
+      await Promise.resolve(
+        onCreateConnection({
+          provider: "selfHosted",
+          serverUrl: result.serverUrl,
+          label: result.label || undefined,
+          managementToken: result.deviceCredential,
+          selfHostedDeviceId: result.deviceId,
+          selfHostedRole: result.role,
+          selfHostedServerId: result.serverId
+        })
+      );
+      showFeedback("success", t("settings.connectionAdded"));
     }
+    closeModal();
   };
 
   const handleAddHostedConnection = async () => {
@@ -1362,16 +1378,12 @@ export default function SyncSettingsPanel({
               name: hostedNameDraft.trim() || hostedEmailDraft.trim(),
               email: hostedEmailDraft.trim(),
               password: hostedPasswordDraft,
-              deviceName: getHostedDeviceName(settings),
-              deviceId: settings.localDeviceId,
-              clientPlatform: getHostedDevicePlatform()
+              ...getHostedDeviceIdentity(settings.localDeviceId)
             })
           : await loginHostedAccount(hostedUrlDraft.trim(), {
               email: hostedEmailDraft.trim(),
               password: hostedPasswordDraft,
-              deviceName: getHostedDeviceName(settings),
-              deviceId: settings.localDeviceId,
-              clientPlatform: getHostedDevicePlatform()
+              ...getHostedDeviceIdentity(settings.localDeviceId)
             });
 
       if (hostedEditingConnection) {
@@ -1379,6 +1391,8 @@ export default function SyncSettingsPanel({
           ...hostedEditingConnection,
           serverUrl: hostedUrlDraft.trim(),
           sessionToken: result.session.token,
+          refreshToken: result.session.refreshToken ?? "",
+          tokenExpiresAt: result.session.expiresAt,
           userId: result.user.id,
           userName: result.user.name,
           userEmail: result.user.email ?? "",
@@ -1389,6 +1403,8 @@ export default function SyncSettingsPanel({
           onUpdateConnection(hostedEditingConnection.id, {
             serverUrl: refreshedConnection.serverUrl,
             sessionToken: refreshedConnection.sessionToken,
+            refreshToken: refreshedConnection.refreshToken ?? null,
+            tokenExpiresAt: refreshedConnection.tokenExpiresAt,
             userId: refreshedConnection.userId,
             userName: refreshedConnection.userName,
             userEmail: refreshedConnection.userEmail
@@ -1401,6 +1417,8 @@ export default function SyncSettingsPanel({
             provider: "hosted",
             serverUrl: hostedUrlDraft.trim(),
             sessionToken: result.session.token,
+            refreshToken: result.session.refreshToken ?? null,
+            tokenExpiresAt: result.session.expiresAt,
             userId: result.user.id,
             userName: result.user.name,
             userEmail: result.user.email ?? ""
@@ -1457,6 +1475,8 @@ export default function SyncSettingsPanel({
       };
       session: {
         token: string;
+        refreshToken?: string;
+        expiresAt?: number;
       };
     },
     connection?: SyncConnection | null
@@ -1469,6 +1489,8 @@ export default function SyncSettingsPanel({
         ...hostedConnection,
         serverUrl: normalizedUrl,
         sessionToken: result.session.token,
+        refreshToken: result.session.refreshToken ?? "",
+        tokenExpiresAt: result.session.expiresAt ?? null,
         userId: result.user.id,
         userName: result.user.name,
         userEmail: result.user.email ?? "",
@@ -1479,6 +1501,8 @@ export default function SyncSettingsPanel({
         onUpdateConnection(hostedConnection.id, {
           serverUrl: refreshedConnection.serverUrl,
           sessionToken: refreshedConnection.sessionToken,
+          refreshToken: refreshedConnection.refreshToken ?? null,
+          tokenExpiresAt: refreshedConnection.tokenExpiresAt,
           userId: refreshedConnection.userId,
           userName: refreshedConnection.userName,
           userEmail: refreshedConnection.userEmail
@@ -1497,6 +1521,8 @@ export default function SyncSettingsPanel({
         provider: "hosted",
         serverUrl: normalizedUrl,
         sessionToken: result.session.token,
+        refreshToken: result.session.refreshToken ?? null,
+        tokenExpiresAt: result.session.expiresAt ?? null,
         userId: result.user.id,
         userName: result.user.name,
         userEmail: result.user.email ?? ""
@@ -1527,27 +1553,19 @@ export default function SyncSettingsPanel({
             name: input.name || input.email,
             email: input.email,
             password: input.password,
-            deviceName: getHostedDeviceName(settings),
-            deviceId: settings.localDeviceId,
-            clientPlatform: getHostedDevicePlatform()
+            ...getHostedDeviceIdentity(settings.localDeviceId)
           })
         : await loginHostedAccount(input.serverUrl, {
             email: input.email,
             password: input.password,
-            deviceName: getHostedDeviceName(settings),
-            deviceId: settings.localDeviceId,
-            clientPlatform: getHostedDevicePlatform()
+            ...getHostedDeviceIdentity(settings.localDeviceId)
           });
 
     return upsertHostedWizardConnection(input.serverUrl, result, input.connection);
   };
 
   const handleCloudWizardStartDeviceLogin = async (serverUrl: string) =>
-    startHostedDeviceLogin(serverUrl, {
-      deviceName: getHostedDeviceName(settings),
-      deviceId: settings.localDeviceId,
-      clientPlatform: getHostedDevicePlatform()
-    });
+    startHostedDeviceLogin(serverUrl, getHostedDeviceIdentity(settings.localDeviceId));
 
   const handleCloudWizardPollDeviceLogin = async (
     serverUrl: string,
@@ -1681,7 +1699,7 @@ export default function SyncSettingsPanel({
       })
     );
 
-    return {
+    const refreshedConnection = {
       ...connection,
       sessionToken: result.accessToken,
       tokenExpiresAt: result.expiresAt,
@@ -1691,6 +1709,12 @@ export default function SyncSettingsPanel({
       label: result.userEmail || result.userName || connection.label,
       updatedAt: Date.now()
     } satisfies SyncConnection;
+
+    if (!options?.silent) {
+      await Promise.resolve(onRefreshGoogleDriveConnectionCredentials(refreshedConnection));
+    }
+
+    return refreshedConnection;
   }
 
   const performVaultBinding = async (
@@ -1748,11 +1772,7 @@ export default function SyncSettingsPanel({
             connection.serverUrl,
             connection.sessionToken,
             remoteVault.id,
-            {
-              deviceName: getHostedDeviceName(settings),
-              deviceId: settings.localDeviceId,
-              clientPlatform: getHostedDevicePlatform()
-            }
+            getHostedDeviceIdentity(settings.localDeviceId)
           );
 
     await onBindVault({
@@ -1779,6 +1799,17 @@ export default function SyncSettingsPanel({
   ) => {
     const localVault = localVaultByGuid.get(remoteVault.id) ?? null;
     const existingBinding = localVault ? bindingsByVaultId.get(localVault.id) ?? null : null;
+    const existingConnection = existingBinding
+      ? connectionsById.get(existingBinding.connectionId) ?? null
+      : null;
+
+    if (localVault && existingConnection?.role === "locorisCloud") {
+      showFeedback(
+        "error",
+        `${t("settings.accountCloudVaultConnected", { vault: getVaultLabel(localVault) })} ${t("settings.syncConnectionsDescription")}`
+      );
+      return;
+    }
 
     const runImport = async () => {
       setBusyKey(`import:${connection.id}:${remoteVault.id}`);
@@ -1879,15 +1910,30 @@ export default function SyncSettingsPanel({
       return;
     }
 
+    const cloudManagedCount = remoteVaults.filter((remoteVault) => {
+      const localVault = localVaultByGuid.get(remoteVault.id) ?? null;
+      const binding = localVault ? bindingsByVaultId.get(localVault.id) ?? null : null;
+      const bindingConnection = binding ? connectionsById.get(binding.connectionId) ?? null : null;
+      return bindingConnection?.role === "locorisCloud";
+    }).length;
     const candidates = remoteVaults.filter((remoteVault) => {
       const localVault = localVaultByGuid.get(remoteVault.id) ?? null;
       const binding = localVault ? bindingsByVaultId.get(localVault.id) ?? null : null;
+      const bindingConnection = binding ? connectionsById.get(binding.connectionId) ?? null : null;
 
-      return !binding || binding.connectionId !== connection.id || binding.remoteVaultId !== remoteVault.id;
+      return (
+        bindingConnection?.role !== "locorisCloud" &&
+        (!binding || binding.connectionId !== connection.id || binding.remoteVaultId !== remoteVault.id)
+      );
     });
 
     if (candidates.length === 0) {
-      showFeedback("success", t("settings.remoteImportAllNothing"));
+      showFeedback(
+        "success",
+        `${t("settings.remoteImportAllNothing")}${
+          cloudManagedCount > 0 ? ` ${t("settings.syncConnectionsDescription")}` : ""
+        }`
+      );
       return;
     }
 
@@ -2117,6 +2163,11 @@ export default function SyncSettingsPanel({
     const binding = bindingsByVaultId.get(vault.id) ?? null;
     const connection = binding ? connectionsById.get(binding.connectionId) ?? null : null;
 
+    if (connection?.role === "locorisCloud") {
+      void onDeleteLocalVault(vault.id);
+      return;
+    }
+
     if (!binding || !connection || localVaults.length <= 1) {
       void onDeleteLocalVault(vault.id);
       return;
@@ -2178,6 +2229,19 @@ export default function SyncSettingsPanel({
     }
 
     const existingBinding = bindingsByVaultId.get(vault.id) ?? null;
+    const existingConnection = existingBinding
+      ? connectionsById.get(existingBinding.connectionId) ?? null
+      : null;
+
+    if (existingConnection?.role === "locorisCloud" && existingConnection.id !== connection.id) {
+      setPendingBindVaultId(null);
+      setBindingSheetVaultId(null);
+      showFeedback(
+        "error",
+        `${t("settings.accountCloudVaultConnected", { vault: getVaultLabel(vault) })} ${t("settings.syncConnectionsDescription")}`
+      );
+      return;
+    }
 
     const runBinding = async () => {
       setBusyKey(`bind:${vault.id}:${connection.id}`);
@@ -2199,9 +2263,7 @@ export default function SyncSettingsPanel({
         setConnectionAvailability((current) => ({
           ...current,
           [connection.id]:
-            message === "UNAUTHORIZED" ||
-            message === "INVALID_CREDENTIALS" ||
-            message === "GOOGLE_DRIVE_AUTH_REQUIRED"
+            isConnectionAuthErrorCode(message)
               ? "authError"
               : message === "SERVER_UNAVAILABLE" || message === "HTTP_404"
                 ? "unavailable"
@@ -2235,7 +2297,23 @@ export default function SyncSettingsPanel({
   };
 
   const requestBindAllVaults = (connection: SyncConnection) => {
-    const rebindCount = sortedVaults.filter((vault) => {
+    const cloudManagedVaults = sortedVaults.filter((vault) => {
+      const existingBinding = bindingsByVaultId.get(vault.id) ?? null;
+      const existingConnection = existingBinding
+        ? connectionsById.get(existingBinding.connectionId) ?? null
+        : null;
+      return existingConnection?.role === "locorisCloud";
+    });
+    const eligibleVaults = sortedVaults.filter(
+      (vault) => !cloudManagedVaults.some((entry) => entry.id === vault.id)
+    );
+
+    if (eligibleVaults.length === 0) {
+      showFeedback("error", t("settings.syncConnectionsDescription"));
+      return;
+    }
+
+    const rebindCount = eligibleVaults.filter((vault) => {
       const existingBinding = bindingsByVaultId.get(vault.id);
       return existingBinding && existingBinding.connectionId !== connection.id;
     }).length;
@@ -2244,7 +2322,7 @@ export default function SyncSettingsPanel({
       setBusyKey(`bind-all:${connection.id}`);
 
       try {
-        for (const vault of sortedVaults) {
+        for (const vault of eligibleVaults) {
           await performVaultBinding(vault, connection, {
             refreshCatalog: false
           });
@@ -2259,15 +2337,18 @@ export default function SyncSettingsPanel({
           ...current,
           [connection.id]: "available"
         }));
-        showFeedback("success", t("settings.bindAllCompleted", { count: sortedVaults.length }));
+        showFeedback(
+          "success",
+          `${t("settings.bindAllCompleted", { count: eligibleVaults.length })}${
+            cloudManagedVaults.length > 0 ? ` ${t("settings.syncConnectionsDescription")}` : ""
+          }`
+        );
       } catch (error) {
         const message = getErrorMessage(error);
         setConnectionAvailability((current) => ({
           ...current,
           [connection.id]:
-            message === "UNAUTHORIZED" ||
-            message === "INVALID_CREDENTIALS" ||
-            message === "GOOGLE_DRIVE_AUTH_REQUIRED"
+            isConnectionAuthErrorCode(message)
               ? "authError"
               : message === "SERVER_UNAVAILABLE" || message === "HTTP_404"
                 ? "unavailable"
@@ -2316,6 +2397,21 @@ export default function SyncSettingsPanel({
   };
 
   const startVaultBindingFlow = (vault: LocalVaultProfile) => {
+    const currentBinding = bindingsByVaultId.get(vault.id) ?? null;
+    const currentConnection = currentBinding
+      ? connectionsById.get(currentBinding.connectionId) ?? null
+      : null;
+
+    if (currentConnection?.role === "locorisCloud") {
+      setPendingBindVaultId(null);
+      setBindingSheetVaultId(null);
+      showFeedback(
+        "error",
+        `${t("settings.accountCloudVaultConnected", { vault: getVaultLabel(vault) })} ${t("settings.syncConnectionsDescription")}`
+      );
+      return;
+    }
+
     onSelectLocalVault(vault.id);
     setPendingBindVaultId(vault.id);
     setBindingSheetVaultId(vault.id);
@@ -2354,6 +2450,7 @@ export default function SyncSettingsPanel({
 
   const refreshConnectionRemoteVaults = async (connection: SyncConnection) => {
     let nextConnection = connection;
+    let googleDriveSignInRefreshed = false;
     const availability = online ? connectionAvailability[connection.id] ?? "checking" : "offline";
     const reauthBusyKey = `reauth:${connection.id}`;
 
@@ -2371,6 +2468,7 @@ export default function SyncSettingsPanel({
       try {
         setBusyKey(reauthBusyKey);
         nextConnection = await reauthorizeGoogleDriveConnection(connection);
+        googleDriveSignInRefreshed = true;
       } catch (error) {
         const message = getErrorMessage(error);
         showFeedback("error", translateSyncManagerError(message, t));
@@ -2383,6 +2481,17 @@ export default function SyncSettingsPanel({
       await loadRemoteVaultCatalog(nextConnection, {
         silent: false
       });
+      if (googleDriveSignInRefreshed) {
+        setConnectionAvailability((current) => ({
+          ...current,
+          [connection.id]: "available"
+        }));
+        setRemoteVaultErrors((current) => ({
+          ...current,
+          [connection.id]: null
+        }));
+        showFeedback("success", t("settings.googleDriveReconnectSuccess"));
+      }
     } finally {
       setBusyKey((current) => (current === reauthBusyKey ? null : current));
     }
@@ -2411,6 +2520,15 @@ export default function SyncSettingsPanel({
       await loadRemoteVaultCatalog(nextConnection, {
         silent: false
       });
+      setConnectionAvailability((current) => ({
+        ...current,
+        [connection.id]: "available"
+      }));
+      setRemoteVaultErrors((current) => ({
+        ...current,
+        [connection.id]: null
+      }));
+      showFeedback("success", t("settings.googleDriveReconnectSuccess"));
     } catch (error) {
       const message = getErrorMessage(error);
       showFeedback("error", translateSyncManagerError(message, t));
@@ -2663,51 +2781,6 @@ export default function SyncSettingsPanel({
 
   return (
     <>
-      <SyncSettingsMobile
-        online={online}
-        localVaults={sortedVaults}
-        activeLocalVaultId={activeLocalVaultId}
-        selectedLocalVaultId={selectedLocalVaultId}
-        syncConnections={syncConnections}
-        syncBindings={syncBindings}
-        vaultEncryptionById={vaultEncryptionById}
-        connectionAvailability={connectionAvailability}
-        remoteVaultsByConnectionId={remoteVaultsByConnectionId}
-        remoteVaultErrors={remoteVaultErrors}
-        remoteVaultLoading={remoteVaultLoading}
-        pendingBindVaultId={pendingBindVaultId}
-        bindingSheetVault={bindingSheetVault}
-        busyKey={busyKey}
-        feedback={feedback}
-        getVaultLabel={getVaultLabel}
-        onBack={onBack}
-        onClose={onClose}
-        onSelectLocalVault={onSelectLocalVault}
-        onCreateVault={openCreateVaultModal}
-        onRenameVault={openRenameVaultModal}
-        onDeleteLocalVault={requestDeleteLocalVault}
-        onStartVaultBinding={startVaultBindingFlow}
-        onCancelVaultBinding={cancelVaultBindingFlow}
-        onConnectCloud={openHostedConnectionModal}
-        onAddConnection={openAddConnectionCatalog}
-        onAddConnectionFromBinding={openAddConnectionFromBindingFlow}
-        onBindVaultToConnection={requestVaultBindingFromSheet}
-        onClearBinding={onClearBinding}
-        onOpenVaultEncryption={(vault, view) =>
-          openVaultEncryptionModal(vault, {
-            view
-          })
-        }
-        onRefreshRemoteVaults={refreshConnectionRemoteVaults}
-        onImportAllRemoteVaults={requestImportAllRemoteVaults}
-        onImportRemoteVault={requestRemoteVaultImport}
-        onDeleteRemoteVault={requestDeleteRemoteVault}
-        onBindAllVaults={requestBindAllVaults}
-        onDeleteConnection={onDeleteConnection}
-        onRepairConnection={repairConnectionAuth}
-      />
-
-      <div className="sync-settings-desktop-surface">
       <SyncSettingsLayout
         title={t("settings.syncTitle")}
         kicker={online ? t("sync.statusReady") : t("settings.connectionOffline")}
@@ -2785,14 +2858,58 @@ export default function SyncSettingsPanel({
             </div>
           ) : undefined
         }
-        feedback={
-          feedback ? (
-            <div className={`sync-settings-feedback ${feedback.tone === "error" ? "is-error" : "is-success"}`}>
-              <span>{feedback.text}</span>
-            </div>
-          ) : undefined
-        }
       >
+        <SyncSettingsMobile
+          online={online}
+          localVaults={sortedVaults}
+          activeLocalVaultId={activeLocalVaultId}
+          selectedLocalVaultId={selectedLocalVaultId}
+          syncConnections={syncConnections}
+          syncBindings={syncBindings}
+          bindingConnections={allSyncConnections}
+          vaultBindings={allSyncBindings}
+          vaultEncryptionById={vaultEncryptionById}
+          connectionAvailability={connectionAvailability}
+          remoteVaultsByConnectionId={remoteVaultsByConnectionId}
+          remoteVaultErrors={remoteVaultErrors}
+          remoteVaultLoading={remoteVaultLoading}
+          pendingBindVaultId={pendingBindVaultId}
+          bindingSheetVault={bindingSheetVault}
+          busyKey={busyKey}
+          getVaultLabel={getVaultLabel}
+          getBindingErrorLabel={(errorCode) =>
+            errorCode ? translateSyncManagerError(errorCode, t) : null
+          }
+          onSelectLocalVault={onSelectLocalVault}
+          onCreateVault={openCreateVaultModal}
+          onRenameVault={openRenameVaultModal}
+          onDeleteLocalVault={requestDeleteLocalVault}
+          onStartVaultBinding={startVaultBindingFlow}
+          onCancelVaultBinding={cancelVaultBindingFlow}
+          onConnectCloud={openHostedConnectionModal}
+          onAddConnection={openAddConnectionCatalog}
+          onAddConnectionFromBinding={openAddConnectionFromBindingFlow}
+          onBindVaultToConnection={requestVaultBindingFromSheet}
+          onClearBinding={onClearBinding}
+          onOpenVaultEncryption={(vault, view) =>
+            openVaultEncryptionModal(vault, {
+              view
+            })
+          }
+          onRefreshRemoteVaults={refreshConnectionRemoteVaults}
+          onImportAllRemoteVaults={requestImportAllRemoteVaults}
+          onImportRemoteVault={requestRemoteVaultImport}
+          onDeleteRemoteVault={requestDeleteRemoteVault}
+          onBindAllVaults={requestBindAllVaults}
+          onDeleteConnection={onDeleteConnection}
+          onRevokeGoogleDriveConnection={onRevokeGoogleDriveConnection}
+          onRepairConnection={repairConnectionAuth}
+          onManageSelfHostedAccess={(connection) =>
+            setPanelModal({ kind: "manageSelfHosted", connection })
+          }
+        />
+
+        <div className="sync-settings-desktop-surface">
         <div className="sync-settings-columns">
           <section className="sync-settings-column is-vaults">
               <div className="sync-settings-column-head">
@@ -2819,12 +2936,18 @@ export default function SyncSettingsPanel({
                   const isSelected = vault.id === selectedLocalVaultId;
                   const binding = bindingsByVaultId.get(vault.id) ?? null;
                   const bindingConnection = binding ? connectionsById.get(binding.connectionId) ?? null : null;
+                  const isLocorisCloudManaged = bindingConnection?.role === "locorisCloud";
                   const encryption = resolveVaultEncryptionSummary(vault);
                   const privateEncryptionVisible =
                     vault.vaultKind === "private" && encryption.state !== "disabled";
                   const needsUnlock =
                     (binding?.lastError === "VAULT_ENCRYPTION_LOCKED" || encryption.state === "locked") &&
                     encryption.enabled;
+                  const needsGoogleDriveSignIn = Boolean(
+                    binding &&
+                      bindingConnection?.provider === "googleDrive" &&
+                      isSyncBindingAuthError(binding)
+                  );
                   const statusLabel = !binding
                     ? t("settings.statusUnbound")
                     : needsUnlock
@@ -2864,6 +2987,11 @@ export default function SyncSettingsPanel({
                                 {encryption.state === "ready"
                                   ? t("settings.vaultEncryptionReady")
                                   : t("settings.vaultEncryptionLocked")}
+                              </span>
+                            ) : null}
+                            {isLocorisCloudManaged ? (
+                              <span className="sync-settings-chip is-cloud">
+                                {t("settings.accountCloudConnected")}
                               </span>
                             ) : null}
                             <span
@@ -2914,8 +3042,26 @@ export default function SyncSettingsPanel({
                           </span>
                           {binding ? (
                             <span className="sync-settings-card-submeta">
-                              {binding.remoteVaultName} · {formatTime(binding.lastSyncAt, i18n.language)}
+                              {binding.remoteVaultName} · {formatTime(binding.lastSyncAt, localeRuntime)}
                             </span>
+                          ) : null}
+                          {binding?.lastError && binding.lastError !== "VAULT_ENCRYPTION_LOCKED" ? (
+                            <span className="sync-settings-card-error" role="status">
+                              {translateSyncManagerError(binding.lastError, t)}
+                            </span>
+                          ) : null}
+                          {needsGoogleDriveSignIn && bindingConnection ? (
+                            <button
+                              type="button"
+                              className="sync-settings-inline-action sync-settings-auth-repair-action"
+                              disabled={busyKey !== null}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void repairConnectionAuth(bindingConnection);
+                              }}
+                            >
+                              {t("settings.googleDriveReconnect")}
+                            </button>
                           ) : null}
                         </div>
                       </div>
@@ -2942,31 +3088,35 @@ export default function SyncSettingsPanel({
                             <LockGlyph />
                           </button>
                         ) : null}
-                        <button
-                          type="button"
-                          className={`sync-settings-vault-action ${
-                            binding ? "is-change-binding" : "is-bind"
-                          }`}
-                          title={binding ? t("settings.changeBindingAction") : t("settings.bindVaultAction")}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            startVaultBindingFlow(vault);
-                          }}
-                        >
-                          {binding ? t("settings.changeBindingAction") : t("settings.bindVaultAction")}
-                        </button>
-                        {binding ? (
-                          <button
-                            type="button"
-                            className="sync-settings-vault-action is-unbind"
-                            title={t("settings.unbindVaultAction")}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void onClearBinding(vault.id);
-                            }}
-                          >
-                            {t("settings.unbindVaultAction")}
-                          </button>
+                        {!isLocorisCloudManaged ? (
+                          <>
+                            <button
+                              type="button"
+                              className={`sync-settings-vault-action ${
+                                binding ? "is-change-binding" : "is-bind"
+                              }`}
+                              title={binding ? t("settings.changeBindingAction") : t("settings.bindVaultAction")}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                startVaultBindingFlow(vault);
+                              }}
+                            >
+                              {binding ? t("settings.changeBindingAction") : t("settings.bindVaultAction")}
+                            </button>
+                            {binding ? (
+                              <button
+                                type="button"
+                                className="sync-settings-vault-action is-unbind"
+                                title={t("settings.unbindVaultAction")}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void onClearBinding(vault.id);
+                                }}
+                              >
+                                {t("settings.unbindVaultAction")}
+                              </button>
+                            ) : null}
+                          </>
                         ) : null}
                         <button
                           type="button"
@@ -3069,6 +3219,8 @@ export default function SyncSettingsPanel({
                     connection.provider === "selfHosted" && availability === "authError";
                   const canRepairHostedAuth =
                     connection.provider === "hosted" && availability === "authError";
+                  const canRepairGoogleDriveAuth =
+                    connection.provider === "googleDrive" && availability === "authError";
 
                   return (
                     <article
@@ -3121,7 +3273,11 @@ export default function SyncSettingsPanel({
                               ? connection.userName || t("sync.hostedAccountSignedOut")
                               : connection.provider === "googleDrive"
                                 ? t("settings.googleDriveSessionReady")
-                              : `${t("sync.managementToken")}: ${maskToken(connection.managementToken)}`}
+                              : connection.selfHostedRole === "guest"
+                                ? t("settings.selfHostedGuestDeviceAccess")
+                                : connection.selfHostedDeviceId
+                                  ? t("settings.selfHostedTrustedDeviceAccess")
+                                  : t("settings.selfHostedLegacyAccess")}
                           </span>
                           <div className="sync-settings-connection-stats">
                             <span className="sync-settings-mini-chip">
@@ -3183,6 +3339,21 @@ export default function SyncSettingsPanel({
                                 }}
                               >
                                 {t("settings.hostedReconnect")}
+                              </button>
+                            </div>
+                          ) : null}
+                          {canRepairGoogleDriveAuth ? (
+                            <div className="sync-settings-card-actions">
+                              <button
+                                type="button"
+                                className="sync-settings-inline-action"
+                                disabled={busyKey !== null}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void repairConnectionAuth(connection);
+                                }}
+                              >
+                                {t("settings.googleDriveReconnect")}
                               </button>
                             </div>
                           ) : null}
@@ -3308,6 +3479,11 @@ export default function SyncSettingsPanel({
                                   const matchingBinding = matchingLocalVault
                                     ? bindingsByVaultId.get(matchingLocalVault.id) ?? null
                                     : null;
+                                  const matchingBindingConnection = matchingBinding
+                                    ? connectionsById.get(matchingBinding.connectionId) ?? null
+                                    : null;
+                                  const isLocorisCloudManaged =
+                                    matchingBindingConnection?.role === "locorisCloud";
                                   const isLinkedHere =
                                     matchingBinding?.connectionId === connection.id &&
                                     matchingBinding.remoteVaultId === remoteVault.id;
@@ -3340,6 +3516,11 @@ export default function SyncSettingsPanel({
                                               {t("settings.remoteVaultOnDevice")}
                                             </span>
                                           ) : null}
+                                          {isLocorisCloudManaged ? (
+                                            <span className="sync-settings-chip is-cloud">
+                                              {t("settings.accountCloudConnected")}
+                                            </span>
+                                          ) : null}
                                           {hasNameCollision ? (
                                             <span className="sync-settings-chip is-count">
                                               {t("settings.remoteVaultNameCollision")}
@@ -3362,7 +3543,7 @@ export default function SyncSettingsPanel({
                                         </span>
                                         <span className="sync-settings-card-submeta">
                                           {t("settings.remoteVaultUpdatedAt", {
-                                            time: formatTime(remoteVault.lastSyncAt ?? remoteVault.updatedAt, i18n.language)
+                                            time: formatTime(remoteVault.lastSyncAt ?? remoteVault.updatedAt, localeRuntime)
                                           })}
                                         </span>
                                         {matchingLocalVault ? (
@@ -3379,7 +3560,7 @@ export default function SyncSettingsPanel({
                                       </div>
 
                                       <div className="sync-settings-card-actions">
-                                        {!isLinkedHere ? (
+                                        {!isLinkedHere && !isLocorisCloudManaged ? (
                                           <button
                                             type="button"
                                             className="sync-settings-inline-action"
@@ -3415,6 +3596,32 @@ export default function SyncSettingsPanel({
                       </div>
 
                       <div className="sync-settings-card-actions sync-settings-card-actions-wide">
+                        {connection.provider === "selfHosted" && connection.selfHostedRole !== "guest" ? (
+                          <button
+                            type="button"
+                            className="sync-settings-inline-action"
+                            disabled={busyKey !== null || availability !== "available"}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPanelModal({ kind: "manageSelfHosted", connection });
+                            }}
+                          >
+                            {t("settings.selfHostedManageAccess")}
+                          </button>
+                        ) : null}
+                        {connection.provider === "googleDrive" ? (
+                          <button
+                            type="button"
+                            className="sync-settings-inline-action"
+                            disabled={busyKey !== null}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void onRevokeGoogleDriveConnection(connection.id);
+                            }}
+                          >
+                            {t("sync.googleDriveRevoke")}
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className="sync-settings-inline-action"
@@ -3445,8 +3652,8 @@ export default function SyncSettingsPanel({
             </div>
           </section>
         </div>
+        </div>
       </SyncSettingsLayout>
-      </div>
 
       <SyncSettingsDialog
         open={Boolean(panelModal)}
@@ -3462,6 +3669,8 @@ export default function SyncSettingsPanel({
                 ? t("settings.vaultEncryptionKicker")
                 : panelModal?.kind === "addConnection"
                   ? t("settings.addConnection")
+                  : panelModal?.kind === "manageSelfHosted"
+                    ? t("settings.selfHostedAccessKicker")
                   : panelModal?.kind === "addGoogleDrive"
                     ? t("sync.googleDrive")
                     : panelModal?.kind === "hostedWizard" || panelModal?.kind === "addHosted"
@@ -3479,6 +3688,8 @@ export default function SyncSettingsPanel({
                   })
                 : panelModal?.kind === "addConnection"
                   ? t("settings.connectionCatalogTitle")
+                  : panelModal?.kind === "manageSelfHosted"
+                    ? t("settings.selfHostedAccessTitle")
                   : panelModal?.kind === "addGoogleDrive"
                     ? t("settings.googleDriveConnectionTitle")
                     : panelModal?.kind === "hostedWizard"
@@ -3638,7 +3849,7 @@ export default function SyncSettingsPanel({
                           {summary.updatedAt ? (
                             <div className="sync-settings-encryption-meta">
                               <span>{t("settings.vaultEncryptionUpdatedAt")}</span>
-                              <strong>{formatTime(summary.updatedAt, i18n.language)}</strong>
+                              <strong>{formatTime(summary.updatedAt, localeRuntime)}</strong>
                             </div>
                           ) : null}
                         </div>
@@ -3886,80 +4097,23 @@ export default function SyncSettingsPanel({
             ) : null}
 
             {panelModal.kind === "addSelfHosted" ? (
-              <div className="sync-settings-modal-body">
-                <p className="sync-settings-modal-copy">
-                  {selfHostedEditingConnection
-                    ? t("settings.selfHostedReconnectDescription")
-                    : t("settings.selfHostedModalDescription")}
-                </p>
-                <input
-                  className="sync-settings-input"
-                  value={selfHostedUrlDraft}
-                  onChange={(event) => {
-                    setSelfHostedUrlDraft(event.target.value);
-                    if (selfHostedDraftError) {
-                      setSelfHostedDraftError(null);
-                    }
-                  }}
-                  placeholder={t("sync.endpointPlaceholder")}
-                  autoFocus
-                />
-                <input
-                  className="sync-settings-input"
-                  value={selfHostedManagementTokenDraft}
-                  onChange={(event) => {
-                    setSelfHostedManagementTokenDraft(event.target.value);
-                    if (selfHostedDraftError) {
-                      setSelfHostedDraftError(null);
-                    }
-                  }}
-                  placeholder={t("sync.managementTokenPlaceholder")}
-                />
-                <input
-                  className="sync-settings-input"
-                  value={selfHostedLabelDraft}
-                  onChange={(event) => {
-                    setSelfHostedLabelDraft(event.target.value);
-                    if (selfHostedDraftError) {
-                      setSelfHostedDraftError(null);
-                    }
-                  }}
-                  placeholder={t("settings.connectionLabelOptional")}
-                />
-                <div className="sync-settings-note-shell">
-                  <span className="sync-settings-note-chip">CHECK</span>
-                  <span className={`sync-settings-note-copy ${selfHostedDraftError ? "is-error" : ""}`}>
-                    {selfHostedDraftError ?? t("settings.selfHostedValidationHint")}
-                  </span>
-                </div>
-                <div className="sync-settings-modal-actions">
-                  <button type="button" className="sync-settings-inline-action" onClick={closeModal}>
-                    {t("dialog.cancel")}
-                  </button>
-                  <button
-                    type="button"
-                    className="sync-settings-primary-action"
-                    disabled={
-                      busyKey ===
-                      (selfHostedEditingConnection
-                        ? `self-hosted:${selfHostedEditingConnection.id}`
-                        : "self-hosted:new")
-                    }
-                    onClick={() => {
-                      void handleSaveSelfHostedConnection();
-                    }}
-                  >
-                    {busyKey ===
-                    (selfHostedEditingConnection
-                      ? `self-hosted:${selfHostedEditingConnection.id}`
-                      : "self-hosted:new")
-                      ? t("sync.syncing")
-                      : selfHostedEditingConnection
-                        ? t("settings.selfHostedReconnectSave")
-                        : t("settings.selfHostedConnectAction")}
-                  </button>
-                </div>
-              </div>
+              <SelfHostedConnectionWizard
+                connection={selfHostedEditingConnection}
+                deviceName={getHostedDeviceIdentity(settings.localDeviceId).deviceName}
+                platform={getHostedDeviceIdentity(settings.localDeviceId).clientPlatform}
+                initialConnectionPackage={incomingSelfHostedPackage}
+                translateError={(message) => translateSyncManagerError(message, t)}
+                onConnected={handleSelfHostedConnected}
+                onCancel={closeModal}
+              />
+            ) : null}
+
+            {panelModal.kind === "manageSelfHosted" ? (
+              <SelfHostedAccessManager
+                connection={panelModal.connection}
+                remoteVaults={remoteVaultsByConnectionId[panelModal.connection.id] ?? []}
+                translateError={(message) => translateSyncManagerError(message, t)}
+              />
             ) : null}
 
             {panelModal.kind === "hostedWizard" ? (
@@ -4157,6 +4311,17 @@ export default function SyncSettingsPanel({
         onSecondary={() => void confirmState?.secondaryAction?.()}
         onConfirm={() => void confirmState?.action()}
       />
+
+      {visibleFeedback ? (
+        <ActionFeedbackToast
+          anchor={feedbackAnchor}
+          tone={visibleFeedback.tone}
+          dismissLabel={t("orbit.closeModal")}
+          onDismiss={dismissFeedback}
+        >
+          {visibleFeedback.text}
+        </ActionFeedbackToast>
+      ) : null}
     </>
   );
 }

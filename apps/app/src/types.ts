@@ -1,7 +1,8 @@
-export type AppLanguage = "en" | "ru";
+export type AppLanguage = string;
 export type SyncProvider = "none" | "googleDrive" | "selfHosted" | "hosted";
 export type SyncConnectionProvider = Exclude<SyncProvider, "none">;
 export type SyncConnectionRole = "external" | "locorisCloud";
+export type SelfHostedDeviceRole = "owner" | "guest";
 export type MobileSection = "vault" | "notes" | "editor";
 export type SaveState = "idle" | "saving" | "saved";
 export type AssetKind = "image" | "file" | "audio" | "video";
@@ -312,7 +313,6 @@ export type PlannerCalendarDefaultView = "day" | "week" | "month";
 
 export interface AppSettings {
   id: "app";
-  language: AppLanguage;
   syncEnabled: boolean;
   syncStatus: SyncStatus;
   syncProvider: SyncProvider;
@@ -344,6 +344,11 @@ export interface AppSettings {
   plannerDefaultCalendarView: PlannerCalendarDefaultView;
 }
 
+/** Read-only compatibility shape for vaults and backups created before locale preferences became device-local. */
+export type LegacyAppSettings = AppSettings & {
+  language?: AppLanguage;
+};
+
 export interface VaultEncryptionSummary {
   enabled: boolean;
   state: SyncEncryptionState;
@@ -370,10 +375,15 @@ export interface SyncConnection {
   serverUrl: string;
   managementToken: string;
   sessionToken: string;
+  refreshToken?: string;
   tokenExpiresAt: number | null;
   userId: string | null;
   userName: string;
   userEmail: string;
+  changePageToken?: string | null;
+  selfHostedDeviceId: string | null;
+  selfHostedRole: SelfHostedDeviceRole | null;
+  selfHostedServerId: string | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -419,6 +429,10 @@ export interface HostedAccountSession {
   createdAt: number;
   expiresAt: number;
   token: string;
+  refreshToken?: string;
+  refreshExpiresAt?: number;
+  refreshIdleExpiresAt?: number;
+  authProtocol?: number;
 }
 
 export interface HostedAccountVault {
@@ -440,9 +454,13 @@ export interface HostedCloudLimits {
   maxVaults: number | null;
   maxSyncTokens: number | null;
   storageBytes: number | null;
+  historyDays?: number | null;
   maxUploadBytes: number | null;
   maxJournalEntriesPerVault: number | null;
   journalTtlDays: number | null;
+  webAppEnabled?: boolean;
+  prioritySupport?: boolean;
+  advancedBackupsEnabled?: boolean;
 }
 
 export interface HostedCloudPlan {
@@ -457,11 +475,24 @@ export interface HostedCloudPlan {
 
 export interface HostedCloudEntitlement {
   plan: HostedCloudPlan;
+  planId?: string;
   subscription: unknown | null;
   accountStatus: string;
+  status?: string;
+  subscriptionStatus?: string | null;
+  source?: string;
   trialEndsAt: number | null;
+  effectiveUntil?: number | null;
+  graceEndsAt?: number | null;
   reason: string;
   limits: HostedCloudLimits;
+  retention?: {
+    phase: "none" | "trial" | "read_only" | "archive" | "expired" | string;
+    trialEndsAt: number | null;
+    readOnlyUntil: number | null;
+    archiveUntil: number | null;
+    deleteEligibleAt: number | null;
+  } | null;
   capabilities: {
     canUseCloud: boolean;
     canCreateVault: boolean;
@@ -469,7 +500,15 @@ export interface HostedCloudEntitlement {
     canReadSync: boolean;
     canIssueToken: boolean;
     canDeleteCloudData: boolean;
+    canExportCloudData?: boolean;
+    webAppEnabled?: boolean;
+    prioritySupport?: boolean;
+    advancedBackupsEnabled?: boolean;
   };
+  upgradeOffer?: {
+    recommendedPlan: HostedCloudPlan;
+    accountPortalPath: string;
+  } | null;
 }
 
 export interface HostedCloudUsage {
@@ -481,9 +520,14 @@ export interface HostedCloudUsage {
 
 export interface HostedAccountDevice {
   id: string;
-  credentialId: string;
-  vaultId: string;
+  credentialId: string | null;
+  credentialIds?: string[];
+  sessionIds?: string[];
+  vaultId: string | null;
   vaultName: string;
+  vaultIds?: string[];
+  vaultNames?: string[];
+  vaultCount?: number;
   deviceId: string | null;
   deviceName: string;
   clientPlatform: string | null;
@@ -546,7 +590,7 @@ export interface DesktopLocalVaultBackup {
   habitLogs: HabitLog[];
   goals: Goal[];
   timeBlocks: TimeBlock[];
-  settings: AppSettings | null;
+  settings: LegacyAppSettings | null;
   syncDirtyEntries: SyncDirtyEntry[];
   syncShadows: SyncShadow[];
   syncTombstones: SyncTombstone[];

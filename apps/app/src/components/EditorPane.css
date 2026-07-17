@@ -1295,19 +1295,9 @@
 }
 
 @media (max-width: 1080px) {
-  .editor-pane-shell {
-    flex-direction: column;
-  }
-
-  .editor-stage-frame,
-  .editor-pane.is-immersive .editor-stage-frame {
-    min-height: clamp(340px, 58vh, 720px);
-  }
-
   .editor-sidepanel {
-    width: auto;
-    flex: 0 0 auto;
-    max-height: min(30vh, 320px);
+    flex: 0 0 clamp(224px, 24vw, 252px);
+    width: clamp(224px, 24vw, 252px);
   }
 }
 

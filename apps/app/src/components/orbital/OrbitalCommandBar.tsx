@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import LocalVaultSwitcher, { type LocalVaultSwitcherItem } from "../LocalVaultSwitcher";
 import type { LocalVaultKind } from "../../lib/localVaults";
@@ -19,7 +19,9 @@ type CommandIconKind =
   | "center"
   | "reset"
   | "close"
-  | "sync"
+  | "account"
+  | "cloud"
+  | "sync-time"
   | "focus"
   | "autofocus"
   | "update";
@@ -29,6 +31,25 @@ interface CommandChip {
   text: string;
   compactText?: string;
   title?: string;
+  description?: string;
+  primaryActionLabel?: string;
+  secondaryActionLabel?: string;
+  metaItems?: CommandAccountMetaItem[];
+  meters?: CommandAccountMeter[];
+  notice?: string;
+}
+
+interface CommandAccountMetaItem {
+  label: string;
+  value: string;
+  tone?: CommandChipTone;
+}
+
+interface CommandAccountMeter {
+  label: string;
+  valueLabel: string;
+  ratio: number | null;
+  tone?: CommandChipTone;
 }
 
 interface OrbitalCommandBarLabels {
@@ -61,17 +82,11 @@ interface OrbitalCommandBarProps {
   sceneFocusActive: boolean;
   syncStatusChip?: CommandChip;
   syncTransportChip?: CommandChip | null;
+  webAccessChip?: CommandChip | null;
   updateChip?: {
     text: string;
     title?: string;
   } | null;
-  isOrbitalMotionEnabled: boolean;
-  isPaused: boolean;
-  temporalSignalsEnabled: boolean;
-  temporalLayerVisible: boolean;
-  temporalLayerLabel: string;
-  temporalLayerShowLabel: string;
-  temporalLayerHideLabel: string;
   hasTrash: boolean;
   hasSettings: boolean;
   showClose: boolean;
@@ -82,14 +97,9 @@ interface OrbitalCommandBarProps {
     vaultKind: LocalVaultKind;
     passphrase?: string;
   }) => string | void | Promise<string | void>;
-  onToggleMotion: () => void;
-  onToggleTemporalLayer: () => void;
   onOpenTrash: () => void;
   onOpenSettings: () => void;
-  onZoomOut: () => void;
-  onZoomIn: () => void;
-  onCenterSelection: () => void;
-  onResetView: () => void;
+  onOpenWebAccess?: () => void;
   onClose: () => void;
 }
 
@@ -172,6 +182,125 @@ function StatusChip({
   );
 }
 
+function AccountStatusButton({
+  status,
+  onOpen
+}: {
+  status: CommandChip;
+  onOpen?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const actionLabel = status.primaryActionLabel ?? status.text;
+  const metaItems = status.metaItems ?? [];
+  const meters = status.meters ?? [];
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!shellRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="orbital-command-account" ref={shellRef}>
+      <button
+        type="button"
+        className={`orbital-command-account-button is-${status.tone}`}
+        title={status.title ?? status.text}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <CommandIcon kind="account" />
+        <span className="orbital-command-account-text">{status.compactText ?? status.text}</span>
+      </button>
+      {open ? (
+        <section className={`orbital-command-account-popover is-${status.tone}`} role="dialog">
+          <div className="orbital-command-account-popover-head">
+            <span className="orbital-command-account-popover-icon" aria-hidden="true">
+              <CommandIcon kind="cloud" />
+            </span>
+            <div>
+              <strong>{status.title ?? status.text}</strong>
+              {status.description ? <p>{status.description}</p> : null}
+            </div>
+          </div>
+          {metaItems.length ? (
+            <div className="orbital-command-account-meta" aria-label={status.title ?? status.text}>
+              {metaItems.map((item) => (
+                <div key={`${item.label}-${item.value}`} className={`orbital-command-account-meta-item is-${item.tone ?? "default"}`}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {meters.length ? (
+            <div className="orbital-command-account-meters">
+              {meters.map((meter) => {
+                const clampedRatio =
+                  meter.ratio === null || !Number.isFinite(meter.ratio)
+                    ? 1
+                    : Math.max(0, Math.min(1, meter.ratio));
+
+                return (
+                  <div
+                    key={meter.label}
+                    className={`orbital-command-account-meter is-${meter.tone ?? "default"} ${
+                      meter.ratio === null ? "is-unlimited" : ""
+                    }`}
+                    style={{ "--account-meter-fill": `${clampedRatio * 100}%` } as CSSProperties}
+                  >
+                    <div className="orbital-command-account-meter-copy">
+                      <span>{meter.label}</span>
+                      <strong>{meter.valueLabel}</strong>
+                    </div>
+                    <span className="orbital-command-account-meter-track" aria-hidden="true">
+                      <span />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+          {status.notice ? <p className="orbital-command-account-notice">{status.notice}</p> : null}
+          {onOpen ? (
+            <button
+              type="button"
+              className="orbital-command-account-action"
+              onClick={() => {
+                setOpen(false);
+                onOpen();
+              }}
+            >
+              {actionLabel}
+            </button>
+          ) : null}
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
 export default function OrbitalCommandBar({
   labels,
   surfaceMode,
@@ -183,154 +312,139 @@ export default function OrbitalCommandBar({
   sceneFocusActive,
   syncStatusChip,
   syncTransportChip,
+  webAccessChip,
   updateChip,
-  isOrbitalMotionEnabled,
-  isPaused,
-  temporalSignalsEnabled,
-  temporalLayerVisible,
-  temporalLayerLabel,
-  temporalLayerShowLabel,
-  temporalLayerHideLabel,
   hasTrash,
   hasSettings,
   showClose,
   onSurfaceModeChange,
   onSelectLocalVault,
   onCreateLocalVault,
-  onToggleMotion,
-  onToggleTemporalLayer,
   onOpenTrash,
   onOpenSettings,
-  onZoomOut,
-  onZoomIn,
-  onCenterSelection,
-  onResetView,
+  onOpenWebAccess,
   onClose
 }: OrbitalCommandBarProps) {
-  const motionLabel = !isOrbitalMotionEnabled || isPaused ? labels.resume : labels.pause;
-  const motionIcon: CommandIconKind = !isOrbitalMotionEnabled || isPaused ? "play" : "pause";
-  const temporalLabel = temporalLayerVisible ? temporalLayerHideLabel : temporalLayerShowLabel;
-  const hasStatus =
+  const hasAmbientStatus =
     autoFocusEnabled ||
     sceneFocusActive ||
-    Boolean(syncStatusChip) ||
-    Boolean(syncTransportChip) ||
     Boolean(updateChip);
+  const hasSyncStatus = Boolean(syncStatusChip) || Boolean(syncTransportChip);
 
   return (
-    <header className="orbital-command-bar" style={{ "--orbital-command-actions": surfaceMode === "map" ? 8 : 4 } as CSSProperties}>
-      <div className="orbital-command-brand-panel">
-        <span className="orbital-command-brand-mark" aria-hidden="true">
-          <span />
-        </span>
-        <div className="orbital-command-title">
-          <h1 className="orbital-command-brand">{labels.title}</h1>
-          <p className="orbital-command-subtitle">{labels.subtitle}</p>
+    <header className="orbital-command-bar">
+      <div className="orbital-command-left">
+        <div className="orbital-command-brand-panel">
+          <span className="orbital-command-brand-mark" aria-hidden="true">
+            <span />
+          </span>
+          <div className="orbital-command-title">
+            <h1 className="orbital-command-brand">{labels.title}</h1>
+            <p className="orbital-command-subtitle">{labels.subtitle}</p>
+          </div>
+        </div>
+
+        <div className="orbital-command-vault">
+          <LocalVaultSwitcher
+            label={labels.localVault}
+            activeLabel={activeVaultLabel}
+            items={localVaultOptions}
+            activeVaultId={activeLocalVaultId}
+            onSelect={onSelectLocalVault}
+            onCreate={onCreateLocalVault}
+          />
         </div>
       </div>
 
-      <div className="orbital-command-vault">
-        <LocalVaultSwitcher
-          label={labels.localVault}
-          activeLabel={activeVaultLabel}
-          items={localVaultOptions}
-          activeVaultId={activeLocalVaultId}
-          onSelect={onSelectLocalVault}
-          onCreate={onCreateLocalVault}
-        />
+      <div className="orbital-command-center">
+        {plannerAvailable ? (
+          <div className="orbital-surface-switch" role="tablist" aria-label={labels.title}>
+            <button
+              type="button"
+              className={surfaceMode === "map" ? "is-active" : ""}
+              onClick={() => onSurfaceModeChange("map")}
+              aria-selected={surfaceMode === "map"}
+              role="tab"
+            >
+              <CommandIcon kind="map" />
+              <span>{labels.mapMode}</span>
+            </button>
+            <button
+              type="button"
+              className={surfaceMode === "planner" ? "is-active" : ""}
+              onClick={() => onSurfaceModeChange("planner")}
+              aria-selected={surfaceMode === "planner"}
+              role="tab"
+            >
+              <CommandIcon kind="planner" />
+              <span>{labels.plannerMode}</span>
+            </button>
+          </div>
+        ) : null}
       </div>
 
-      {hasStatus ? (
-        <div className="orbital-command-status" aria-label={labels.title}>
-          {autoFocusEnabled ? <StatusChip icon="autofocus" text={labels.autoFocus} tone="accent" className="is-state-chip" /> : null}
-          {sceneFocusActive ? <StatusChip icon="focus" text={labels.focusMode} tone="accent" className="is-state-chip" /> : null}
-          {syncStatusChip ? (
-            <StatusChip
-              icon="sync"
-              text={syncStatusChip.text}
-              compactText={syncStatusChip.compactText}
-              title={syncStatusChip.title}
-              tone={syncStatusChip.tone}
-              className="is-sync-chip"
-            />
-          ) : null}
-          {syncTransportChip ? (
-            <StatusChip
-              icon="sync"
-              text={syncTransportChip.text}
-              title={syncTransportChip.title}
-              tone={syncTransportChip.tone}
-              className="is-transport-chip"
-            />
-          ) : null}
-          {updateChip && hasSettings ? (
-            <StatusChip
-              icon="update"
-              text={updateChip.text}
-              title={updateChip.title}
-              tone="warning"
-              className="is-update-chip"
-              asButton
-              onClick={onOpenSettings}
-            />
-          ) : null}
-        </div>
-      ) : null}
-
-      {plannerAvailable ? (
-        <div className="orbital-surface-switch" role="tablist" aria-label={labels.title}>
-          <button
-            type="button"
-            className={surfaceMode === "map" ? "is-active" : ""}
-            onClick={() => onSurfaceModeChange("map")}
-            aria-selected={surfaceMode === "map"}
-            role="tab"
-          >
-            <CommandIcon kind="map" />
-            <span>{labels.mapMode}</span>
-          </button>
-          <button
-            type="button"
-            className={surfaceMode === "planner" ? "is-active" : ""}
-            onClick={() => onSurfaceModeChange("planner")}
-            aria-selected={surfaceMode === "planner"}
-            role="tab"
-          >
-            <CommandIcon kind="planner" />
-            <span>{labels.plannerMode}</span>
-          </button>
-        </div>
-      ) : null}
-
-      <div className="orbital-command-actions" aria-label={labels.title}>
-        {surfaceMode === "map" ? (
-          <div className="orbital-command-group" aria-label={labels.mapMode}>
-            <CommandIconButton icon={motionIcon} label={motionLabel} onClick={onToggleMotion} active={isOrbitalMotionEnabled && !isPaused} />
-            {temporalSignalsEnabled ? (
-              <CommandIconButton
-                icon="plan"
-                label={temporalLabel || temporalLayerLabel}
-                onClick={onToggleTemporalLayer}
-                active={temporalLayerVisible}
+      <div className="orbital-command-right">
+        {hasAmbientStatus ? (
+          <div className="orbital-command-status" aria-label={labels.title}>
+            {autoFocusEnabled ? <StatusChip icon="autofocus" text={labels.autoFocus} tone="accent" className="is-state-chip" /> : null}
+            {sceneFocusActive ? <StatusChip icon="focus" text={labels.focusMode} tone="accent" className="is-state-chip" /> : null}
+            {updateChip && hasSettings ? (
+              <StatusChip
+                icon="update"
+                text={updateChip.text}
+                title={updateChip.title}
+                tone="warning"
+                className="is-update-chip"
+                asButton
+                onClick={onOpenSettings}
               />
             ) : null}
-            <CommandIconButton icon="zoom-out" label={labels.zoomOut} onClick={onZoomOut} />
-            <CommandIconButton icon="zoom-in" label={labels.zoomIn} onClick={onZoomIn} />
-            <CommandIconButton icon="center" label={labels.centerSelection} onClick={onCenterSelection} />
-            <CommandIconButton icon="reset" label={labels.resetView} onClick={onResetView} />
           </div>
         ) : null}
 
-        {(hasTrash || hasSettings) && (
-          <div className="orbital-command-group" aria-label={labels.settings}>
-            {hasTrash ? <CommandIconButton icon="trash" label={labels.trash} onClick={onOpenTrash} danger /> : null}
-            {hasSettings ? <CommandIconButton icon="settings" label={labels.settings} onClick={onOpenSettings} /> : null}
+        {hasSyncStatus ? (
+          <div className="orbital-command-sync-cluster" aria-label={labels.title}>
+            <span
+              className={`orbital-command-transport-slot ${syncTransportChip ? "has-chip" : ""}`}
+              aria-hidden={!syncTransportChip}
+            >
+              {syncTransportChip ? (
+                <StatusChip
+                  icon="cloud"
+                  text={syncTransportChip.text}
+                  title={syncTransportChip.title}
+                  tone={syncTransportChip.tone}
+                  className="is-transport-chip"
+                />
+              ) : null}
+            </span>
+            {syncStatusChip ? (
+              <StatusChip
+                icon="sync-time"
+                text={syncStatusChip.text}
+                compactText={syncStatusChip.compactText}
+                title={syncStatusChip.title}
+                tone={syncStatusChip.tone}
+                className="is-sync-chip"
+              />
+            ) : null}
           </div>
-        )}
-
-        {showClose ? (
-          <CommandIconButton icon="close" label={labels.close} onClick={onClose} danger />
         ) : null}
+
+        {webAccessChip ? <AccountStatusButton status={webAccessChip} onOpen={onOpenWebAccess} /> : null}
+
+        <div className="orbital-command-actions" aria-label={labels.title}>
+          {(hasTrash || hasSettings) && (
+            <div className="orbital-command-group" aria-label={labels.settings}>
+              {hasTrash ? <CommandIconButton icon="trash" label={labels.trash} onClick={onOpenTrash} danger /> : null}
+              {hasSettings ? <CommandIconButton icon="settings" label={labels.settings} onClick={onOpenSettings} /> : null}
+            </div>
+          )}
+
+          {showClose ? (
+            <CommandIconButton icon="close" label={labels.close} onClick={onClose} danger />
+          ) : null}
+        </div>
       </div>
     </header>
   );

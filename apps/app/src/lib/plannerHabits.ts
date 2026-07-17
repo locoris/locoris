@@ -1,6 +1,6 @@
 import { rrulestr } from "rrule";
 
-import type { AppLanguage, Habit, HabitLog, Project } from "../types";
+import type { Habit, HabitLog, Project } from "../types";
 import { getEndOfLocalDay, getStartOfLocalDay } from "./planner";
 import { buildPlannerRRule, normalizeRecurrenceRule } from "./plannerRecurrence";
 
@@ -100,27 +100,6 @@ export function getPlannerHabitIntervalDays(rule: string | null | undefined) {
   const normalized = normalizeRecurrenceRule(rule) ?? "";
   const interval = Number(normalized.match(/INTERVAL=(\d+)/)?.[1] ?? "2");
   return Number.isFinite(interval) ? Math.max(2, Math.min(365, Math.round(interval))) : 2;
-}
-
-export function getPlannerHabitCadenceLabel(rule: string | null | undefined, language: AppLanguage) {
-  const preset = getPlannerHabitCadencePreset(rule);
-  const interval = getPlannerHabitIntervalDays(rule);
-
-  if (language === "ru") {
-    return {
-      daily: "Каждый день",
-      weekdays: "По будням",
-      weekly: "Раз в неделю",
-      customDaily: `Каждые ${interval} дн.`
-    }[preset];
-  }
-
-  return {
-    daily: "Daily",
-    weekdays: "Weekdays",
-    weekly: "Weekly",
-    customDaily: `Every ${interval} days`
-  }[preset];
 }
 
 function getDayRange(dayAt: number) {

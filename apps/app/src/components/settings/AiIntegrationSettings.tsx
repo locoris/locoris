@@ -21,6 +21,10 @@ import {
   type GeminiEditorApplyMode,
   type GeminiEditorFormat
 } from "../../lib/aiIntegration";
+import { useAndroidBackHandler } from "../../lib/useAndroidBackHandler";
+import useAutoDismissNotice from "../../lib/useAutoDismissNotice";
+import SettingsSubpageLayer from "../SettingsSubpageLayer";
+import TransientNotice from "../TransientNotice";
 import "./AiIntegrationSettings.css";
 
 type AiFeedbackState = {
@@ -35,6 +39,7 @@ type AiModelCheckFeedbackState = {
 } | null;
 
 type AiBusyState = "saving" | "testing" | "checkingModel" | "disconnecting" | null;
+type AiModelPickerTab = "presets" | "advanced";
 
 interface AiIntegrationSettingsProps {
   onConnectionChange?: (connected: boolean) => void;
@@ -46,14 +51,6 @@ function SparkIcon() {
       <path d="M12 3.2l1.9 5.1 5.1 1.9-5.1 1.9L12 17.2l-1.9-5.1L5 10.2l5.1-1.9L12 3.2Z" />
       <path d="M18.4 14.6l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8.8-2.1Z" />
       <path d="M5.7 15.5l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6.6-1.7Z" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6.8 6.8l10.4 10.4M17.2 6.8 6.8 17.2" />
     </svg>
   );
 }
@@ -151,6 +148,9 @@ export default function AiIntegrationSettings({
   const [aiKeyLoaded, setAiKeyLoaded] = useState(false);
   const [aiInstructionsOpen, setAiInstructionsOpen] = useState(false);
   const [aiModelPickerOpen, setAiModelPickerOpen] = useState(false);
+  const [aiModelPickerTab, setAiModelPickerTab] = useState<AiModelPickerTab>("presets");
+
+  useAutoDismissNotice(aiFeedback, setAiFeedback);
 
   const hasGeminiKey = aiKeyDraft.trim().length > 0;
   const selectedAiModelOption =
@@ -169,6 +169,20 @@ export default function AiIntegrationSettings({
     ? t("settings.aiConnected")
     : t("settings.aiNotConnected");
   const aiLayerOpen = aiInstructionsOpen || aiModelPickerOpen;
+
+  useAndroidBackHandler(aiLayerOpen, () => {
+    if (aiModelPickerOpen) {
+      setAiModelPickerOpen(false);
+      return;
+    }
+
+    setAiInstructionsOpen(false);
+  });
+
+  const openAiModelPicker = () => {
+    setAiModelPickerTab(selectedAiModelOption ? "presets" : "advanced");
+    setAiModelPickerOpen(true);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -597,9 +611,14 @@ export default function AiIntegrationSettings({
         </div>
 
         {aiFeedback ? (
-          <p className={`ai-settings-feedback is-${aiFeedback.tone}`}>
+          <TransientNotice
+            className="ai-settings-feedback"
+            tone={aiFeedback.tone}
+            dismissLabel={t("orbit.closeModal")}
+            onDismiss={() => setAiFeedback(null)}
+          >
             {aiFeedback.text}
-          </p>
+          </TransientNotice>
         ) : null}
       </section>
 
@@ -616,7 +635,7 @@ export default function AiIntegrationSettings({
             <button
               type="button"
               className="ai-settings-model-card"
-              onClick={() => setAiModelPickerOpen(true)}
+              onClick={openAiModelPicker}
               aria-haspopup="dialog"
             >
               <span className="ai-settings-model-icon" aria-hidden="true">
@@ -713,39 +732,39 @@ export default function AiIntegrationSettings({
       </div>
 
       {aiModelPickerOpen ? (
-        <div
-          className="ai-settings-layer"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="ai-settings-model-picker-title"
+        <SettingsSubpageLayer
+          className="ai-settings-model-layer"
+          contentClassName="ai-settings-model-subpage-content"
+          kicker={t("settings.aiTitle")}
+          title={t("settings.aiModelPickerTitle")}
+          closeLabel={t("orbit.closeModal")}
+          onClose={() => setAiModelPickerOpen(false)}
         >
-          <button
-            type="button"
-            className="ai-settings-layer-dim"
-            aria-label={t("orbit.closeModal")}
-            onClick={() => setAiModelPickerOpen(false)}
-          />
-          <section className="ai-settings-modal ai-settings-model-modal">
-            <div className="ai-settings-modal-head">
-              <div>
-                <p className="panel-kicker settings-panel-block-kicker">
-                  {t("settings.aiModelPresetGroup")}
-                </p>
-                <h3 id="ai-settings-model-picker-title">{t("settings.aiModelPickerTitle")}</h3>
-                <p>{t("settings.aiModelPickerCaption")}</p>
-              </div>
-              <button
-                type="button"
-                className="ai-settings-icon-button"
-                onClick={() => setAiModelPickerOpen(false)}
-                aria-label={t("orbit.closeModal")}
-                title={t("orbit.closeModal")}
-              >
-                <CloseIcon />
-              </button>
-            </div>
+          <nav className="ai-settings-model-tabs" role="tablist" aria-label={t("settings.aiModelPickerTitle")}>
+            <button
+              type="button"
+              role="tab"
+              className={aiModelPickerTab === "presets" ? "is-active" : ""}
+              aria-selected={aiModelPickerTab === "presets"}
+              onClick={() => setAiModelPickerTab("presets")}
+            >
+              <ModelIcon />
+              <span>{t("settings.aiModelPresetTab")}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              className={aiModelPickerTab === "advanced" ? "is-active" : ""}
+              aria-selected={aiModelPickerTab === "advanced"}
+              onClick={() => setAiModelPickerTab("advanced")}
+            >
+              <SparkIcon />
+              <span>{t("settings.aiModelAdvancedTab")}</span>
+            </button>
+          </nav>
 
-            <div className="ai-settings-model-modal-body">
+          {aiModelPickerTab === "presets" ? (
+            <div key="presets" className="ai-settings-model-tab-panel" role="tabpanel">
               <div
                 className="ai-settings-model-list"
                 role="radiogroup"
@@ -778,8 +797,10 @@ export default function AiIntegrationSettings({
                   );
                 })}
               </div>
-
-              <aside className="ai-settings-advanced-model">
+            </div>
+          ) : (
+            <div key="advanced" className="ai-settings-model-tab-panel" role="tabpanel">
+              <section className="ai-settings-advanced-model is-subpage-panel">
                 <div className="ai-settings-advanced-head">
                   <span>{t("settings.aiModelAdvancedTitle")}</span>
                   <p>{t("settings.aiModelAdvancedDescription")}</p>
@@ -831,91 +852,67 @@ export default function AiIntegrationSettings({
                 <p className="ai-settings-model-note">
                   {t("settings.aiModelLimitsDisclaimer")}
                 </p>
-              </aside>
+              </section>
             </div>
-          </section>
-        </div>
+          )}
+        </SettingsSubpageLayer>
       ) : null}
 
       {aiInstructionsOpen ? (
-        <div
-          className="ai-settings-layer"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="ai-settings-guide-title"
+        <SettingsSubpageLayer
+          className="ai-settings-guide-layer"
+          contentClassName="ai-settings-guide-subpage-content"
+          kicker={t("settings.aiTitle")}
+          title={t("settings.aiInstructionsTitle")}
+          closeLabel={t("orbit.closeModal")}
+          onClose={() => setAiInstructionsOpen(false)}
         >
-          <button
-            type="button"
-            className="ai-settings-layer-dim"
-            aria-label={t("orbit.closeModal")}
-            onClick={() => setAiInstructionsOpen(false)}
-          />
-          <section className="ai-settings-modal ai-settings-guide-modal">
-            <div className="ai-settings-modal-head">
-              <div>
-                <p className="panel-kicker settings-panel-block-kicker">
-                  {t("settings.aiInstructionsTitle")}
-                </p>
-                <h3 id="ai-settings-guide-title">{t("settings.aiGuideTitle")}</h3>
-                <p>{t("settings.aiPanelCaption")}</p>
-              </div>
-              <button
-                type="button"
-                className="ai-settings-icon-button"
-                onClick={() => setAiInstructionsOpen(false)}
-                aria-label={t("orbit.closeModal")}
-                title={t("orbit.closeModal")}
-              >
-                <CloseIcon />
-              </button>
+          <div className="ai-settings-guide-body">
+            <ol className="ai-settings-steps">
+              {[
+                "settings.aiInstructionStep1",
+                "settings.aiInstructionStep2",
+                "settings.aiInstructionStep3",
+                "settings.aiInstructionStep4",
+                "settings.aiInstructionStep5"
+              ].map((stepKey, index) => (
+                <li key={stepKey}>
+                  <span aria-hidden="true">{index + 1}</span>
+                  <p>{t(stepKey)}</p>
+                </li>
+              ))}
+            </ol>
+            <div className="ai-settings-guide-card-grid">
+              <article className="ai-settings-guide-card">
+                <span className="ai-settings-summary-icon" aria-hidden="true">
+                  <ShieldIcon />
+                </span>
+                <div>
+                  <h4>{t("settings.aiPrivacyTitle")}</h4>
+                  <p>{t("settings.aiPrivacyNote")}</p>
+                </div>
+              </article>
+              <article className="ai-settings-guide-card">
+                <span className="ai-settings-summary-icon" aria-hidden="true">
+                  <FlowIcon />
+                </span>
+                <div>
+                  <h4>{t("settings.aiFlowTitle")}</h4>
+                  <p>{t("settings.aiFlowDescription")}</p>
+                </div>
+              </article>
             </div>
-            <div className="ai-settings-guide-body">
-              <ol className="ai-settings-steps">
-                {[
-                  "settings.aiInstructionStep1",
-                  "settings.aiInstructionStep2",
-                  "settings.aiInstructionStep3",
-                  "settings.aiInstructionStep4",
-                  "settings.aiInstructionStep5"
-                ].map((stepKey, index) => (
-                  <li key={stepKey}>
-                    <span aria-hidden="true">{index + 1}</span>
-                    <p>{t(stepKey)}</p>
-                  </li>
-                ))}
-              </ol>
-              <div className="ai-settings-guide-card-grid">
-                <article className="ai-settings-guide-card">
-                  <span className="ai-settings-summary-icon" aria-hidden="true">
-                    <ShieldIcon />
-                  </span>
-                  <div>
-                    <h4>{t("settings.aiPrivacyTitle")}</h4>
-                    <p>{t("settings.aiPrivacyNote")}</p>
-                  </div>
-                </article>
-                <article className="ai-settings-guide-card">
-                  <span className="ai-settings-summary-icon" aria-hidden="true">
-                    <FlowIcon />
-                  </span>
-                  <div>
-                    <h4>{t("settings.aiFlowTitle")}</h4>
-                    <p>{t("settings.aiFlowDescription")}</p>
-                  </div>
-                </article>
-              </div>
-              <a
-                className="ai-settings-external-action"
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <ExternalIcon />
-                <span>{t("settings.aiOpenGoogleAiStudio")}</span>
-              </a>
-            </div>
-          </section>
-        </div>
+            <a
+              className="ai-settings-external-action"
+              href="https://aistudio.google.com/app/apikey"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalIcon />
+              <span>{t("settings.aiOpenGoogleAiStudio")}</span>
+            </a>
+          </div>
+        </SettingsSubpageLayer>
       ) : null}
     </div>
   );

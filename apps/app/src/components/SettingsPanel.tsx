@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -12,6 +12,11 @@ import type {
   OrbitalTemporalSignalsMode
 } from "../lib/interfacePreferences";
 import { readGeminiApiKey } from "../lib/aiIntegration";
+import type {
+  ClientLocalePreferences,
+  LocaleRuntime
+} from "../localization";
+import { formatDateTimeValue, getNativeLocaleName } from "../localization";
 import type { LocalVaultKind, LocalVaultProfile } from "../lib/localVaults";
 import {
   checkForAppUpdate,
@@ -25,26 +30,48 @@ import {
   supportsAppUpdates
 } from "../lib/appUpdates";
 import type {
-  AppLanguage,
   AppSettings,
+  HostedAccountVault,
   PlannerCalendarDefaultView,
   PlannerDefaultSurface,
-  PlannerWeekStartsOn,
   RemoteVaultImportResult,
   SyncConnection,
   SyncVaultBinding,
   VaultEncryptionSummary
 } from "../types";
+import useAutoDismissNotice from "../lib/useAutoDismissNotice";
 import BackupSettingsPanel from "./BackupSettingsPanel";
+import MobileGlassHeader from "./MobileGlassHeader";
+import SettingsSurface from "./SettingsSurface";
 import SyncSettingsPanel from "./SyncSettingsPanel";
 import AccountCloudPanel from "./accountCloud/AccountCloudPanel";
 import AiIntegrationSettings from "./settings/AiIntegrationSettings";
+import LocalePreferencesSettings, {
+  LocalePreferencesDestination
+} from "./settings/LocalePreferencesSettings";
 import "./SettingsPanel.css";
 
 type SyncFeedbackState = {
   tone: "success" | "error";
   text: string;
 } | null;
+
+type SettingsView =
+  | "root"
+  | "accountCloud"
+  | "sync"
+  | "interface"
+  | "locale"
+  | "planner"
+  | "ai"
+  | "backup";
+
+type SettingsMotionDirection = "forward" | "back";
+
+export type SettingsOpenViewRequest = {
+  view: SettingsView;
+  requestId: number;
+};
 
 type PlannerDataCounts = {
   tasks: number;
@@ -56,6 +83,8 @@ type PlannerDataCounts = {
 
 interface SettingsPanelProps {
   settings: AppSettings;
+  localePreferences: ClientLocalePreferences;
+  localeRuntime: LocaleRuntime;
   accentThemeId: AppAccentThemeId;
   orbitalAnimationMode: OrbitalAnimationMode;
   orbitalTemporalSignalsMode: OrbitalTemporalSignalsMode;
@@ -67,6 +96,7 @@ interface SettingsPanelProps {
   syncBindings: SyncVaultBinding[];
   vaultEncryptionById: Record<string, VaultEncryptionSummary>;
   syncFeedback?: SyncFeedbackState;
+  openViewRequest?: SettingsOpenViewRequest | null;
   plannerDataCounts?: PlannerDataCounts;
   onAccentThemeChange: (themeId: AppAccentThemeId) => void;
   onOrbitalAnimationModeChange: (mode: OrbitalAnimationMode) => void;
@@ -75,13 +105,14 @@ interface SettingsPanelProps {
     patch: Partial<
       Pick<
         AppSettings,
-        "plannerDefaultSurface" | "plannerWeekStartsOn" | "plannerDefaultCalendarView"
+        "plannerDefaultSurface" | "plannerDefaultCalendarView"
       >
     >
   ) => void | Promise<void>;
   onClearPlannerData?: () => boolean | Promise<boolean>;
-  onLanguageChange: (language: AppLanguage) => void;
+  onLocalePreferencesChange: (patch: Partial<ClientLocalePreferences>) => void | Promise<void>;
   onSelectLocalVault: (localVaultId: string) => void;
+  onActivateLocalVault: (localVaultId: string) => void;
   onCreateLocalVault: (input: {
     name: string;
     vaultKind: LocalVaultKind;
@@ -107,14 +138,23 @@ interface SettingsPanelProps {
     userName?: string;
     userEmail?: string;
   }) => SyncConnection | void | Promise<SyncConnection | void>;
-  onDeleteConnection: (connectionId: string) => void | Promise<void>;
+  onDeleteConnection: (
+    connectionId: string,
+    options?: { skipConfirmation?: boolean }
+  ) => void | Promise<void>;
+  onRevokeGoogleDriveConnection: (connectionId: string) => void | Promise<void>;
   onUpdateConnection: (
     connectionId: string,
-    patch: Partial<Omit<SyncConnection, "id" | "provider" | "createdAt">> & {
+    patch: Partial<Omit<SyncConnection, "id" | "provider" | "createdAt" | "refreshToken">> & {
       refreshToken?: string | null;
     }
   ) => void | Promise<void>;
   onRefreshHostedConnectionCredentials: (connection: SyncConnection) => void | Promise<void>;
+  onRefreshGoogleDriveConnectionCredentials: (connection: SyncConnection) => void | Promise<void>;
+  onRestoreHostedVaultBindings: (
+    connection: SyncConnection,
+    remoteVaults: HostedAccountVault[]
+  ) => Promise<{ restored: number; failed: number }>;
   onBindVault: (input: {
     localVaultId: string;
     connectionId: string;
@@ -132,6 +172,11 @@ interface SettingsPanelProps {
   onDeleteRemoteVault: (input: {
     connectionId: string;
     remoteVaultId: string;
+  }) => Promise<void>;
+  onRenameRemoteVault: (input: {
+    connectionId: string;
+    remoteVaultId: string;
+    name: string;
   }) => Promise<void>;
   onClearBinding: (localVaultId: string) => void | Promise<void>;
   onRunVaultSync: (localVaultId: string) => void | Promise<void>;
@@ -154,14 +199,6 @@ interface SettingsPanelProps {
   }) => void | Promise<void>;
   onLockVaultEncryption: (localVaultId: string) => void | Promise<void>;
   onClose: () => void;
-}
-
-function LanguageGlyph() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M3.2 4.5h6.2M6.3 4.5c0 5-1.9 8.4-3.6 10.6M6.3 4.5c1.2 2.4 2.8 4.8 4.9 6.8M11.8 6.8h5M14.3 6.8v8.4M11.6 12.4h5.4" />
-    </svg>
-  );
 }
 
 function AccountCloudGlyph() {
@@ -229,14 +266,18 @@ function BackupGlyph() {
 
 function BackGlyph() {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M12.6 4.8 7.4 10l5.2 5.2" className="settings-row-icon-accent" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="m15 6-6 6 6 6" className="settings-row-icon-accent" />
     </svg>
   );
 }
 
 function CloseGlyph() {
-  return <span aria-hidden="true">×</span>;
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="m7 7 10 10M17 7 7 17" className="settings-row-icon-accent" />
+    </svg>
+  );
 }
 
 function ChevronGlyph({ expanded = false }: { expanded?: boolean }) {
@@ -249,28 +290,6 @@ function ChevronGlyph({ expanded = false }: { expanded?: boolean }) {
     </svg>
   );
 }
-
-type SettingsView = "root" | "accountCloud" | "sync" | "interface" | "planner" | "ai" | "backup";
-
-const LANGUAGE_OPTIONS: Array<{
-  value: AppLanguage;
-  code: string;
-  labelKey: "settings.languageEnglish" | "settings.languageRussian";
-  nativeLabel: string;
-}> = [
-  {
-    value: "en",
-    code: "EN",
-    labelKey: "settings.languageEnglish",
-    nativeLabel: "English"
-  },
-  {
-    value: "ru",
-    code: "RU",
-    labelKey: "settings.languageRussian",
-    nativeLabel: "Русский"
-  }
-];
 
 const PLANNER_DEFAULT_SURFACE_OPTIONS: Array<{
   value: PlannerDefaultSurface;
@@ -289,26 +308,6 @@ const PLANNER_DEFAULT_SURFACE_OPTIONS: Array<{
     titleKey: "settings.plannerOpenCalendarTitle",
     chipKey: "settings.plannerOpenCalendarChip",
     descriptionKey: "settings.plannerOpenCalendarDescription"
-  }
-];
-
-const PLANNER_WEEK_START_OPTIONS: Array<{
-  value: PlannerWeekStartsOn;
-  titleKey: "settings.plannerWeekMondayTitle" | "settings.plannerWeekSundayTitle";
-  chipKey: "settings.plannerWeekMondayChip" | "settings.plannerWeekSundayChip";
-  descriptionKey: "settings.plannerWeekMondayDescription" | "settings.plannerWeekSundayDescription";
-}> = [
-  {
-    value: "monday",
-    titleKey: "settings.plannerWeekMondayTitle",
-    chipKey: "settings.plannerWeekMondayChip",
-    descriptionKey: "settings.plannerWeekMondayDescription"
-  },
-  {
-    value: "sunday",
-    titleKey: "settings.plannerWeekSundayTitle",
-    chipKey: "settings.plannerWeekSundayChip",
-    descriptionKey: "settings.plannerWeekSundayDescription"
   }
 ];
 
@@ -360,6 +359,8 @@ function UpdateGlyph() {
 
 export default function SettingsPanel({
   settings,
+  localePreferences,
+  localeRuntime,
   accentThemeId,
   orbitalAnimationMode,
   orbitalTemporalSignalsMode,
@@ -371,6 +372,7 @@ export default function SettingsPanel({
   syncBindings,
   vaultEncryptionById,
   syncFeedback = null,
+  openViewRequest = null,
   plannerDataCounts = {
     tasks: 0,
     habits: 0,
@@ -383,18 +385,23 @@ export default function SettingsPanel({
   onOrbitalTemporalSignalsModeChange,
   onPlannerSettingsChange,
   onClearPlannerData,
-  onLanguageChange,
+  onLocalePreferencesChange,
   onSelectLocalVault,
+  onActivateLocalVault,
   onCreateLocalVault,
   onRenameLocalVault,
   onDeleteLocalVault,
   onCreateConnection,
   onDeleteConnection,
+  onRevokeGoogleDriveConnection,
   onUpdateConnection,
   onRefreshHostedConnectionCredentials,
+  onRefreshGoogleDriveConnectionCredentials,
+  onRestoreHostedVaultBindings,
   onBindVault,
   onImportRemoteVault,
   onDeleteRemoteVault,
+  onRenameRemoteVault,
   onClearBinding,
   onRunVaultSync,
   onEnableVaultEncryption,
@@ -405,39 +412,35 @@ export default function SettingsPanel({
   onClose
 }: SettingsPanelProps) {
   const { t } = useTranslation();
-  const [view, setView] = useState<SettingsView>("root");
+  const [view, setView] = useState<SettingsView>(() => openViewRequest?.view ?? "root");
+  const [motionDirection, setMotionDirection] = useState<SettingsMotionDirection>("forward");
   const [appUpdateState, setAppUpdateState] = useState(() => readAppUpdateSnapshot());
   const [aiConnected, setAiConnected] = useState(false);
-  const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
   const [plannerClearBusy, setPlannerClearBusy] = useState(false);
   const [plannerClearFeedback, setPlannerClearFeedback] = useState<SyncFeedbackState>(null);
-  const languagePickerRef = useRef<HTMLDivElement | null>(null);
+  useAutoDismissNotice(plannerClearFeedback, setPlannerClearFeedback);
   const appUpdatesEnabled = supportsAppUpdates();
 
   useEffect(() => {
-    if (!languagePickerOpen) {
+    if (!openViewRequest) {
       return;
     }
 
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!languagePickerRef.current?.contains(event.target as Node)) {
-        setLanguagePickerOpen(false);
-      }
-    };
+    setMotionDirection("forward");
+    setView(openViewRequest.view);
+  }, [openViewRequest?.requestId, openViewRequest?.view]);
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setLanguagePickerOpen(false);
-      }
-    };
+  const openSettingsView = (nextView: SettingsView) => {
+    setMotionDirection("forward");
+    setView(nextView);
+  };
 
-    window.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [languagePickerOpen]);
+  const returnToSettingsView = (nextView: SettingsView) => {
+    setMotionDirection("back");
+    setView(nextView);
+  };
+
+  const settingsMotionClass = `is-motion-${motionDirection}`;
 
   useEffect(() => {
     if (!appUpdatesEnabled) {
@@ -528,13 +531,13 @@ export default function SettingsPanel({
 
   const appUpdateCurrentVersion = appUpdateState.currentVersion;
   const appUpdatePublishedLabel = appUpdateState.releaseDate
-    ? new Intl.DateTimeFormat(settings.language === "ru" ? "ru-RU" : "en-US", {
+    ? formatDateTimeValue(appUpdateState.releaseDate, localeRuntime, {
         year: "numeric",
         month: "short",
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit"
-      }).format(new Date(appUpdateState.releaseDate))
+      })
     : null;
 
   const appUpdateIssueText =
@@ -624,10 +627,7 @@ export default function SettingsPanel({
   const shouldShowOpenReleaseAction =
     appUpdateState.canOpenReleasePage &&
     (appUpdateState.phase === "available" || appUpdateState.phase === "failed");
-  const selectedLanguageOption =
-    LANGUAGE_OPTIONS.find((option) => option.value === settings.language) ?? LANGUAGE_OPTIONS[0];
   const plannerDefaultSurface = settings.plannerDefaultSurface ?? "planner";
-  const plannerWeekStartsOn = settings.plannerWeekStartsOn ?? "monday";
   const plannerDefaultCalendarView = settings.plannerDefaultCalendarView ?? "week";
   const plannerDefaultSurfaceOption =
     PLANNER_DEFAULT_SURFACE_OPTIONS.find((option) => option.value === plannerDefaultSurface) ??
@@ -866,46 +866,25 @@ export default function SettingsPanel({
 
   const renderSettingsHeader = (
     title: string,
-    caption: string,
-    options: { back?: boolean } = {}
-  ) => (
-    <header className={`settings-panel-header ${options.back ? "has-back-action" : "is-root-action"}`}>
-      {options.back ? (
-        <button
-          type="button"
-          className="settings-panel-nav-button settings-panel-back-button"
-          onClick={() => setView("root")}
-          aria-label={t("settings.back")}
-          title={t("settings.back")}
-        >
-          <span className="settings-row-action-icon" aria-hidden="true">
-            <BackGlyph />
-          </span>
-        </button>
-      ) : (
-        <span className="settings-panel-header-pad" aria-hidden="true" />
-      )}
+    _caption: string,
+    options: { back?: boolean; backTo?: SettingsView } = {}
+  ) => {
+    const backTarget = options.backTo ?? "root";
 
-      <div className="settings-panel-heading">
-        <h2 className="panel-title settings-panel-title">{title}</h2>
-        <p className="settings-panel-caption">{caption}</p>
-      </div>
-
-      <div className="settings-panel-header-actions">
-        <button
-          type="button"
-          className="settings-panel-nav-button settings-panel-close-button"
-          onClick={onClose}
-          aria-label={t("orbit.closeModal")}
-          title={t("orbit.closeModal")}
-        >
-          <span className="settings-panel-close-icon" aria-hidden="true">
-            <CloseGlyph />
-          </span>
-        </button>
-      </div>
-    </header>
-  );
+    return (
+      <MobileGlassHeader
+        className={`settings-panel-header ${options.back ? "has-back-action" : "is-root-action"}`}
+        kicker={options.back ? t("settings.title") : undefined}
+        title={title}
+        backLabel={t("settings.back")}
+        closeLabel={t("orbit.closeModal")}
+        backIcon={<BackGlyph />}
+        closeIcon={<CloseGlyph />}
+        onBack={options.back ? () => returnToSettingsView(backTarget) : undefined}
+        onClose={onClose}
+      />
+    );
+  };
 
   if (view === "accountCloud") {
     return (
@@ -919,15 +898,21 @@ export default function SettingsPanel({
         syncBindings={syncBindings}
         vaultEncryptionById={vaultEncryptionById}
         syncFeedback={syncFeedback}
-        onBack={() => setView("root")}
+        onBack={() => returnToSettingsView("root")}
         onClose={onClose}
         onSelectLocalVault={onSelectLocalVault}
+        onActivateLocalVault={onActivateLocalVault}
         onCreateConnection={onCreateConnection}
         onDeleteConnection={onDeleteConnection}
         onUpdateConnection={onUpdateConnection}
         onRefreshHostedConnectionCredentials={onRefreshHostedConnectionCredentials}
+        onRestoreHostedVaultBindings={onRestoreHostedVaultBindings}
         onBindVault={onBindVault}
         onImportRemoteVault={onImportRemoteVault}
+        onRenameLocalVault={onRenameLocalVault}
+        onDeleteLocalVault={onDeleteLocalVault}
+        onDeleteRemoteVault={onDeleteRemoteVault}
+        onRenameRemoteVault={onRenameRemoteVault}
         onClearBinding={onClearBinding}
         onRunVaultSync={onRunVaultSync}
       />
@@ -946,7 +931,7 @@ export default function SettingsPanel({
         syncBindings={syncBindings}
         vaultEncryptionById={vaultEncryptionById}
         syncFeedback={syncFeedback}
-        onBack={() => setView("root")}
+        onBack={() => returnToSettingsView("root")}
         onClose={onClose}
         onSelectLocalVault={onSelectLocalVault}
         onCreateLocalVault={onCreateLocalVault}
@@ -954,8 +939,10 @@ export default function SettingsPanel({
         onDeleteLocalVault={onDeleteLocalVault}
         onCreateConnection={onCreateConnection}
         onDeleteConnection={onDeleteConnection}
+        onRevokeGoogleDriveConnection={onRevokeGoogleDriveConnection}
         onUpdateConnection={onUpdateConnection}
         onRefreshHostedConnectionCredentials={onRefreshHostedConnectionCredentials}
+        onRefreshGoogleDriveConnectionCredentials={onRefreshGoogleDriveConnectionCredentials}
         onBindVault={onBindVault}
         onImportRemoteVault={onImportRemoteVault}
         onDeleteRemoteVault={onDeleteRemoteVault}
@@ -972,7 +959,7 @@ export default function SettingsPanel({
 
   if (view === "planner") {
     return (
-      <section className="settings-panel-shell is-planner-settings">
+      <SettingsSurface className={`is-planner-settings ${settingsMotionClass}`}>
         {renderSettingsHeader(t("settings.plannerTitle"), t("settings.plannerPanelCaption"), {
           back: true
         })}
@@ -1001,14 +988,6 @@ export default function SettingsPanel({
               PLANNER_DEFAULT_SURFACE_OPTIONS,
               plannerDefaultSurface,
               (value) => void onPlannerSettingsChange({ plannerDefaultSurface: value })
-            )}
-
-            {renderPlannerChoiceGroup(
-              t("settings.plannerWeekStartsOnLabel"),
-              t("settings.plannerWeekStartsOnLabel"),
-              PLANNER_WEEK_START_OPTIONS,
-              plannerWeekStartsOn,
-              (value) => void onPlannerSettingsChange({ plannerWeekStartsOn: value })
             )}
 
             {renderPlannerChoiceGroup(
@@ -1066,19 +1045,19 @@ export default function SettingsPanel({
             ) : null}
           </section>
         </div>
-      </section>
+      </SettingsSurface>
     );
   }
 
   if (view === "ai") {
     return (
-      <section className="settings-panel-shell is-ai-settings">
+      <SettingsSurface className={`is-ai-settings ${settingsMotionClass}`}>
         {renderSettingsHeader(t("settings.aiTitle"), t("settings.aiPanelCaption"), {
           back: true
         })}
 
         <AiIntegrationSettings onConnectionChange={setAiConnected} />
-      </section>
+      </SettingsSurface>
     );
   }
 
@@ -1087,7 +1066,7 @@ export default function SettingsPanel({
     const activeVaultName = activeVault?.name || t("app.localVault");
 
     return (
-      <section className="settings-panel-shell is-backup-settings">
+      <SettingsSurface className={`is-backup-settings ${settingsMotionClass}`}>
         {renderSettingsHeader(t("settings.backupTitle"), t("settings.backupCaption"), {
           back: true
         })}
@@ -1096,97 +1075,24 @@ export default function SettingsPanel({
           activeLocalVaultId={activeLocalVaultId}
           vaultName={activeVaultName}
           vaultKind={activeVault?.vaultKind ?? "regular"}
-          language={settings.language}
+          language={localeRuntime.interfaceLocale}
         />
-      </section>
+      </SettingsSurface>
     );
   }
 
   if (view === "interface") {
     return (
-      <section className="settings-panel-shell is-interface-settings">
+      <SettingsSurface className={`is-interface-settings ${settingsMotionClass}`}>
         {renderSettingsHeader(t("settings.interfaceTitle"), t("settings.interfacePanelCaption"), {
           back: true
         })}
 
         <div className="settings-panel-grid">
-          <section
-            className={`settings-panel-block settings-panel-block-primary settings-language-block ${languagePickerOpen ? "is-picker-open" : ""}`}
-          >
-            <div className="settings-panel-block-head">
-              <p className="panel-kicker settings-panel-block-kicker">{t("settings.interfaceLanguageKicker")}</p>
-            </div>
-
-            <div className="settings-row-stack settings-row-stack-single">
-              <div className="settings-row settings-row-static is-language">
-                <span className="settings-row-icon" aria-hidden="true">
-                  <LanguageGlyph />
-                </span>
-                <div className="settings-row-copy">
-                  <strong>{t("settings.language")}</strong>
-                  <span>{t("settings.languageDescription")}</span>
-                </div>
-                <div
-                  className={`settings-language-picker ${languagePickerOpen ? "is-open" : ""}`}
-                  ref={languagePickerRef}
-                >
-                  <button
-                    type="button"
-                    className="settings-language-trigger"
-                    onClick={() => setLanguagePickerOpen((current) => !current)}
-                    aria-haspopup="listbox"
-                    aria-expanded={languagePickerOpen}
-                    aria-controls="settings-language-menu"
-                  >
-                    <span className="settings-language-option-mark" aria-hidden="true">
-                      {selectedLanguageOption.code}
-                    </span>
-                    <span className="settings-language-option-copy">
-                      <strong>{t(selectedLanguageOption.labelKey)}</strong>
-                      <span>{selectedLanguageOption.nativeLabel}</span>
-                    </span>
-                    <span className="settings-row-action-icon settings-language-chevron" aria-hidden="true">
-                      <ChevronGlyph expanded={languagePickerOpen} />
-                    </span>
-                  </button>
-
-                  {languagePickerOpen ? (
-                    <div
-                      id="settings-language-menu"
-                      className="settings-language-menu"
-                      role="listbox"
-                      aria-label={t("settings.language")}
-                    >
-                    {LANGUAGE_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        className={`settings-language-option ${settings.language === option.value ? "is-active" : ""}`}
-                        onClick={() => {
-                          onLanguageChange(option.value);
-                          setLanguagePickerOpen(false);
-                        }}
-                        role="option"
-                        aria-selected={settings.language === option.value}
-                      >
-                        <span className="settings-language-option-mark" aria-hidden="true">
-                          {option.code}
-                        </span>
-                        <span className="settings-language-option-copy">
-                          <strong>{t(option.labelKey)}</strong>
-                          <span>{option.nativeLabel}</span>
-                        </span>
-                        <span className="settings-language-option-check" aria-hidden="true">
-                          {settings.language === option.value ? "✓" : ""}
-                        </span>
-                      </button>
-                    ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </section>
+          <LocalePreferencesDestination
+            runtime={localeRuntime}
+            onOpen={() => openSettingsView("locale")}
+          />
 
           <section className="settings-panel-block settings-panel-block-primary">
             <div className="settings-panel-block-head">
@@ -1220,25 +1126,41 @@ export default function SettingsPanel({
             {renderOrbitalTemporalSignalOptions()}
           </section>
         </div>
-      </section>
+      </SettingsSurface>
+    );
+  }
+
+  if (view === "locale") {
+    return (
+      <SettingsSurface className={`is-locale-settings ${settingsMotionClass}`}>
+        {renderSettingsHeader(
+          t("settings.localePreferencesTitle"),
+          t("settings.localePreferencesDescription"),
+          { back: true, backTo: "interface" }
+        )}
+
+        <div className="settings-panel-grid locale-preferences-settings-grid">
+          <LocalePreferencesSettings
+            preferences={localePreferences}
+            runtime={localeRuntime}
+            onChange={onLocalePreferencesChange}
+          />
+        </div>
+      </SettingsSurface>
     );
   }
 
   return (
-    <section className="settings-panel-shell is-root-settings">
+    <SettingsSurface className="is-root-settings">
       {renderSettingsHeader(t("settings.title"), t("settings.caption"))}
 
       <div className="settings-panel-grid">
         <section className="settings-panel-block settings-panel-block-primary">
-          <div className="settings-panel-block-head">
-            <p className="panel-kicker settings-panel-block-kicker">{t("settings.general")}</p>
-          </div>
-
           <div className="settings-row-stack">
             <button
               type="button"
               className="settings-row settings-row-destination is-account-cloud"
-              onClick={() => setView("accountCloud")}
+              onClick={() => openSettingsView("accountCloud")}
             >
               <span className="settings-row-icon settings-destination-icon" aria-hidden="true">
                 <AccountCloudGlyph />
@@ -1258,7 +1180,7 @@ export default function SettingsPanel({
             <button
               type="button"
               className="settings-row settings-row-destination is-interface"
-              onClick={() => setView("interface")}
+              onClick={() => openSettingsView("interface")}
             >
               <span className="settings-row-icon settings-destination-icon" aria-hidden="true">
                 <AccentGlyph />
@@ -1269,7 +1191,7 @@ export default function SettingsPanel({
               </div>
               <span className="settings-row-side">
                 <span className="settings-row-count">
-                  {t(currentAccentTheme.labelKey)} · {t(selectedLanguageOption.labelKey)}
+                  {t(currentAccentTheme.labelKey)} · {getNativeLocaleName(localeRuntime.interfaceLocale)}
                 </span>
                 <span className="settings-row-action-icon" aria-hidden="true">
                   <ChevronGlyph />
@@ -1280,7 +1202,7 @@ export default function SettingsPanel({
             <button
               type="button"
               className="settings-row settings-row-destination is-planner"
-              onClick={() => setView("planner")}
+              onClick={() => openSettingsView("planner")}
             >
               <span className="settings-row-icon settings-destination-icon" aria-hidden="true">
                 <PlannerGlyph />
@@ -1302,7 +1224,7 @@ export default function SettingsPanel({
             <button
               type="button"
               className="settings-row settings-row-destination is-ai"
-              onClick={() => setView("ai")}
+              onClick={() => openSettingsView("ai")}
             >
               <span className="settings-row-icon settings-destination-icon" aria-hidden="true">
                 <AiGlyph />
@@ -1322,7 +1244,7 @@ export default function SettingsPanel({
             <button
               type="button"
               className="settings-row settings-row-destination is-backup"
-              onClick={() => setView("backup")}
+              onClick={() => openSettingsView("backup")}
             >
               <span className="settings-row-icon settings-destination-icon" aria-hidden="true">
                 <BackupGlyph />
@@ -1342,7 +1264,7 @@ export default function SettingsPanel({
             <button
               type="button"
               className="settings-row settings-row-destination is-sync"
-              onClick={() => setView("sync")}
+              onClick={() => openSettingsView("sync")}
             >
               <span className="settings-row-icon settings-destination-icon" aria-hidden="true">
                 <SyncGlyph />
@@ -1457,6 +1379,6 @@ export default function SettingsPanel({
           </section>
         ) : null}
         </div>
-    </section>
+    </SettingsSurface>
   );
 }

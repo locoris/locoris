@@ -22,6 +22,7 @@
 
 .settings-panel-shell::before {
   content: "";
+  display: none;
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -43,6 +44,7 @@
 
 .settings-panel-shell.is-ai-settings,
 .settings-panel-shell.is-interface-settings,
+.settings-panel-shell.is-locale-settings,
 .settings-panel-shell.is-backup-settings {
   grid-template-rows: auto minmax(0, 1fr);
 }
@@ -55,20 +57,20 @@
 }
 
 .settings-panel-nav-button {
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  min-height: 34px;
-  flex: 0 0 34px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
   display: inline-grid;
   place-items: center;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--settings-accent) 22%, rgba(255, 255, 255, 0.12));
-  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--settings-accent) 28%, rgb(var(--line-rgb) / 0.16));
+  border-radius: 16px;
   background:
     radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--settings-accent) 18%, transparent), transparent 60%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.026)),
-    rgba(255, 255, 255, 0.035);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.092), rgba(255, 255, 255, 0.03)),
+    rgb(var(--surface-rgb) / 0.36);
   color: rgba(245, 248, 255, 0.88);
   font: inherit;
   cursor: pointer;
@@ -151,30 +153,34 @@
 }
 
 .settings-panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   min-width: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
-  gap: clamp(10px, 1.6vw, 18px);
-  padding: clamp(14px, 1.8vw, 20px);
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--settings-accent) 16%, rgba(255, 255, 255, 0.11));
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--settings-accent) 15%, transparent), transparent 44%),
-    radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 9%, transparent), transparent 38%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.022)),
-    rgba(255, 255, 255, 0.035);
-  box-shadow:
-    0 22px 58px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.075);
-  backdrop-filter: blur(26px) saturate(132%);
+}
+
+.settings-panel-header.mobile-glass-header {
+  z-index: 8;
+  align-items: center;
+  gap: clamp(10px, 1.6vw, 18px);
+  padding: clamp(14px, 1.9vw, 20px);
+  border: 1px solid color-mix(in srgb, var(--settings-accent) 24%, rgb(var(--line-rgb) / 0.14));
+  border-radius: 28px;
 }
 
 .settings-panel-header-pad {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   visibility: hidden;
+}
+
+.settings-panel-header.is-root-action {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.settings-panel-header.is-root-action .settings-panel-header-pad {
+  display: block;
 }
 
 .settings-panel-header-actions {
@@ -183,27 +189,42 @@
 }
 
 .settings-panel-header .settings-panel-nav-button {
-  margin-top: 2px;
+  margin-top: 0;
+}
+
+.settings-panel-header .settings-panel-nav-button > span {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  line-height: 0;
+}
+
+.settings-panel-header .settings-panel-nav-button svg {
+  display: block;
 }
 
 .settings-panel-heading {
   min-width: 0;
   display: grid;
-  gap: 7px;
+  gap: 4px;
+  align-content: center;
+  justify-items: center;
+  text-align: center;
 }
 
 .settings-panel-header .settings-panel-title {
   margin: 0;
   color: color-mix(in srgb, var(--settings-emphasis, #fff) 88%, #fff 12%);
   font-family: var(--font-ui-display);
-  font-size: clamp(1.22rem, 1.55vw, 1.58rem);
-  font-weight: 780;
+  font-size: clamp(1.16rem, 1.58vw, 1.54rem);
+  font-weight: 900;
   letter-spacing: 0;
-  line-height: 1.02;
-  text-transform: uppercase;
+  line-height: 1.04;
 }
 
 .settings-panel-caption {
+  display: none;
   max-width: 68ch;
   margin: 0;
   color: color-mix(in srgb, var(--text-secondary, rgba(210, 219, 250, 0.78)) 86%, var(--settings-accent-secondary) 14%);
@@ -233,6 +254,58 @@
   padding: 1px 4px 8px 1px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--settings-accent) 36%, transparent) transparent;
+}
+
+.settings-panel-shell.is-root-settings,
+.settings-panel-shell.is-interface-settings,
+.settings-panel-shell.is-locale-settings,
+.settings-panel-shell.is-planner-settings,
+.settings-panel-shell.is-backup-settings {
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--settings-accent) 34%, transparent) transparent;
+}
+
+.settings-panel-shell.account-cloud-panel-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.settings-panel-shell.account-cloud-panel-shell .account-cloud-grid,
+.settings-panel-shell.account-cloud-panel-shell .account-cloud-wizard-grid {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+@media (min-width: 721px) and (orientation: landscape) {
+  .settings-panel-shell.is-ai-settings,
+  .settings-panel-shell.account-cloud-panel-shell {
+    grid-template-rows: auto auto;
+    align-content: start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--settings-accent) 34%, transparent) transparent;
+  }
+
+  .settings-panel-shell.is-ai-settings > .ai-settings-panel,
+  .settings-panel-shell.account-cloud-panel-shell > .account-cloud-grid,
+  .settings-panel-shell.account-cloud-panel-shell > .account-cloud-wizard-grid {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+}
+
+.settings-panel-shell.is-root-settings .settings-panel-grid,
+.settings-panel-shell.is-interface-settings .settings-panel-grid,
+.settings-panel-shell.is-locale-settings .settings-panel-grid,
+.settings-panel-shell.is-planner-settings .settings-panel-grid {
+  overflow: visible;
 }
 
 .settings-panel-grid::-webkit-scrollbar {
@@ -1343,30 +1416,32 @@ button.settings-row:focus-visible {
 
   .settings-panel-shell.is-root-settings .settings-panel-grid,
   .settings-panel-shell.is-interface-settings .settings-panel-grid,
+  .settings-panel-shell.is-locale-settings .settings-panel-grid,
   .settings-panel-shell.is-planner-settings .settings-panel-grid {
     align-content: stretch;
   }
 
   .settings-panel-shell.is-root-settings .settings-panel-block,
   .settings-panel-shell.is-interface-settings .settings-panel-block,
+  .settings-panel-shell.is-locale-settings .settings-panel-block,
   .settings-panel-shell.is-planner-settings .settings-panel-block {
     min-height: 100%;
   }
 
   .settings-panel-nav-button {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    min-height: 34px;
-    flex-basis: 34px;
-    border-radius: 13px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    flex-basis: 44px;
+    border-radius: 16px;
   }
 
   .settings-panel-header {
     grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 10px;
-    padding: 14px;
-    border-radius: 22px;
+    padding: 13px;
+    border-radius: 25px;
   }
 
   .settings-panel-header .settings-panel-title {
@@ -1494,9 +1569,64 @@ button.settings-row:focus-visible {
   }
 }
 
+@media (max-width: 720px), (orientation: portrait) {
+  .settings-panel-shell {
+    gap: 12px;
+    padding: 0;
+    background: transparent;
+  }
+
+  .settings-panel-shell::before {
+    display: none;
+  }
+
+  .settings-panel-header.mobile-glass-header {
+    top: 0;
+    margin: 0;
+  }
+
+  .settings-panel-grid,
+  .account-cloud-grid,
+  .account-cloud-wizard-grid {
+    min-height: 0;
+    padding: 1px 2px 16px;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .settings-panel-shell.account-cloud-panel-shell {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .settings-panel-shell.account-cloud-panel-shell .account-cloud-grid,
+  .settings-panel-shell.account-cloud-panel-shell .account-cloud-wizard-grid {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  .settings-panel-shell.is-root-settings .settings-panel-block,
+  .settings-panel-shell.is-interface-settings .settings-panel-block,
+  .settings-panel-shell.is-locale-settings .settings-panel-block,
+  .settings-panel-shell.is-planner-settings .settings-panel-block {
+    min-height: 0;
+  }
+
+  .settings-panel-block {
+    backdrop-filter: blur(18px) saturate(122%);
+    -webkit-backdrop-filter: blur(18px) saturate(122%);
+  }
+}
+
 @media (max-width: 480px) {
   .settings-panel-shell {
-    padding-inline: 6px;
+    padding-inline: 0;
   }
 
   .settings-panel-header {

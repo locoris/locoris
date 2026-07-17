@@ -1,4 +1,6 @@
 import type { AppLanguage, PlannerTaskPriority } from "../types";
+import { getCurrentLocaleRuntime } from "../localization";
+import { translateApp } from "../localization/translateInline";
 
 export interface PlannerQuickAddResult {
   title: string;
@@ -32,26 +34,11 @@ function withTime(date: Date, hours: number, minutes: number) {
   return next;
 }
 
-function getRelativeDateOffset(input: string) {
-  const normalized = input.toLowerCase();
-
-  if (normalized === "сегодня" || normalized === "today") {
-    return 0;
-  }
-
-  if (normalized === "завтра" || normalized === "tomorrow") {
-    return 1;
-  }
-
-  if (
-    normalized === "послезавтра" ||
-    normalized === "after tomorrow" ||
-    normalized === "day after tomorrow"
-  ) {
-    return 2;
-  }
-
-  return null;
+function getLocalizedAliases(language: AppLanguage, key: string) {
+  return translateApp(language, `plannerCore.quickAdd.${key}`)
+    .split(",")
+    .map((entry) => entry.trim().toLocaleLowerCase())
+    .filter(Boolean);
 }
 
 function normalizeWhitespace(value: string) {
@@ -71,6 +58,7 @@ export function parsePlannerQuickAdd(
   options: { now?: number; language?: AppLanguage } = {}
 ): PlannerQuickAddResult {
   const now = options.now ?? Date.now();
+  const language = options.language ?? getCurrentLocaleRuntime().interfaceLocale;
   let workingTitle = input.trim();
   const detectedTokens: string[] = [];
   const tagNames: string[] = [];
@@ -79,17 +67,13 @@ export function parsePlannerQuickAdd(
   let dateOffset: number | null = null;
   let parsedTime: { hours: number; minutes: number } | null = null;
 
-  const relativeDateTokens = [
-    "day after tomorrow",
-    "after tomorrow",
-    "послезавтра",
-    "tomorrow",
-    "завтра",
-    "today",
-    "сегодня"
-  ];
+  const relativeDateEntries = [
+    ...getLocalizedAliases(language, "dayAfterTomorrow").map((token) => ({ token, offset: 2 })),
+    ...getLocalizedAliases(language, "tomorrow").map((token) => ({ token, offset: 1 })),
+    ...getLocalizedAliases(language, "today").map((token) => ({ token, offset: 0 }))
+  ].sort((left, right) => right.token.length - left.token.length);
 
-  for (const token of relativeDateTokens) {
+  for (const { token, offset } of relativeDateEntries) {
     const tokenPattern = new RegExp(`(^|\\s)${escapeRegExp(token)}(?=\\s|$)`, "iu");
     const match = workingTitle.match(tokenPattern);
 
@@ -97,7 +81,7 @@ export function parsePlannerQuickAdd(
       continue;
     }
 
-    dateOffset = getRelativeDateOffset(token);
+    dateOffset = offset;
     detectedTokens.push(token);
     workingTitle = workingTitle.replace(tokenPattern, " ");
     break;
@@ -125,14 +109,25 @@ export function parsePlannerQuickAdd(
     return prefix;
   });
 
+  const minuteAliases = getLocalizedAliases(language, "minutes");
+  const hourAliases = getLocalizedAliases(language, "hours");
+  const durationAliases = [...new Set([...minuteAliases, ...hourAliases])]
+    .sort((left, right) => right.length - left.length)
+    .map(escapeRegExp)
+    .join("|");
+  const durationPattern = new RegExp(
+    `(^|\\s)(\\d+(?:[.,]\\d+)?)\\s*(${durationAliases})(?=\\s|$)`,
+    "giu"
+  );
+
   workingTitle = workingTitle.replace(
-    /(^|\s)(\d+(?:[.,]\d+)?)\s*(m|min|mins|minute|minutes|м|мин|минута|минуты|минут|h|hr|hrs|hour|hours|ч|час|часа|часов)(?=\s|$)/giu,
+    durationPattern,
     (_match, prefix: string, rawAmount: string, rawUnit: string) => {
       const amount = Number(rawAmount.replace(",", "."));
       const unit = rawUnit.toLowerCase();
 
       if (Number.isFinite(amount) && amount > 0) {
-        const isHours = ["h", "hr", "hrs", "hour", "hours", "ч", "час", "часа", "часов"].includes(unit);
+        const isHours = hourAliases.includes(unit);
         estimateMinutes = Math.max(1, Math.round(isHours ? amount * 60 : amount));
         detectedTokens.push(`${rawAmount}${rawUnit}`);
       }

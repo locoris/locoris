@@ -1,3 +1,5 @@
+import { translateInline } from "../localization/translateInline";
+import { getResolvedTimeZone } from "../localization/formatters";
 import type {
   AppLanguage,
   CanvasContent,
@@ -78,58 +80,7 @@ export type InitialDemoVaultSeed = {
   activeNoteId: string;
 };
 
-const DEMO_STRINGS: Record<AppLanguage, DemoStrings> = {
-  ru: {
-    projectName: "Демо-пространство Locoris",
-    folders: {
-      start: "Старт",
-      notes: "Заметки",
-      canvases: "Холсты",
-      planner: "Планер"
-    },
-    tags: {
-      start: "старт",
-      demo: "пример",
-      idea: "идея",
-      plan: "план",
-      local: "локально"
-    },
-    notes: {
-      welcome: "Добро пожаловать в Locoris",
-      editor: "Пример заметки: возможности редактора",
-      vault: "Как устроено хранилище",
-      dailyReview: "Рабочий обзор дня",
-      canvas: "Карта возможностей Locoris"
-    },
-    planner: {
-      readDemo: "Прочитать демо-заметку",
-      firstNote: "Создать первую рабочую заметку",
-      sketchCanvas: "Набросать карту идеи на холсте",
-      weeklyReview: "Провести первый обзор недели",
-      habitTitle: "Ежедневный обзор",
-      habitDescription: "Короткая проверка заметок, задач и следующего фокусного шага.",
-      habitUnit: "обзор",
-      goalTitle: "Собрать личную систему знаний",
-      goalDescription: "Пример цели, которая связывает проект, заметки, планер и обзор прогресса.",
-      goalMetric: "%",
-      focusBlock: "Обзор демо-пространства",
-      focusBlockDescription: "Посмотреть заметки, холст и планер как единый рабочий цикл.",
-      habitLogNote: "Демо-отметка за вчера: привычки показывают ритм, а не обычные задачи."
-    },
-    canvas: {
-      title: "Locoris как система",
-      subtitle: "Одна локальная база для заметок, холстов, планера, синхронизации и бэкапов.",
-      notes: "Заметки",
-      notesBody: "Идеи, документы,\nструктура и теги",
-      canvas: "Холсты",
-      canvasBody: "Схемы, связи,\nвизуальное мышление",
-      planner: "Планер",
-      plannerBody: "Задачи, привычки,\nкалендарь и обзор",
-      sync: "Синхронизация и бэкап",
-      syncBody: "Локальность,\nпереносимость,\nконтроль данных"
-    }
-  },
-  en: {
+const DEMO_STRING_TEMPLATE: DemoStrings = {
     projectName: "Locoris Demo Space",
     folders: {
       start: "Start",
@@ -178,8 +129,23 @@ const DEMO_STRINGS: Record<AppLanguage, DemoStrings> = {
       sync: "Sync and backup",
       syncBody: "Local-first data,\nportability,\ncontrol"
     }
-  }
-};
+  };
+
+function buildDemoStrings(language: AppLanguage): DemoStrings {
+  const visit = (value: unknown, pathParts: string[]): unknown => {
+    if (typeof value === "string") {
+      return translateInline(language, `demoSeed.strings.${pathParts.join(".")}`);
+    }
+    if (Array.isArray(value)) {
+      return value.map((entry, index) => visit(entry, [...pathParts, String(index)]));
+    }
+    if (value && typeof value === "object") {
+      return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, visit(entry, [...pathParts, key])]));
+    }
+    return value;
+  };
+  return visit(DEMO_STRING_TEMPLATE, []) as DemoStrings;
+}
 
 function createColor(seedIndex: number) {
   return COLOR_PALETTE[seedIndex % COLOR_PALETTE.length].hex;
@@ -283,212 +249,107 @@ function table(rows: string[][], headerRows = 1): StoredBlock {
 }
 
 function buildWelcomeContent(language: AppLanguage, strings: DemoStrings): NoteContent {
-  if (language === "ru") {
-    return [
-      heading(1, "Демо-пространство Locoris"),
-      paragraph([
-        text("Это аккуратный стартовый vault, который показывает Locoris как "),
-        text("локальную рабочую систему", { bold: true }),
-        text(": заметки, холсты, планер, теги, синхронизация и бэкапы.")
-      ]),
-      quote("Все данные лежат локально. Демо можно спокойно редактировать, переименовывать или удалить вместе с проектом."),
-      heading(2, "Что посмотреть первым"),
-      checklist("Открыть заметку с возможностями редактора", false),
-      checklist("Посмотреть холст с картой возможностей", false),
-      checklist("Открыть планер и увидеть задачи, привычку, цель и фокус-блок", false),
-      divider(),
-      heading(2, "Структура демо"),
-      table([
-        ["Раздел", "Что показывает"],
-        [strings.folders.start, "Маршрут первого знакомства и общий смысл приложения."],
-        [strings.folders.notes, "Редактор, форматирование, теги и структура знаний."],
-        [strings.folders.canvases, "Визуальные связи между заметками, задачами и идеями."],
-        [strings.folders.planner, "Задачи, привычки, цель, календарный фокус и обзор."]
-      ]),
-      heading(2, "Быстрый маршрут"),
-      numbered("Создайте свою первую заметку рядом с демо.", 1),
-      numbered("Свяжите важную идею с задачей в планере.", 2),
-      numbered("Сделайте бэкап перед большим импортом или перестройкой хранилища.", 3)
-    ];
-  }
-
   return [
-    heading(1, "Locoris Demo Space"),
+    heading(1, translateInline(language, "demoSeed.buildWelcomeContent.locorisDemoSpace")),
     paragraph([
-      text("This compact starter vault shows Locoris as a "),
-      text("local working system", { bold: true }),
-      text(": notes, canvases, planner, tags, sync, and backups.")
+      text(translateInline(language, "demoSeed.buildWelcomeContent.thisCompactStarterVaultShowsLocorisAs")),
+      text(translateInline(language, "demoSeed.buildWelcomeContent.localWorkingSystem"), { bold: true }),
+      text(translateInline(language, "demoSeed.buildWelcomeContent.notesCanvasesPlannerTagsSyncAndBackups"))
     ]),
-    quote("Everything is local. You can edit, rename, or delete the demo together with its project."),
-    heading(2, "Start here"),
-    checklist("Open the editor capability note", false),
-    checklist("View the capability map canvas", false),
-    checklist("Open the planner and see tasks, habit, goal, and focus block", false),
+    quote(translateInline(language, "demoSeed.buildWelcomeContent.everythingIsLocalYouCanEditRename")),
+    heading(2, translateInline(language, "demoSeed.buildWelcomeContent.startHere")),
+    checklist(translateInline(language, "demoSeed.buildWelcomeContent.openTheEditorCapabilityNote"), false),
+    checklist(translateInline(language, "demoSeed.buildWelcomeContent.viewTheCapabilityMapCanvas"), false),
+    checklist(translateInline(language, "demoSeed.buildWelcomeContent.openThePlannerAndSeeTasksHabit"), false),
     divider(),
-    heading(2, "Demo structure"),
+    heading(2, translateInline(language, "demoSeed.buildWelcomeContent.demoStructure")),
     table([
-      ["Section", "What it shows"],
-      [strings.folders.start, "The first route and the product idea."],
-      [strings.folders.notes, "Editor, formatting, tags, and knowledge structure."],
-      [strings.folders.canvases, "Visual links between notes, tasks, and ideas."],
-      [strings.folders.planner, "Tasks, habits, goal, calendar focus, and review."]
+      [translateInline(language, "demoSeed.buildWelcomeContent.section"), translateInline(language, "demoSeed.buildWelcomeContent.whatItShows")],
+      [strings.folders.start, translateInline(language, "demoSeed.buildWelcomeContent.theFirstRouteAndTheProductIdea")],
+      [strings.folders.notes, translateInline(language, "demoSeed.buildWelcomeContent.editorFormattingTagsAndKnowledgeStructure")],
+      [strings.folders.canvases, translateInline(language, "demoSeed.buildWelcomeContent.visualLinksBetweenNotesTasksAndIdeas")],
+      [strings.folders.planner, translateInline(language, "demoSeed.buildWelcomeContent.tasksHabitsGoalCalendarFocusAndReview")]
     ]),
-    heading(2, "Quick route"),
-    numbered("Create your first note next to the demo.", 1),
-    numbered("Connect an important idea to a planner task.", 2),
-    numbered("Create a backup before a large import or vault rebuild.", 3)
+    heading(2, translateInline(language, "demoSeed.buildWelcomeContent.quickRoute")),
+    numbered(translateInline(language, "demoSeed.buildWelcomeContent.createYourFirstNoteNextToThe"), 1),
+    numbered(translateInline(language, "demoSeed.buildWelcomeContent.connectAnImportantIdeaToAPlanner"), 2),
+    numbered(translateInline(language, "demoSeed.buildWelcomeContent.createABackupBeforeALargeImport"), 3)
   ];
 }
 
 function buildEditorDemoContent(language: AppLanguage): NoteContent {
-  if (language === "ru") {
-    return [
-      heading(1, "Возможности редактора"),
-      paragraph([
-        text("Locoris хранит заметки как структурированные блоки: "),
-        text("текст", { bold: true }),
-        text(", "),
-        text("акценты", { italic: true }),
-        text(", "),
-        text("подчёркивание", { underline: true }),
-        text(", "),
-        text("удалённый вариант", { strike: true }),
-        text(", "),
-        text("inline code", { code: true }),
-        text(" и "),
-        link("ссылки", "https://locoris.local/demo"),
-        text(".")
-      ]),
-      heading(2, "Блоки"),
-      bullet("Маркированные списки подходят для идей и быстрых заметок."),
-      numbered("Нумерованные списки хороши для процессов.", 1),
-      numbered("Каждый блок можно переставлять и развивать дальше.", 2),
-      checklist("Чеклист можно превратить в рабочий маршрут.", false),
-      checklist("Готовые шаги остаются в контексте заметки.", true),
-      quote("Хорошая заметка не обязана быть длинной. Она должна помогать принять следующее решение."),
-      code("## План\n- Сформулировать идею\n- Связать её с задачей\n- Вернуться к обзору дня", "markdown"),
-      heading(2, "Таблица"),
-      table([
-        ["Объект", "Когда использовать", "Сигнал"],
-        ["Заметка", "Нужно сохранить мысль или документ", "Контекст"],
-        ["Холст", "Нужно увидеть связи", "Структура"],
-        ["Задача", "Есть обязательство", "Следующее действие"]
-      ]),
-      heading(2, "Типографика"),
-      paragraph([
-        text("Авто", { bold: true }),
-        text(" — базовый адаптивный стиль заметки: он следует текущему режиму чтения и теме.")
-      ]),
-      paragraph([text("Onest подходит для компактных интерфейсных фрагментов.", { font: "onest" })]),
-      paragraph([text("IBM Plex Sans хорошо читается в рабочих заметках.", { font: "ibmPlexSans" })]),
-      paragraph([text("Golos Text мягко смотрится в длинном чтении.", { font: "golosText" })]),
-      paragraph([text("IBM Plex Serif добавляет редакционный тон.", { font: "ibmPlexSerif" })]),
-      paragraph([text("IBM Plex Mono полезен для технических фрагментов.", { font: "ibmPlexMono" })]),
-      paragraph([text("Unbounded лучше оставлять для коротких выразительных акцентов.", { font: "unbounded" })])
-    ];
-  }
-
   return [
-    heading(1, "Editor capabilities"),
+    heading(1, translateInline(language, "demoSeed.buildEditorDemoContent.editorCapabilities")),
     paragraph([
-      text("Locoris stores notes as structured blocks: "),
-      text("text", { bold: true }),
+      text(translateInline(language, "demoSeed.buildEditorDemoContent.locorisStoresNotesAsStructuredBlocks")),
+      text(translateInline(language, "demoSeed.buildEditorDemoContent.text"), { bold: true }),
       text(", "),
-      text("emphasis", { italic: true }),
+      text(translateInline(language, "demoSeed.buildEditorDemoContent.emphasis"), { italic: true }),
       text(", "),
-      text("underline", { underline: true }),
+      text(translateInline(language, "demoSeed.buildEditorDemoContent.underline"), { underline: true }),
       text(", "),
-      text("removed option", { strike: true }),
+      text(translateInline(language, "demoSeed.buildEditorDemoContent.removedOption"), { strike: true }),
       text(", "),
       text("inline code", { code: true }),
-      text(", and "),
-      link("links", "https://locoris.local/demo"),
+      text(translateInline(language, "demoSeed.buildEditorDemoContent.and")),
+      link(translateInline(language, "demoSeed.buildEditorDemoContent.links"), "https://locoris.local/demo"),
       text(".")
     ]),
-    heading(2, "Blocks"),
-    bullet("Bullet lists are useful for ideas and quick notes."),
-    numbered("Numbered lists are good for processes.", 1),
-    numbered("Each block can be moved and expanded later.", 2),
-    checklist("A checklist can become a working route.", false),
-    checklist("Completed steps stay in the note context.", true),
-    quote("A good note does not have to be long. It should help you choose the next decision."),
-    code("## Plan\n- Shape the idea\n- Link it to a task\n- Return to the daily review", "markdown"),
-    heading(2, "Table"),
+    heading(2, translateInline(language, "demoSeed.buildEditorDemoContent.blocks")),
+    bullet(translateInline(language, "demoSeed.buildEditorDemoContent.bulletListsAreUsefulForIdeasAnd")),
+    numbered(translateInline(language, "demoSeed.buildEditorDemoContent.numberedListsAreGoodForProcesses"), 1),
+    numbered(translateInline(language, "demoSeed.buildEditorDemoContent.eachBlockCanBeMovedAndExpanded"), 2),
+    checklist(translateInline(language, "demoSeed.buildEditorDemoContent.aChecklistCanBecomeAWorkingRoute"), false),
+    checklist(translateInline(language, "demoSeed.buildEditorDemoContent.completedStepsStayInTheNoteContext"), true),
+    quote(translateInline(language, "demoSeed.buildEditorDemoContent.aGoodNoteDoesNotHaveTo")),
+    code(translateInline(language, "demoSeed.buildEditorDemoContent.planShapeTheIdeaLinkItTo"), "markdown"),
+    heading(2, translateInline(language, "demoSeed.buildEditorDemoContent.table")),
     table([
-      ["Object", "When to use", "Signal"],
-      ["Note", "Capture a thought or document", "Context"],
-      ["Canvas", "See relationships", "Structure"],
-      ["Task", "Track a commitment", "Next action"]
+      [translateInline(language, "demoSeed.buildEditorDemoContent.object"), translateInline(language, "demoSeed.buildEditorDemoContent.whenToUse"), translateInline(language, "demoSeed.buildEditorDemoContent.signal")],
+      [translateInline(language, "demoSeed.buildEditorDemoContent.note"), translateInline(language, "demoSeed.buildEditorDemoContent.captureAThoughtOrDocument"), translateInline(language, "demoSeed.buildEditorDemoContent.context")],
+      [translateInline(language, "demoSeed.buildEditorDemoContent.canvas"), translateInline(language, "demoSeed.buildEditorDemoContent.seeRelationships"), translateInline(language, "demoSeed.buildEditorDemoContent.structure")],
+      [translateInline(language, "demoSeed.buildEditorDemoContent.task"), translateInline(language, "demoSeed.buildEditorDemoContent.trackACommitment"), translateInline(language, "demoSeed.buildEditorDemoContent.nextAction")]
     ]),
-    heading(2, "Typography"),
+    heading(2, translateInline(language, "demoSeed.buildEditorDemoContent.typography")),
     paragraph([
-      text("Auto", { bold: true }),
-      text(" is the adaptive note style: it follows the current reading mode and theme.")
+      text(translateInline(language, "demoSeed.buildEditorDemoContent.auto"), { bold: true }),
+      text(translateInline(language, "demoSeed.buildEditorDemoContent.isTheAdaptiveNoteStyleItFollows"))
     ]),
-    paragraph([text("Onest works well for compact interface-like fragments.", { font: "onest" })]),
-    paragraph([text("IBM Plex Sans stays crisp in working notes.", { font: "ibmPlexSans" })]),
-    paragraph([text("Golos Text feels calm for long reading.", { font: "golosText" })]),
-    paragraph([text("IBM Plex Serif adds an editorial tone.", { font: "ibmPlexSerif" })]),
-    paragraph([text("IBM Plex Mono is useful for technical fragments.", { font: "ibmPlexMono" })]),
-    paragraph([text("Unbounded is best for short expressive accents.", { font: "unbounded" })])
+    paragraph([text(translateInline(language, "demoSeed.buildEditorDemoContent.onestWorksWellForCompactInterfaceLike"), { font: "onest" })]),
+    paragraph([text(translateInline(language, "demoSeed.buildEditorDemoContent.ibmPlexSansStaysCrispInWorking"), { font: "ibmPlexSans" })]),
+    paragraph([text(translateInline(language, "demoSeed.buildEditorDemoContent.golosTextFeelsCalmForLongReading"), { font: "golosText" })]),
+    paragraph([text(translateInline(language, "demoSeed.buildEditorDemoContent.ibmPlexSerifAddsAnEditorialTone"), { font: "ibmPlexSerif" })]),
+    paragraph([text(translateInline(language, "demoSeed.buildEditorDemoContent.ibmPlexMonoIsUsefulForTechnical"), { font: "ibmPlexMono" })]),
+    paragraph([text(translateInline(language, "demoSeed.buildEditorDemoContent.unboundedIsBestForShortExpressiveAccents"), { font: "unbounded" })])
   ];
 }
 
 function buildVaultGuideContent(language: AppLanguage): NoteContent {
-  if (language === "ru") {
-    return [
-      heading(1, "Как устроено хранилище"),
-      paragraph("Проект собирает рядом папки, заметки, холсты, задачи и визуальные сигналы карты."),
-      bullet("Папки дают спокойную иерархию."),
-      bullet("Теги пересекают папки и помогают быстро собрать тему."),
-      bullet("Избранное и закрепление выводят рабочие элементы наверх."),
-      bullet("Бэкап сохраняет восстановимый файл и читаемый ZIP-экспорт."),
-      heading(2, "Практика"),
-      checklist("Оставить демо как песочницу для экспериментов.", false),
-      checklist("Или удалить проект после знакомства и начать с чистого пространства.", false)
-    ];
-  }
-
   return [
-    heading(1, "How the vault is organized"),
-    paragraph("A project keeps folders, notes, canvases, tasks, and map signals in one place."),
-    bullet("Folders provide calm hierarchy."),
-    bullet("Tags cross folder boundaries and help collect a theme quickly."),
-    bullet("Favorites and pinned notes lift active items to the top."),
-    bullet("Backup creates a precise restore file and a readable ZIP export."),
-    heading(2, "Practice"),
-    checklist("Keep the demo as a sandbox for experiments.", false),
-    checklist("Or delete the project after the tour and start from a clean space.", false)
+    heading(1, translateInline(language, "demoSeed.buildVaultGuideContent.howTheVaultIsOrganized")),
+    paragraph(translateInline(language, "demoSeed.buildVaultGuideContent.aProjectKeepsFoldersNotesCanvasesTasks")),
+    bullet(translateInline(language, "demoSeed.buildVaultGuideContent.foldersProvideCalmHierarchy")),
+    bullet(translateInline(language, "demoSeed.buildVaultGuideContent.tagsCrossFolderBoundariesAndHelpCollect")),
+    bullet(translateInline(language, "demoSeed.buildVaultGuideContent.favoritesAndPinnedNotesLiftActiveItems")),
+    bullet(translateInline(language, "demoSeed.buildVaultGuideContent.backupCreatesAPreciseRestoreFileAnd")),
+    heading(2, translateInline(language, "demoSeed.buildVaultGuideContent.practice")),
+    checklist(translateInline(language, "demoSeed.buildVaultGuideContent.keepTheDemoAsASandboxFor"), false),
+    checklist(translateInline(language, "demoSeed.buildVaultGuideContent.orDeleteTheProjectAfterTheTour"), false)
   ];
 }
 
 function buildDailyReviewContent(language: AppLanguage): NoteContent {
-  if (language === "ru") {
-    return [
-      heading(1, "Рабочий обзор дня"),
-      paragraph("Эта заметка показывает, как связать спокойный обзор с задачами и привычками."),
-      heading(2, "Сегодня"),
-      checklist("Выбрать один главный фокус", false),
-      checklist("Проверить просроченные задачи", false),
-      checklist("Закрыть день короткой заметкой", false),
-      heading(2, "Вопросы"),
-      bullet("Что сегодня двигает проект вперёд?"),
-      bullet("Где нужна не задача, а привычка или ритм?"),
-      bullet("Что стоит вынести на холст, чтобы увидеть связи?")
-    ];
-  }
-
   return [
-    heading(1, "Daily work review"),
-    paragraph("This note shows how a calm review can connect tasks and habits."),
-    heading(2, "Today"),
-    checklist("Choose one main focus", false),
-    checklist("Check overdue tasks", false),
-    checklist("Close the day with a short note", false),
-    heading(2, "Questions"),
-    bullet("What moves the project forward today?"),
-    bullet("Where do I need a rhythm instead of a task?"),
-    bullet("What belongs on a canvas so relationships become visible?")
+    heading(1, translateInline(language, "demoSeed.buildDailyReviewContent.dailyWorkReview")),
+    paragraph(translateInline(language, "demoSeed.buildDailyReviewContent.thisNoteShowsHowACalmReview")),
+    heading(2, translateInline(language, "demoSeed.buildDailyReviewContent.today")),
+    checklist(translateInline(language, "demoSeed.buildDailyReviewContent.chooseOneMainFocus"), false),
+    checklist(translateInline(language, "demoSeed.buildDailyReviewContent.checkOverdueTasks"), false),
+    checklist(translateInline(language, "demoSeed.buildDailyReviewContent.closeTheDayWithAShortNote"), false),
+    heading(2, translateInline(language, "demoSeed.buildDailyReviewContent.questions")),
+    bullet(translateInline(language, "demoSeed.buildDailyReviewContent.whatMovesTheProjectForwardToday")),
+    bullet(translateInline(language, "demoSeed.buildDailyReviewContent.whereDoINeedARhythmInstead")),
+    bullet(translateInline(language, "demoSeed.buildDailyReviewContent.whatBelongsOnACanvasSoRelationships"))
   ];
 }
 
@@ -835,19 +696,11 @@ function createTask(input: {
   };
 }
 
-function getTimeZone() {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-  } catch {
-    return null;
-  }
-}
-
 export async function buildInitialDemoVault(
   language: AppLanguage,
   timestamp = Date.now()
 ): Promise<InitialDemoVaultSeed> {
-  const strings = DEMO_STRINGS[language];
+  const strings = buildDemoStrings(language);
   const project: Project = {
     id: crypto.randomUUID(),
     name: strings.projectName,
@@ -1055,7 +908,7 @@ export async function buildInitialDemoVault(
     color: createColor(3),
     icon: "spark",
     frequencyRule: "FREQ=DAILY;INTERVAL=1",
-    frequencyTimezone: getTimeZone(),
+    frequencyTimezone: getResolvedTimeZone(),
     targetCount: 1,
     targetUnit: strings.planner.habitUnit,
     targetPeriod: "day",

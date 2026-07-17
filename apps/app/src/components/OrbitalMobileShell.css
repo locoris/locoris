@@ -24,9 +24,9 @@
 .orbital-overlay.is-android-runtime .orbital-mobile-map-controls,
 .orbital-overlay.is-android-runtime .orbital-mobile-selection-sheet,
 .orbital-overlay.is-android-runtime .orbital-mobile-inspector-actions,
-.orbital-overlay.is-android-runtime .orbital-mobile-bottom-nav,
 .orbital-overlay.is-android-runtime .orbital-mobile-menu-backdrop,
-.orbital-overlay.is-android-runtime .orbital-mobile-menu-card {
+.orbital-overlay.is-android-runtime .orbital-mobile-menu-card,
+.orbital-overlay.is-android-runtime .orbital-mobile-account-sheet {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
@@ -105,8 +105,13 @@
 }
 
 .orbital-overlay.is-android-mobile-shell {
+  --orbital-mobile-bottom-nav-clearance: calc(clamp(64px, 9.8vw, 80px) + env(safe-area-inset-bottom, 0px));
+  --orbital-mobile-page-height: calc(100% - var(--orbital-mobile-bottom-nav-clearance));
+  --orbital-mobile-page-max-width: 720px;
+  --orbital-mobile-page-radius: 28px;
+  --orbital-mobile-page-inline: max(10px, env(safe-area-inset-left), env(safe-area-inset-right));
   grid-template-rows: minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 8px;
   padding:
     max(10px, env(safe-area-inset-top))
     max(10px, env(safe-area-inset-right))
@@ -119,9 +124,7 @@
   display: none;
 }
 
-.orbital-mobile-topbar,
-.orbital-mobile-bottom-nav,
-.orbital-mobile-menu-layer {
+.orbital-mobile-topbar {
   position: relative;
   z-index: 12;
 }
@@ -487,8 +490,12 @@
 
 .orbital-overlay.is-android-mobile-shell .orbital-layout,
 .orbital-overlay.is-android-mobile-shell .orbital-layout.has-editor {
-  height: 100%;
+  grid-row: 1;
+  grid-column: 1;
+  width: min(var(--orbital-mobile-page-max-width), 100%);
+  height: var(--orbital-mobile-page-height);
   min-height: 0;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr;
   gap: 0;
@@ -496,13 +503,22 @@
 
 .orbital-overlay.is-android-mobile-shell.is-planner-mode .orbital-layout,
 .orbital-overlay.is-android-mobile-shell.is-planner-mode .orbital-layout.has-editor {
-  display: none;
+  display: grid;
 }
 
 .orbital-overlay.is-android-mobile-shell .orbital-planner-slot {
+  grid-row: 1;
+  grid-column: 1;
+  width: min(var(--orbital-mobile-page-max-width), 100%);
   min-height: 0;
-  height: 100%;
+  height: var(--orbital-mobile-page-height);
+  margin: 0 auto;
   overflow: hidden;
+}
+
+.orbital-overlay.is-android-mobile-shell .orbital-planner-slot > .planner-surface {
+  width: 100%;
+  height: 100%;
 }
 
 .orbital-overlay.is-android-mobile-shell .orbital-inspector.panel,
@@ -514,7 +530,7 @@
 .orbital-overlay.is-android-mobile-shell .orbital-inspector.panel {
   height: 100%;
   max-height: none;
-  padding-bottom: 88px;
+  padding-bottom: 16px;
   border-radius: 26px;
   overflow: auto;
   overscroll-behavior: contain;
@@ -551,9 +567,11 @@
 
 .orbital-overlay.is-android-mobile-shell.is-mobile-section-map .orbital-scene-wrap {
   display: block;
+  width: 100%;
   height: 100%;
   min-height: 0;
-  border-radius: 26px;
+  margin: 0 auto;
+  border-radius: var(--orbital-mobile-page-radius);
   overflow: hidden;
   contain: layout paint style;
   overscroll-behavior: none;
@@ -1095,83 +1113,148 @@
 }
 
 .orbital-mobile-bottom-nav {
-  position: relative;
+  position: fixed;
+  left: 50%;
+  right: auto;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  z-index: 96;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 5px;
-  padding: 6px;
-  overflow: hidden;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0;
+  width: min(720px, calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  transform: translateX(-50%);
+  padding: 0;
+  overflow: visible;
   isolation: isolate;
-  border: 1px solid color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 22%, rgb(var(--line-rgb) / 0.13));
-  border-radius: 26px;
+  border: 1px solid color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 18%, rgba(255, 255, 255, 0.18));
+  border-radius: 999px;
   background:
-    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 16%, transparent), transparent 44%),
-    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 12%, transparent), transparent 42%),
-    linear-gradient(180deg, rgb(var(--surface-rgb) / 0.78), rgb(var(--surface-deep-rgb) / 0.72)),
-    rgb(var(--surface-deep-rgb) / 0.82);
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 10%, transparent), transparent 44%),
+    radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 9%, transparent), transparent 44%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.026)),
+    rgb(var(--surface-rgb) / 0.24);
   box-shadow:
-    0 22px 58px rgba(2, 5, 15, 0.34),
-    0 0 0 1px color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 6%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.075);
-  backdrop-filter: blur(20px) saturate(130%);
+    0 18px 48px rgba(0, 0, 0, 0.36),
+    0 1px 0 rgba(255, 255, 255, 0.12) inset,
+    0 -1px 0 rgba(255, 255, 255, 0.026) inset;
+  backdrop-filter: blur(34px) saturate(185%);
+  -webkit-backdrop-filter: blur(34px) saturate(185%);
+}
+
+.orbital-overlay.is-android-mobile-shell .orbital-editor-modal-layer {
+  z-index: 120;
 }
 
 .orbital-mobile-bottom-nav::before {
+  content: none;
+}
+
+.orbital-mobile-bottom-nav-indicator {
+  position: absolute;
+  z-index: 0;
+  top: clamp(5px, 1.3vw, 8px);
+  bottom: clamp(5px, 1.3vw, 8px);
+  left: 0;
+  width: 16.666666%;
+  border-radius: 999px;
+  pointer-events: none;
+  transform: translateX(0);
+  transition: transform 520ms cubic-bezier(0.2, 0.92, 0.14, 1);
+  will-change: transform;
+}
+
+.orbital-mobile-bottom-nav-indicator::before {
   content: "";
   position: absolute;
-  inset: 1px;
-  z-index: -1;
-  border-radius: 22px;
+  inset: 0 clamp(2px, 0.9vw, 6px);
+  border: 1px solid color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 30%, rgba(255, 255, 255, 0.18));
+  border-radius: inherit;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.07), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 72%);
-  pointer-events: none;
+    radial-gradient(circle at 50% 12%, color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 16%, transparent), transparent 56%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.056)),
+    rgb(var(--surface-rgb) / 0.26);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  animation: orbital-mobile-pill-morph 520ms cubic-bezier(0.2, 0.92, 0.14, 1);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.orbital-mobile-bottom-nav-indicator:is(.is-index-1, .is-index-3, .is-index-5)::before {
+  animation-name: orbital-mobile-pill-morph-alt;
+}
+
+.orbital-mobile-bottom-nav-indicator.is-index-1 {
+  transform: translateX(100%);
+}
+
+.orbital-mobile-bottom-nav-indicator.is-index-2 {
+  transform: translateX(200%);
+}
+
+.orbital-mobile-bottom-nav-indicator.is-index-3 {
+  transform: translateX(300%);
+}
+
+.orbital-mobile-bottom-nav-indicator.is-index-4 {
+  transform: translateX(400%);
+}
+
+.orbital-mobile-bottom-nav-indicator.is-index-5 {
+  transform: translateX(500%);
 }
 
 .orbital-mobile-bottom-nav button {
   position: relative;
+  z-index: 1;
   min-width: 0;
-  min-height: 52px;
+  min-height: clamp(48px, 7.8vw, 62px);
   display: grid;
   place-items: center;
-  gap: 4px;
+  align-content: center;
+  gap: 3px;
   border: 1px solid transparent;
-  border-radius: 18px;
-  padding: 5px 2px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.008)),
-    transparent;
-  color: rgba(229, 234, 255, 0.7);
-  font-size: 0.64rem;
-  font-weight: 850;
+  border-radius: 999px;
+  margin: clamp(5px, 1.3vw, 8px) 0;
+  padding: clamp(4px, 1.3vw, 7px) 2px;
+  background: transparent;
+  color: rgba(245, 247, 255, 0.82);
+  font-size: clamp(0.52rem, 1.55vw, 0.72rem);
+  font-weight: 780;
   line-height: 1.05;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.026);
+  transition:
+    color 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 320ms cubic-bezier(0.2, 0.9, 0.16, 1.08);
 }
 
 .orbital-mobile-bottom-nav button.is-active {
-  border-color: color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 42%, rgb(var(--line-rgb) / 0.14));
-  background:
-    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 22%, transparent), transparent 62%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.074), rgba(255, 255, 255, 0.024)),
-    color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 8%, rgba(255, 255, 255, 0.026));
-  color: var(--text);
-  box-shadow:
-    0 12px 28px color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 10%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: transparent;
+  background: transparent;
+  color: color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 72%, #ffffff 18%);
+  box-shadow: none;
+  transform: none;
 }
 
 .orbital-mobile-nav-glyph {
-  width: 22px;
-  height: 22px;
+  width: clamp(19px, 4.9vw, 28px);
+  height: clamp(19px, 4.9vw, 28px);
   display: block;
   overflow: visible;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.75;
+  stroke-width: 1.82;
   stroke-linecap: round;
   stroke-linejoin: round;
-  color: color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 76%, rgba(238, 241, 255, 0.9));
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 22%, transparent));
+  color: currentColor;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 12%, transparent));
+  transition:
+    transform 320ms cubic-bezier(0.2, 0.9, 0.16, 1.08),
+    color 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .orbital-mobile-nav-glyph path,
@@ -1189,8 +1272,55 @@
 }
 
 .orbital-mobile-bottom-nav button.is-active .orbital-mobile-nav-glyph {
-  color: color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 88%, white 18%);
-  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 34%, transparent));
+  color: color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 80%, #ffffff 18%);
+  filter: drop-shadow(0 0 16px color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 26%, transparent));
+  transform: translateY(-1px) scale(1.08);
+}
+
+.orbital-mobile-bottom-nav button:active {
+  transform: scale(0.98);
+}
+
+@keyframes orbital-mobile-pill-morph {
+  0% {
+    transform: scaleX(0.86) scaleY(1.04);
+    border-radius: 28px;
+  }
+
+  44% {
+    transform: scaleX(1.16) scaleY(0.96);
+    border-radius: 36px;
+  }
+
+  100% {
+    transform: scaleX(1) scaleY(1);
+    border-radius: 999px;
+  }
+}
+
+@keyframes orbital-mobile-pill-morph-alt {
+  0% {
+    transform: scaleX(0.86) scaleY(1.04);
+    border-radius: 28px;
+  }
+
+  44% {
+    transform: scaleX(1.16) scaleY(0.96);
+    border-radius: 36px;
+  }
+
+  100% {
+    transform: scaleX(1) scaleY(1);
+    border-radius: 999px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbital-mobile-bottom-nav-indicator,
+  .orbital-mobile-bottom-nav-indicator::before {
+    animation: none;
+    transition: none;
+  }
 }
 
 .orbital-mobile-menu-layer {
@@ -1198,12 +1328,13 @@
   inset: 0;
   z-index: 70;
   display: grid;
-  align-items: end;
+  align-items: stretch;
+  justify-items: center;
   padding:
-    max(14px, env(safe-area-inset-top))
-    max(14px, env(safe-area-inset-right))
-    max(14px, env(safe-area-inset-bottom))
-    max(14px, env(safe-area-inset-left));
+    max(8px, env(safe-area-inset-top))
+    max(8px, env(safe-area-inset-right))
+    calc(var(--orbital-mobile-bottom-nav-clearance) + 8px)
+    max(8px, env(safe-area-inset-left));
 }
 
 .orbital-mobile-menu-backdrop {
@@ -1221,11 +1352,13 @@
   z-index: 1;
   display: grid;
   gap: 14px;
-  width: min(560px, 100%);
+  width: min(var(--orbital-mobile-page-max-width, 720px), 100%);
+  height: 100%;
+  max-height: none;
   margin: 0 auto;
   padding: 16px;
   border: 1px solid color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 26%, rgb(var(--line-rgb) / 0.14));
-  border-radius: 34px 34px 28px 28px;
+  border-radius: var(--orbital-mobile-page-radius, 28px);
   background:
     radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 14%, transparent), transparent 42%),
     radial-gradient(circle at 96% 4%, color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 15%, transparent), transparent 44%),
@@ -1244,20 +1377,169 @@
   padding:
     max(8px, env(safe-area-inset-top))
     max(8px, env(safe-area-inset-right))
-    max(8px, env(safe-area-inset-bottom))
+    calc(var(--orbital-mobile-bottom-nav-clearance) + 8px)
     max(8px, env(safe-area-inset-left));
 }
 
-.orbital-overlay.is-android-mobile-shell .orbital-modal-window.orbital-utility-modal-window.is-settings-mode {
-  width: min(820px, 100%);
+.orbital-overlay.is-android-mobile-shell .orbital-modal-layer:has(.orbital-utility-modal-window.is-settings-mode),
+.orbital-overlay.is-android-mobile-shell .orbital-modal-layer:has(.orbital-utility-modal-window.is-trash-mode) {
+  z-index: 70;
+}
+
+.orbital-overlay.is-android-mobile-shell .orbital-modal-layer:has(.orbital-utility-modal-window.is-settings-mode) {
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+.orbital-overlay.is-android-mobile-shell .orbital-modal-layer:has(.ai-settings-layer),
+.orbital-overlay.is-android-mobile-shell .orbital-modal-layer:has(.sync-mobile-sheet-layer),
+.orbital-overlay.is-android-mobile-shell .orbital-modal-layer:has(.sync-settings-modal-layer) {
+  z-index: 150;
+}
+
+.orbital-overlay.is-android-mobile-shell .orbital-modal-layer:has(.orbital-utility-modal-window.is-settings-mode) .orbital-modal-dim,
+.orbital-overlay.is-android-mobile-shell .orbital-modal-layer:has(.orbital-utility-modal-window.is-trash-mode) .orbital-modal-dim {
+  display: block;
+  background:
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 10%, transparent), transparent 45%),
+    rgb(var(--surface-deep-rgb) / 0.34);
+  backdrop-filter: blur(16px) saturate(118%);
+  -webkit-backdrop-filter: blur(16px) saturate(118%);
+}
+
+.orbital-overlay.is-android-mobile-shell .orbital-modal-window.orbital-utility-modal-window.is-settings-mode,
+.orbital-overlay.is-android-mobile-shell .orbital-modal-window.orbital-utility-modal-window.is-trash-mode {
+  width: min(var(--orbital-mobile-page-max-width, 720px), 100%);
   height: 100%;
   max-height: none;
+  box-sizing: border-box;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 26%, rgb(var(--line-rgb) / 0.14));
+  border-radius: var(--orbital-mobile-page-radius, 28px);
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 14%, transparent), transparent 42%),
+    radial-gradient(circle at 96% 4%, color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 15%, transparent), transparent 44%),
+    linear-gradient(155deg, rgb(var(--surface-rgb) / 0.9), rgb(var(--surface-deep-rgb) / 0.82)),
+    rgb(var(--surface-deep-rgb) / 0.9);
+  box-shadow:
+    0 32px 96px rgba(2, 5, 15, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px) saturate(132%);
+  -webkit-backdrop-filter: blur(24px) saturate(132%);
+}
+
+.orbital-overlay.is-android-mobile-shell
+  .orbital-modal-window.orbital-utility-modal-window.is-settings-mode:has(.settings-panel-shell),
+.orbital-overlay.is-android-mobile-shell
+  .orbital-modal-window.orbital-utility-modal-window.is-trash-mode:has(.settings-panel-shell) {
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .orbital-overlay.is-android-mobile-shell .orbital-utility-modal-content:has(.settings-panel-shell) {
   height: 100%;
   max-height: none;
   padding: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: transparent;
+}
+
+.orbital-overlay.is-android-mobile-shell
+  .orbital-modal-window.is-settings-mode
+  .settings-surface:not(.sync-settings-panel-shell),
+.orbital-overlay.is-android-mobile-shell
+  .orbital-mobile-menu-layer
+  > .settings-surface {
+  display: block;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scrollbar-width: none;
+  background: transparent;
+}
+
+.orbital-overlay.is-android-mobile-shell
+  .orbital-modal-window.is-settings-mode
+  .settings-surface:not(.sync-settings-panel-shell)::-webkit-scrollbar,
+.orbital-overlay.is-android-mobile-shell
+  .orbital-mobile-menu-layer
+  > .settings-surface::-webkit-scrollbar {
+  display: none;
+}
+
+.orbital-overlay.is-android-mobile-shell
+  .orbital-modal-window.is-settings-mode
+  .settings-surface
+  > .mobile-glass-header,
+.orbital-overlay.is-android-mobile-shell
+  .orbital-mobile-menu-layer
+  > .settings-surface
+  > .mobile-glass-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin-bottom: 12px;
+}
+
+.orbital-overlay.is-android-mobile-shell
+  .orbital-modal-window.is-settings-mode
+  .settings-surface:not(.sync-settings-panel-shell)::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: calc(var(--orbital-mobile-bottom-nav-clearance) + 18px);
+  pointer-events: none;
+}
+
+.orbital-overlay.is-android-mobile-shell
+  .orbital-mobile-menu-layer
+  > .settings-surface::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 16px;
+  pointer-events: none;
+}
+
+.orbital-overlay.is-android-mobile-shell
+  .orbital-modal-window.is-settings-mode
+  .settings-surface
+  > .settings-panel-grid,
+.orbital-overlay.is-android-mobile-shell
+  .orbital-modal-window.is-settings-mode
+  .settings-surface
+  > .account-cloud-grid,
+.orbital-overlay.is-android-mobile-shell
+  .orbital-modal-window.is-settings-mode
+  .settings-surface
+  > .account-cloud-wizard-grid,
+.orbital-overlay.is-android-mobile-shell
+  .orbital-modal-window.is-settings-mode
+  .settings-surface
+  > .ai-settings-panel,
+.orbital-overlay.is-android-mobile-shell
+  .orbital-mobile-menu-layer
+  > .settings-surface
+  > .orbital-mobile-account-content,
+.orbital-overlay.is-android-mobile-shell
+  .orbital-mobile-menu-layer
+  > .settings-surface
+  > .orbital-mobile-more-content {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  padding-bottom: 0;
 }
 
 .orbital-overlay.is-android-mobile-shell .orbital-modal-window,
@@ -1292,6 +1574,13 @@
     max(12px, env(safe-area-inset-right))
     max(12px, env(safe-area-inset-bottom))
     max(12px, env(safe-area-inset-left));
+}
+
+.orbital-mobile-preview-layer {
+  --orbital-mobile-preview-bottom-clearance: calc(
+    var(--orbital-mobile-bottom-nav-clearance, 80px) + 12px
+  );
+  padding-bottom: var(--orbital-mobile-preview-bottom-clearance);
 }
 
 .orbital-mobile-conflict-backdrop,
@@ -1392,12 +1681,20 @@
 .orbital-mobile-preview-card {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  max-height: min(
+    680px,
+    calc(
+      100dvh - var(--orbital-mobile-preview-bottom-clearance, 92px) -
+        max(24px, env(safe-area-inset-top))
+    )
+  );
   overflow: hidden;
   padding: 14px;
 }
 
 .orbital-mobile-preview-card .orbital-note-hovercard-scroll {
-  max-height: min(520px, calc(100dvh - 210px));
+  min-height: 0;
+  max-height: none;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -1433,8 +1730,21 @@
     justify-content: flex-start;
   }
 
+  .orbital-mobile-bottom-nav {
+    gap: 0;
+    width: min(720px, calc(100vw - 14px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  }
+
   .orbital-mobile-bottom-nav button {
-    font-size: 0.58rem;
+    min-height: 48px;
+    gap: 3px;
+    padding-inline: 1px;
+    font-size: 0.52rem;
+  }
+
+  .orbital-mobile-nav-glyph {
+    width: 20px;
+    height: 20px;
   }
 }
 

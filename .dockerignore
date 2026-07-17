@@ -1,0 +1,17 @@
+.git
+.github
+.DS_Store
+node_modules
+**/node_modules
+**/dist
+apps/personal-server/dist-server
+apps/personal-server/release-server
+**/.vite
+**/coverage
+apps/app/src-tauri/target
+apps/app/src-tauri/gen
+*.log
+*.sqlite
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal

@@ -1,0 +1,347 @@
+.web-auth-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 22%, color-mix(in srgb, var(--web-auth-accent) 14%, transparent), transparent 34%),
+    radial-gradient(circle at 88% 72%, color-mix(in srgb, var(--web-auth-secondary) 15%, transparent), transparent 38%),
+    linear-gradient(118deg, rgb(var(--surface-deep-rgb) / 0.97), rgb(var(--surface-deep-rgb) / 0.58) 52%, rgb(var(--surface-deep-rgb) / 0.94)),
+    rgb(var(--surface-deep-rgb) / 1);
+}
+
+.web-auth-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, transparent 28%, rgb(var(--surface-deep-rgb) / 0.26) 100%),
+    linear-gradient(180deg, transparent 65%, rgb(var(--surface-deep-rgb) / 0.42));
+}
+
+.web-auth-atmosphere__spectrum {
+  position: absolute;
+  inset: -72%;
+  opacity: 0.42;
+  background: conic-gradient(
+    from 12deg,
+    transparent 0 5%,
+    color-mix(in srgb, var(--web-auth-accent) 78%, transparent) 15%,
+    color-mix(in srgb, var(--web-auth-sky) 72%, transparent) 28%,
+    transparent 38%,
+    color-mix(in srgb, var(--web-auth-secondary) 76%, transparent) 49%,
+    color-mix(in srgb, var(--web-auth-rose) 68%, transparent) 62%,
+    transparent 72%,
+    color-mix(in srgb, var(--web-auth-gold) 62%, transparent) 83%,
+    color-mix(in srgb, var(--web-auth-accent) 62%, transparent) 94%,
+    transparent
+  );
+  filter: blur(92px) saturate(125%);
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  animation: web-auth-spectrum-flow 26s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
+}
+
+.web-auth-atmosphere__mesh {
+  position: absolute;
+  inset: -8%;
+  opacity: 0.18;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--web-auth-accent) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--web-auth-secondary) 6%, transparent) 1px, transparent 1px);
+  background-size: 84px 84px;
+  mask-image: radial-gradient(ellipse at center, black 8%, transparent 74%);
+  animation: web-auth-mesh-drift 38s linear infinite;
+}
+
+.web-auth-atmosphere__plane {
+  position: absolute;
+  inset: -38%;
+  transform-origin: center;
+  opacity: 0.38;
+  will-change: transform, opacity;
+}
+
+.web-auth-atmosphere__plane.is-primary {
+  background: conic-gradient(
+    from 28deg at 50% 50%,
+    transparent 0 19%,
+    color-mix(in srgb, var(--web-auth-accent) 62%, transparent) 31%,
+    transparent 45% 68%,
+    color-mix(in srgb, var(--web-auth-secondary) 54%, transparent) 80%,
+    transparent 94%
+  );
+  filter: blur(64px);
+  animation: web-auth-drift-primary 22s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
+}
+
+.web-auth-atmosphere__plane.is-secondary {
+  background: linear-gradient(
+    132deg,
+    transparent 12%,
+    color-mix(in srgb, var(--text-emphasis, var(--web-auth-accent)) 36%, transparent) 38%,
+    transparent 58%,
+    color-mix(in srgb, var(--web-auth-secondary) 34%, transparent) 77%,
+    transparent 92%
+  );
+  filter: blur(74px);
+  mix-blend-mode: screen;
+  animation: web-auth-drift-secondary 27s ease-in-out infinite alternate;
+}
+
+.web-auth-atmosphere__plane.is-emphasis {
+  inset: -18%;
+  opacity: 0.24;
+  background: linear-gradient(
+    94deg,
+    transparent,
+    color-mix(in srgb, var(--web-auth-accent) 34%, transparent) 31%,
+    transparent 51%,
+    color-mix(in srgb, var(--text-emphasis, var(--web-auth-secondary)) 28%, transparent) 74%,
+    transparent
+  );
+  filter: blur(58px);
+  animation: web-auth-breathe 21s ease-in-out infinite;
+}
+
+.web-auth-atmosphere__halo {
+  position: absolute;
+  width: clamp(360px, 42vw, 760px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0.24;
+  filter: blur(46px);
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+.web-auth-atmosphere__halo.is-mint {
+  top: -22%;
+  left: -12%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--web-auth-accent) 46%, transparent), transparent 66%);
+  animation: web-auth-halo-mint 18s ease-in-out infinite alternate;
+}
+
+.web-auth-atmosphere__halo.is-secondary {
+  right: -15%;
+  bottom: -32%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--web-auth-secondary) 44%, transparent), transparent 68%);
+  animation: web-auth-halo-secondary 22s ease-in-out infinite alternate;
+}
+
+.web-auth-atmosphere__ribbon {
+  position: absolute;
+  left: -14vw;
+  width: 128vw;
+  height: clamp(170px, 24vw, 390px);
+  border-radius: 50%;
+  opacity: 0.25;
+  filter: blur(34px);
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+.web-auth-atmosphere__ribbon.is-upper {
+  top: 11%;
+  background: linear-gradient(
+    100deg,
+    transparent 3%,
+    color-mix(in srgb, var(--web-auth-accent) 24%, transparent) 27%,
+    color-mix(in srgb, var(--text-emphasis, var(--web-auth-secondary)) 18%, transparent) 54%,
+    transparent 82%
+  );
+  transform: rotate(-9deg) translate3d(-4%, 0, 0);
+  animation: web-auth-ribbon-upper 20s ease-in-out infinite alternate;
+}
+
+.web-auth-atmosphere__ribbon.is-lower {
+  bottom: 2%;
+  background: linear-gradient(
+    92deg,
+    transparent 8%,
+    color-mix(in srgb, var(--web-auth-secondary) 22%, transparent) 36%,
+    color-mix(in srgb, var(--web-auth-accent) 18%, transparent) 68%,
+    transparent 94%
+  );
+  transform: rotate(8deg) translate3d(5%, 0, 0);
+  animation: web-auth-ribbon-lower 24s ease-in-out infinite alternate;
+}
+
+.web-auth-atmosphere__orbit {
+  position: absolute;
+  border: 1px solid color-mix(in srgb, var(--web-auth-accent) 15%, transparent);
+  border-radius: 50%;
+  opacity: 0.42;
+}
+
+.web-auth-atmosphere__orbit.is-wide {
+  width: 780px;
+  height: 330px;
+  top: 7%;
+  right: -190px;
+  transform: rotate(-16deg);
+}
+
+.web-auth-atmosphere__orbit.is-close {
+  width: 620px;
+  height: 250px;
+  bottom: 4%;
+  left: -210px;
+  border-color: color-mix(in srgb, var(--web-auth-secondary) 13%, transparent);
+  transform: rotate(24deg);
+}
+
+.web-auth-atmosphere__signal {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--web-auth-accent);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--web-auth-accent) 64%, transparent);
+  animation: web-auth-signal 8s ease-in-out infinite;
+}
+
+.web-auth-atmosphere__signal.is-one {
+  top: 16%;
+  right: 22%;
+}
+
+.web-auth-atmosphere__signal.is-two {
+  bottom: 18%;
+  left: 16%;
+  background: var(--web-auth-secondary);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--web-auth-secondary) 56%, transparent);
+  animation-delay: -4s;
+}
+
+.web-auth-atmosphere.is-paused .web-auth-atmosphere__plane,
+.web-auth-atmosphere.is-paused .web-auth-atmosphere__spectrum,
+.web-auth-atmosphere.is-paused .web-auth-atmosphere__signal,
+.web-auth-atmosphere.is-paused .web-auth-atmosphere__mesh,
+.web-auth-atmosphere.is-paused .web-auth-atmosphere__halo,
+.web-auth-atmosphere.is-paused .web-auth-atmosphere__ribbon {
+  animation-play-state: paused;
+}
+
+@keyframes web-auth-spectrum-flow {
+  0% {
+    transform: translate3d(-7%, -5%, 0) rotate(-12deg) scale(0.9);
+    opacity: 0.3;
+  }
+  45% {
+    transform: translate3d(5%, -1%, 0) rotate(32deg) scale(1.03);
+    opacity: 0.48;
+  }
+  100% {
+    transform: translate3d(-1%, 7%, 0) rotate(76deg) scale(0.94);
+    opacity: 0.36;
+  }
+}
+
+@keyframes web-auth-mesh-drift {
+  to { transform: translate3d(84px, 84px, 0); }
+}
+
+@keyframes web-auth-drift-primary {
+  from { transform: translate3d(-4%, -3%, 0) rotate(-5deg) scale(1.04); }
+  to { transform: translate3d(5%, 4%, 0) rotate(7deg) scale(0.96); }
+}
+
+@keyframes web-auth-drift-secondary {
+  from { transform: translate3d(4%, -5%, 0) rotate(4deg) scale(0.98); }
+  to { transform: translate3d(-5%, 5%, 0) rotate(-6deg) scale(1.05); }
+}
+
+@keyframes web-auth-breathe {
+  0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.14; }
+  50% { transform: translate3d(2%, -2%, 0); opacity: 0.24; }
+}
+
+@keyframes web-auth-signal {
+  0%, 100% { transform: scale(0.78); opacity: 0.5; }
+  50% { transform: scale(1.08); opacity: 0.92; }
+}
+
+@keyframes web-auth-halo-mint {
+  from { transform: translate3d(-4%, -3%, 0) scale(0.88); opacity: 0.18; }
+  to { transform: translate3d(22%, 16%, 0) scale(1.14); opacity: 0.34; }
+}
+
+@keyframes web-auth-halo-secondary {
+  from { transform: translate3d(4%, 5%, 0) scale(1.08); opacity: 0.18; }
+  to { transform: translate3d(-24%, -18%, 0) scale(0.9); opacity: 0.32; }
+}
+
+@keyframes web-auth-ribbon-upper {
+  from { transform: rotate(-9deg) translate3d(-5%, -10%, 0) scaleX(0.96); opacity: 0.17; }
+  to { transform: rotate(-3deg) translate3d(6%, 12%, 0) scaleX(1.05); opacity: 0.32; }
+}
+
+@keyframes web-auth-ribbon-lower {
+  from { transform: rotate(8deg) translate3d(5%, 10%, 0) scaleX(1.04); opacity: 0.15; }
+  to { transform: rotate(2deg) translate3d(-7%, -12%, 0) scaleX(0.95); opacity: 0.3; }
+}
+
+@media (max-width: 720px) {
+  .web-auth-atmosphere__plane.is-emphasis,
+  .web-auth-atmosphere__orbit.is-close,
+  .web-auth-atmosphere__signal.is-two {
+    display: none;
+  }
+
+  .web-auth-atmosphere__plane {
+    opacity: 0.2;
+  }
+
+  .web-auth-atmosphere__spectrum {
+    inset: -92%;
+    opacity: 0.32;
+    filter: blur(108px) saturate(118%);
+  }
+
+  .web-auth-atmosphere__mesh {
+    opacity: 0.1;
+    background-size: 64px 64px;
+  }
+
+  .web-auth-atmosphere__ribbon {
+    left: -40vw;
+    width: 180vw;
+    opacity: 0.18;
+    filter: blur(44px);
+  }
+
+  .web-auth-atmosphere__halo {
+    opacity: 0.18;
+    filter: blur(58px);
+  }
+
+  .web-auth-atmosphere__orbit.is-wide {
+    right: -480px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce), (prefers-reduced-data: reduce) {
+  .web-auth-atmosphere__plane,
+  .web-auth-atmosphere__spectrum,
+  .web-auth-atmosphere__signal,
+  .web-auth-atmosphere__mesh,
+  .web-auth-atmosphere__halo,
+  .web-auth-atmosphere__ribbon {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .web-auth-atmosphere__plane,
+  .web-auth-atmosphere__spectrum,
+  .web-auth-atmosphere__orbit,
+  .web-auth-atmosphere__signal,
+  .web-auth-atmosphere__mesh,
+  .web-auth-atmosphere__halo,
+  .web-auth-atmosphere__ribbon {
+    display: none;
+  }
+}
