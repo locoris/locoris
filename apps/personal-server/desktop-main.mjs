@@ -23,13 +23,13 @@ function reservePort(preferredPort = 8787) {
     probe.once("error", () => {
       const fallback = net.createServer();
       fallback.once("error", reject);
-      fallback.listen(0, "127.0.0.1", () => {
+      fallback.listen(0, () => {
         const address = fallback.address();
         const port = typeof address === "object" && address ? address.port : preferredPort;
         fallback.close((error) => error ? reject(error) : resolve(port));
       });
     });
-    probe.listen(preferredPort, "127.0.0.1", () => {
+    probe.listen(preferredPort, () => {
       probe.close((error) => error ? reject(error) : resolve(preferredPort));
     });
   });

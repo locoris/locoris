@@ -36,6 +36,7 @@
     "appId": "com.locoris.server",
     "productName": "Locoris Server",
     "artifactName": "Locoris-Server-${version}-${os}-${arch}.${ext}",
+    "npmRebuild": false,
     "files": [
       "desktop-main.mjs",
       "dist-server/**/*",
