@@ -62,10 +62,15 @@ jobs:
             fi
             sleep $((attempt * 20))
           done
-      - if: startsWith(github.ref, 'refs/tags/server-v')
-        name: Apply release version
+      - name: Validate release version
         shell: bash
-        run: npm version "${GITHUB_REF_NAME#server-v}" --workspace @locoris/personal-server --no-git-tag-version
+        run: |
+          package_version="$(node -p "require('./apps/personal-server/package.json').version")"
+          tag_version="${GITHUB_REF_NAME#server-v}"
+          if [ "${package_version}" != "${tag_version}" ]; then
+            echo "Server package version ${package_version} does not match tag ${tag_version}." >&2
+            exit 1
+          fi
       - run: npm test --workspace @locoris/personal-server
       - run: npm run desktop:dist --workspace @locoris/personal-server
       - name: Smoke-test packaged desktop application
