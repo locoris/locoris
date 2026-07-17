@@ -32,7 +32,7 @@ interface LocalVaultRegistryState {
 
 // Legacy storage key. Rename only with a migration that preserves existing vault discovery.
 const REGISTRY_STORAGE_KEY = "zen-notes.local-vaults";
-const DEFAULT_LOCAL_VAULT_ID = "local-default";
+export const DEFAULT_LOCAL_VAULT_ID = "local-default";
 
 function now() {
   return Date.now();

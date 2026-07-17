@@ -118,6 +118,7 @@ async function writeLog(event, detail = "") {
 }
 
 function showWindow() {
+  if (smokeTest) return;
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.show();
   mainWindow.focus();
@@ -246,7 +247,9 @@ async function startServerRuntime() {
   if (smokeTest) {
     await writeLog("packaged-smoke-test-passed");
     quitting = true;
-    app.quit();
+    await Promise.resolve(closeServer?.()).catch(() => undefined);
+    serverClosed = true;
+    app.exit(0);
   }
 }
 
@@ -270,13 +273,7 @@ app.on("before-quit", (event) => {
     });
 });
 
-const ownsInstance = app.requestSingleInstanceLock();
-if (!ownsInstance) {
-  app.quit();
-} else {
-  app.on("second-instance", showWindow);
-
-  await app.whenReady();
+async function initializeDesktop() {
   const isRussian = app.getLocale().toLowerCase().startsWith("ru");
   labels = isRussian
     ? {
@@ -316,9 +313,10 @@ if (!ownsInstance) {
     await writeLog("startup-failed", message);
     await loadLaunchPage("failed", error instanceof Error ? error.message : String(error));
     if (smokeTest) {
-      process.exitCode = 1;
       quitting = true;
-      app.quit();
+      await Promise.resolve(closeServer?.()).catch(() => undefined);
+      serverClosed = true;
+      app.exit(1);
     } else {
       dialog.showErrorBox(labels.title, error instanceof Error ? error.message : String(error));
     }
@@ -326,4 +324,18 @@ if (!ownsInstance) {
 
   app.on("activate", showWindow);
   app.on("window-all-closed", () => undefined);
+}
+
+const ownsInstance = app.requestSingleInstanceLock();
+if (!ownsInstance) {
+  app.quit();
+} else {
+  app.on("second-instance", showWindow);
+  void app.whenReady()
+    .then(initializeDesktop)
+    .catch(async (error) => {
+      const message = error instanceof Error ? error.stack || error.message : String(error);
+      await writeLog("desktop-initialization-failed", message);
+      app.exit(1);
+    });
 }

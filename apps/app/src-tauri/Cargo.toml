@@ -1,6 +1,6 @@
 [package]
 name = "locoris-app"
-version = "1.0.43"
+version = "1.0.44"
 description = "Locoris desktop shell"
 authors = ["Locoris"]
 license = "UNLICENSED"

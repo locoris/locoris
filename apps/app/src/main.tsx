@@ -72,12 +72,13 @@ import { preloadLocaleResources, resolveSupportedLocale } from "./localization/l
 import { initializeLocaleWithRecovery } from "./localization/localeTransition";
 import {
   flushPendingLocalVaultStorage,
-  sanitizePersistedLocalVaultSecrets
+  sanitizePersistedLocalVaultSecrets,
+  switchActiveLocalVaultDatabase
 } from "./data/db";
 import { bootstrapDesktopRuntimeState } from "./lib/desktopRuntimeBootstrap";
 import { initializeDesktopWindowStatePersistence } from "./lib/desktopWindowState";
 import { initializeVaultEncryptionSessions } from "./lib/e2eeSession";
-import { listLocalVaultProfiles } from "./lib/localVaults";
+import { getStoredActiveLocalVaultId, listLocalVaultProfiles } from "./lib/localVaults";
 import { initializePersistentClientStorage } from "./lib/persistentClientStorage";
 import { isDesktopRuntime } from "./lib/runtime";
 import {
@@ -145,6 +146,7 @@ async function bootstrap() {
       queueFailureNotice: queueLocaleFailureNotice
     }
   });
+  switchActiveLocalVaultDatabase(getStoredActiveLocalVaultId());
   await bootstrapDesktopRuntimeState();
   await initializeSelfHostedDeepLinks();
   const localVaultIds = listLocalVaultProfiles().map((vault) => vault.id);

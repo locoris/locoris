@@ -1,9 +1,13 @@
 {
   "name": "@locoris/personal-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "private": false,
-  "author": "Locoris",
+  "author": {
+    "name": "Locoris",
+    "email": "support@locoris.app"
+  },
+  "homepage": "https://locoris.app",
   "desktopName": "locoris-server",
   "description": "Private multi-vault self-hosted sync server for Locoris",
   "scripts": {
@@ -59,6 +63,7 @@
     },
     "linux": {
       "category": "Utility",
+      "maintainer": "Locoris <support@locoris.app>",
       "executableName": "locoris-server",
       "icon": "../app/src-tauri/icons/128x128.png",
       "syncDesktopName": true,

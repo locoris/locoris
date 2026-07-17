@@ -26,7 +26,11 @@ import {
 } from "../lib/canvas";
 import { buildInitialDemoVault } from "./demoSeed";
 import { normalizeTagLookup, normalizeTagName } from "../lib/tags";
-import { buildLocalVaultDatabaseName, getStoredActiveLocalVaultId } from "../lib/localVaults";
+import {
+  buildLocalVaultDatabaseName,
+  DEFAULT_LOCAL_VAULT_ID,
+  getStoredActiveLocalVaultId
+} from "../lib/localVaults";
 import {
   deleteDesktopVaultBackup,
   writeDesktopVaultBackup
@@ -1228,7 +1232,11 @@ function createDatabaseForLocalVault(localVaultId: string) {
   return new LocorisDatabase(buildLocalVaultDatabaseName(localVaultId));
 }
 
-export let db = createDatabaseForLocalVault(getStoredActiveLocalVaultId());
+// Persistent desktop settings are hydrated asynchronously during bootstrap.
+// Do not read the vault registry while modules are being evaluated: a fresh
+// per-version WebView profile has no LocalStorage state yet, and localized
+// fallback names require i18n to be initialized first.
+export let db = createDatabaseForLocalVault(DEFAULT_LOCAL_VAULT_ID);
 
 export function switchActiveLocalVaultDatabase(localVaultId: string) {
   db.close();

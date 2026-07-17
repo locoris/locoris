@@ -1,25 +1,7 @@
 name: Personal Server Release
 
 on:
-  workflow_dispatch:
-  pull_request:
-    paths:
-      - "apps/personal-server/**"
-      - "infra/docker/personal-server/**"
-      - "packages/sync-core/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/personal-server-release.yml"
   push:
-    branches:
-      - main
-    paths:
-      - "apps/personal-server/**"
-      - "infra/docker/personal-server/**"
-      - "packages/sync-core/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/personal-server-release.yml"
     tags:
       - "server-v*"
 

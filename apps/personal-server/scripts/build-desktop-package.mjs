@@ -14,7 +14,8 @@ function run(command, args, cwd) {
       cwd,
       env: process.env,
       stdio: "inherit",
-      windowsHide: true
+      windowsHide: true,
+      shell: process.platform === "win32"
     });
     child.once("error", reject);
     child.once("exit", (code, signal) => {
