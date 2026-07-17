@@ -4,6 +4,7 @@
   "type": "module",
   "private": false,
   "author": "Locoris",
+  "desktopName": "locoris-server",
   "description": "Private multi-vault self-hosted sync server for Locoris",
   "scripts": {
     "start": "node server.mjs",
@@ -58,7 +59,9 @@
     },
     "linux": {
       "category": "Utility",
+      "executableName": "locoris-server",
       "icon": "../app/src-tauri/icons/128x128.png",
+      "syncDesktopName": true,
       "target": ["AppImage", "deb"]
     }
   }
