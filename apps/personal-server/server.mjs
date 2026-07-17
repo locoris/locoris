@@ -39,6 +39,8 @@ const SERVER_DIR = path.dirname(SERVER_FILE);
 const IS_DIRECT_RUN = process.argv[1] ? path.resolve(process.argv[1]) === SERVER_FILE : false;
 const PUBLIC_URL = String(process.env.SYNC_PUBLIC_URL ?? "").trim().replace(/\/+$/, "");
 const PRINT_PAIRING_QR = process.env.SYNC_PRINT_QR !== "0";
+const PRINT_PAIRING_DETAILS = process.env.SYNC_PRINT_PAIRING_DETAILS !== "0"
+  && process.env.LOCORIS_DESKTOP_SERVER !== "1";
 const BOOTSTRAP_INVITE_TTL_MS = 24 * 60 * 60 * 1000;
 const PAIRING_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CONFIRMATION_WORDS = [
@@ -1405,7 +1407,7 @@ server.listen(PORT, () => {
     console.log(`Management token source: ${ENV_MANAGEMENT_TOKEN ? "environment" : bootstrap.managementTokenFile}`);
   }
 
-  if (bootstrapPairingInvite) {
+  if (bootstrapPairingInvite && PRINT_PAIRING_DETAILS) {
     const connection = bootstrapConnection;
     console.log("");
     console.log("Connect the first owner device:");

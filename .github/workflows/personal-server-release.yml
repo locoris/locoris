@@ -2,7 +2,24 @@ name: Personal Server Release
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "apps/personal-server/**"
+      - "infra/docker/personal-server/**"
+      - "packages/sync-core/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/personal-server-release.yml"
   push:
+    branches:
+      - main
+    paths:
+      - "apps/personal-server/**"
+      - "infra/docker/personal-server/**"
+      - "packages/sync-core/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/personal-server-release.yml"
     tags:
       - "server-v*"
 
@@ -24,6 +41,7 @@ env:
 jobs:
   desktop:
     name: Locoris Server · ${{ matrix.label }}
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -68,8 +86,10 @@ jobs:
         run: npm version "${GITHUB_REF_NAME#server-v}" --workspace @locoris/personal-server --no-git-tag-version
       - run: npm test --workspace @locoris/personal-server
       - run: npm run desktop:dist --workspace @locoris/personal-server
+      - name: Smoke-test packaged desktop application
+        run: npm run desktop:smoke --workspace @locoris/personal-server
       - run: npm run desktop:checksums --workspace @locoris/personal-server -- ${{ matrix.artifact }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: locoris-server-${{ matrix.artifact }}
           path: |
@@ -94,6 +114,7 @@ jobs:
   docker:
     name: Docker image
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v3
