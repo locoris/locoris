@@ -53,6 +53,7 @@ struct DesktopGoogleOauthCallbackPayload {
 #[serde(rename_all = "camelCase")]
 struct DesktopGoogleOauthExchangeCodeInput {
   client_id: String,
+  client_secret: Option<String>,
   code: String,
   code_verifier: String,
   redirect_uri: String,
@@ -62,6 +63,7 @@ struct DesktopGoogleOauthExchangeCodeInput {
 #[serde(rename_all = "camelCase")]
 struct DesktopGoogleOauthRefreshTokenInput {
   client_id: String,
+  client_secret: Option<String>,
   refresh_token: String,
 }
 
@@ -550,6 +552,18 @@ fn desktop_google_oauth_is_callback_target(target: &str) -> bool {
     || target.starts_with(GOOGLE_DESKTOP_LEGACY_LOOPBACK_PATH)
 }
 
+fn trim_oauth_value(value: Option<String>) -> Option<String> {
+  value.and_then(|entry| {
+    let trimmed = entry.trim();
+
+    if trimmed.is_empty() {
+      None
+    } else {
+      Some(trimmed.to_string())
+    }
+  })
+}
+
 async fn desktop_google_oauth_submit_token_request(
   mut params: Vec<(&'static str, String)>,
 ) -> Result<DesktopGoogleOauthTokenResponse, String> {
@@ -737,6 +751,10 @@ async fn desktop_google_oauth_exchange_code(
 ) -> Result<DesktopGoogleOauthTokenResponse, String> {
   desktop_google_oauth_submit_token_request(vec![
     ("client_id", input.client_id.trim().to_string()),
+    (
+      "client_secret",
+      trim_oauth_value(input.client_secret).unwrap_or_default(),
+    ),
     ("code", input.code.trim().to_string()),
     ("code_verifier", input.code_verifier.trim().to_string()),
     ("grant_type", "authorization_code".to_string()),
@@ -751,6 +769,10 @@ async fn desktop_google_oauth_refresh_token(
 ) -> Result<DesktopGoogleOauthTokenResponse, String> {
   desktop_google_oauth_submit_token_request(vec![
     ("client_id", input.client_id.trim().to_string()),
+    (
+      "client_secret",
+      trim_oauth_value(input.client_secret).unwrap_or_default(),
+    ),
     ("refresh_token", input.refresh_token.trim().to_string()),
     ("grant_type", "refresh_token".to_string()),
   ])

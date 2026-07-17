@@ -58,7 +58,7 @@ Do not use wildcard origins. The web client ID is public and is compiled into th
 
 ### Desktop app
 
-Create a **Desktop app** client for macOS and Windows. Locoris uses PKCE and a random local loopback port. No desktop client secret is accepted or bundled by the app.
+Create a **Desktop app** client for macOS and Windows. Locoris uses PKCE and a random local loopback port. If Google issues a companion client secret, include it in desktop builds: Google documents the field as optional for installed apps, but some issued clients reject the token exchange when it is omitted. Installed apps cannot keep this credential confidential, so it is not a substitute for PKCE.
 
 ### Android
 
@@ -76,6 +76,7 @@ Create `apps/app/.env` from the example and set only public client IDs:
 ```env
 VITE_GOOGLE_DRIVE_CLIENT_ID=your-web-client-id.apps.googleusercontent.com
 VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_ID=your-desktop-client-id.apps.googleusercontent.com
+VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_SECRET=your-desktop-client-secret
 ```
 
 Android resolves authorization through the application ID, signing certificate, and Google Cloud configuration; it does not consume either browser client ID.
@@ -86,8 +87,9 @@ Add these repository **Variables**, not secrets:
 
 - `VITE_GOOGLE_DRIVE_CLIENT_ID`
 - `VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_ID`
+- `VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_SECRET` as a repository secret
 
-The release workflows validate required client IDs before packaging. Never add an OAuth client secret to `VITE_*`, because every Vite variable is readable in the shipped frontend bundle.
+The release workflows validate all three desktop OAuth values before packaging. The companion secret is embedded in the desktop frontend and therefore must be treated as a public installed-app credential, consistent with Google's installed-app threat model.
 
 ## 5. Account Actions
 
