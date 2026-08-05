@@ -302,3 +302,9 @@ jobs:
           --tag "${{ steps.release-version.outputs.tag }}"
           --expected-version "${{ steps.release-version.outputs.version }}"
           --targets "darwin-aarch64,windows-x86_64"
+
+      - name: Mark application release as latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release-version.outputs.tag }}
+        run: gh release edit "${TAG}" --latest --repo "${GITHUB_REPOSITORY}"
