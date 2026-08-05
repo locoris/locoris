@@ -13,7 +13,7 @@ FROM node:24-bookworm-slim
 
 LABEL org.opencontainers.image.title="Locoris Server" \
       org.opencontainers.image.description="Self-hosted sync server for Locoris" \
-      org.opencontainers.image.source="https://github.com/angrein/locoris" \
+      org.opencontainers.image.source="https://github.com/locoris/locoris" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
 WORKDIR /app

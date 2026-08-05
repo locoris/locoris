@@ -8,7 +8,7 @@ import {
 import { isAndroidRuntime } from "./runtime";
 
 const ANDROID_UPDATE_ATTEMPT_STORAGE_KEY = "locoris:android-update:attempt";
-const ANDROID_RELEASE_REPOSITORY = "angrein/locoris";
+const ANDROID_RELEASE_REPOSITORY = "locoris/locoris";
 const ANDROID_RELEASE_TAG_PREFIX = "app-v";
 const ANDROID_PACKAGE_NAME = "com.locoris.android";
 const GITHUB_RELEASES_ENDPOINT = `https://api.github.com/repos/${ANDROID_RELEASE_REPOSITORY}/releases?per_page=50`;

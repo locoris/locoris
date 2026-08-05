@@ -46,7 +46,7 @@ git commit -m "Release X.Y.Z"
 git push origin main
 git tag app-vX.Y.Z
 git push origin app-vX.Y.Z
-gh run list --repo angrein/locoris --limit 5
+gh run list --repo locoris/locoris --limit 5
 ```
 
 Important:

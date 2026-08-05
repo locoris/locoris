@@ -5,6 +5,7 @@ on:
   push:
     tags:
       - "server-v*"
+  workflow_dispatch:
 
 concurrency:
   group: personal-server-release-${{ github.ref }}

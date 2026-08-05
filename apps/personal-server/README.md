@@ -33,7 +33,7 @@ At first start the terminal shows all three representations of one single-use in
 
 In Locoris open **Settings → Sync → Self-hosted**, paste the link/package or enter the reachable server URL and setup code. The first device becomes the owner. The permanent recovery token is generated into the data volume and is not part of normal onboarding.
 
-The image is published as `ghcr.io/angrein/locoris-server:latest`. For a controlled production upgrade, replace `latest` in the Compose file with a numbered server release.
+The image is published as `ghcr.io/locoris/locoris-server:latest`. For a controlled production upgrade, replace `latest` in the Compose file with a numbered server release.
 
 For development from this repository, the same runtime can be started directly with a permanent data directory:
 

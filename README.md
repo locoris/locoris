@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="AGPL-3.0-or-later" src="https://img.shields.io/badge/license-AGPL--3.0--or--later-8cebd8?style=flat-square"></a>
-  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/angrein/locoris?display_name=tag&style=flat-square&color=f2c879"></a>
+  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/locoris/locoris?display_name=tag&style=flat-square&color=f2c879"></a>
   <img alt="Local-first" src="https://img.shields.io/badge/data-local--first-a8b5ca?style=flat-square">
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-web%20%7C%20macOS%20%7C%20Windows%20%7C%20Android-c7b5ef?style=flat-square">
 </p>

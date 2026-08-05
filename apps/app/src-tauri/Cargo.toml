@@ -4,7 +4,7 @@ version = "1.0.47"
 description = "Locoris desktop shell"
 authors = ["angrein"]
 license = "AGPL-3.0-or-later"
-repository = "https://github.com/angrein/locoris"
+repository = "https://github.com/locoris/locoris"
 edition = "2021"
 rust-version = "1.77.2"
 

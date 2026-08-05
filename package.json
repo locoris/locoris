@@ -6,7 +6,7 @@
   "author": "angrein",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/angrein/locoris.git"
+    "url": "git+https://github.com/locoris/locoris.git"
   },
   "workspaces": [
     "apps/app",

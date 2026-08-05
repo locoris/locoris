@@ -264,7 +264,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.build-android-apk.outputs.tag }}
-        run: gh release upload "${TAG}" dist/android-release/* --clobber --repo angrein/locoris
+        run: gh release upload "${TAG}" dist/android-release/* --clobber --repo "${GITHUB_REPOSITORY}"
 
   validate-release-metadata:
     needs:
@@ -298,7 +298,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
           node ./scripts/validate-release-metadata.mjs
-          --repo angrein/locoris
+          --repo "${GITHUB_REPOSITORY}"
           --tag "${{ steps.release-version.outputs.tag }}"
           --expected-version "${{ steps.release-version.outputs.version }}"
           --targets "darwin-aarch64,windows-x86_64"

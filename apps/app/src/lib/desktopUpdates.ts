@@ -9,7 +9,7 @@ import { saveDesktopWindowState } from "./desktopWindowState";
 import { isDesktopRuntime } from "./runtime";
 
 const DESKTOP_UPDATE_ATTEMPT_STORAGE_KEY = "locoris:desktop-update:attempt";
-const DESKTOP_RELEASE_REPOSITORY = "angrein/locoris";
+const DESKTOP_RELEASE_REPOSITORY = "locoris/locoris";
 
 type PersistedDesktopUpdateAttempt = {
   fromVersion: string;
