@@ -92,7 +92,11 @@ const collectNpmPackages = () => {
 
     const directory = join(rootDir, lockPath);
     const manifestPath = join(directory, "package.json");
-    const manifest = existsSync(manifestPath) ? readJson(manifestPath) : {};
+    const isPlatformSpecific = Boolean(metadata.os || metadata.cpu);
+    const manifest =
+      !isPlatformSpecific && existsSync(manifestPath)
+        ? readJson(manifestPath)
+        : {};
     const version = metadata.version || manifest.version || "unknown";
     const identity = `${name}@${version}`;
     const override = packageOverrides.get(identity) ?? {};
@@ -100,7 +104,7 @@ const collectNpmPackages = () => {
       normalizeText(readFileSync(join(rootDir, path), "utf8")),
     );
     const licenseTexts = [
-      ...readLicenseFiles(directory),
+      ...(isPlatformSpecific ? [] : readLicenseFiles(directory)),
       ...(override.licenseTexts ?? []),
       ...overrideFileTexts,
       ...(override.additionalNotices ?? []),
