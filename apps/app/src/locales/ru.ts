@@ -1684,6 +1684,31 @@ const messages = {
       "Обнови адрес сервера или management token. Locoris сначала проверит доступ, и только потом сохранит изменения.",
     selfHostedReconnect: "Обновить токен",
     selfHostedReconnectSave: "Проверить и сохранить",
+    selfHostedEndpointAction: "Изменить адрес",
+    selfHostedEndpointFoundAction: "Использовать найденный адрес",
+    selfHostedEndpointKicker: "Сетевой адрес",
+    selfHostedEndpointTitle: "Изменить адрес сервера",
+    selfHostedEndpointCurrent: "Текущий адрес",
+    selfHostedEndpointNew: "Новый адрес",
+    selfHostedEndpointDiscoveryTitle: "Найти Locoris Server рядом",
+    selfHostedEndpointDiscoveryDescription:
+      "Locoris ищет сервер в локальной сети и предлагает только тот же идентификатор сервера.",
+    selfHostedEndpointWebDescription:
+      "Введи адрес из Locoris Server. Автоматический поиск в локальной сети доступен в приложениях для компьютера и Android.",
+    selfHostedEndpointDiscovering: "Ищем…",
+    selfHostedEndpointDiscover: "Найти сервер",
+    selfHostedEndpointNotFound: "Тот же Locoris Server не найден в этой локальной сети.",
+    selfHostedEndpointFound: "Тот же сервер",
+    selfHostedEndpointSafety:
+      "Перед сохранением Locoris проверит идентификатор сервера и доступ этого устройства. Привязки хранилищ, история синхронизации и токены не изменятся.",
+    selfHostedEndpointVerifying: "Проверяем…",
+    selfHostedEndpointSave: "Проверить и обновить",
+    selfHostedEndpointUpdated: "Адрес сервера обновлён. Подключённые хранилища уже синхронизируются.",
+    selfHostedEndpointConnectionNotFound:
+      "Нет существующего подключения к этому серверу. Открой нужный профиль хранилища или подключи сервер как новый.",
+    selfHostedEndpointServerMismatch:
+      "По этому адресу находится другой Locoris Server. Существующее подключение не изменено.",
+    selfHostedEndpointAddressUnchanged: "Перед обновлением введи другой адрес сервера.",
     selfHostedConnectAction: "Проверить и подключить",
     selfHostedValidationHint:
       "Locoris сначала проверит адрес сервера и management token. Если сервер их примет, подключение сразу сохранится.",

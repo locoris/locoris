@@ -17,7 +17,7 @@ await build({
   format: "esm",
   target: "node24",
   sourcemap: false,
-  external: ["better-sqlite3", "qrcode", "qrcode-terminal"]
+  external: ["better-sqlite3", "bonjour-service", "qrcode", "qrcode-terminal"]
 });
 await cp(path.join(serverRoot, "public"), path.join(outputRoot, "public"), {
   recursive: true

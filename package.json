@@ -1,7 +1,13 @@
 {
   "name": "locoris",
   "private": true,
-  "version": "1.0.46",
+  "version": "1.0.47",
+  "license": "AGPL-3.0-or-later",
+  "author": "angrein",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/angrein/locoris.git"
+  },
   "workspaces": [
     "apps/app",
     "apps/personal-server",
@@ -19,6 +25,9 @@
     "preview": "npm run preview --workspace @locoris/app",
     "typecheck": "npm run typecheck --workspace @locoris/app",
     "i18n:check": "node ./scripts/check-localization.mjs",
+    "notices:generate": "node ./scripts/generate-third-party-notices.mjs",
+    "notices:check": "node ./scripts/generate-third-party-notices.mjs --check",
+    "legal:copy": "node ./scripts/copy-legal-notices.mjs",
     "test:google-drive": "npm run test --workspace @locoris/app",
     "desktop:dev": "npm run desktop:dev --workspace @locoris/app",
     "desktop:build": "npm run desktop:build --workspace @locoris/app",

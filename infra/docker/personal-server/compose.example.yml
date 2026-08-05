@@ -2,13 +2,13 @@ services:
   locoris-personal-server:
     image: ghcr.io/angrein/locoris-server:latest
     environment:
-      PORT: "8787"
-      SYNC_PUBLIC_URL: "${LOCORIS_PUBLIC_URL:-http://localhost:8787}"
+      PORT: "${LOCORIS_PORT:-26747}"
+      SYNC_PUBLIC_URL: "${LOCORIS_PUBLIC_URL:-http://localhost:26747}"
       SYNC_MANAGEMENT_TOKEN: "${LOCORIS_RECOVERY_TOKEN:-}"
       SYNC_DATA_DIR: "/data"
       SYNC_JOURNAL_MAX_BYTES: "2097152"
     ports:
-      - "8787:8787"
+      - "${LOCORIS_PORT:-26747}:${LOCORIS_PORT:-26747}"
     volumes:
       - locoris-personal-data:/data
     init: true

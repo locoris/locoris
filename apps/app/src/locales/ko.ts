@@ -1651,6 +1651,31 @@ const messages = {
       "서버 URL이나 관리 토큰을 업데이트하세요. Locoris 먼저 접근 권한을 검증한 후에야 변경 사항을 저장합니다.",
     selfHostedReconnect: "토큰 업데이트",
     selfHostedReconnectSave: "체크 앤 세이브",
+    selfHostedEndpointAction: "주소 변경",
+    selfHostedEndpointFoundAction: "찾은 주소 사용",
+    selfHostedEndpointKicker: "네트워크 주소",
+    selfHostedEndpointTitle: "서버 주소 변경",
+    selfHostedEndpointCurrent: "현재 주소",
+    selfHostedEndpointNew: "새 주소",
+    selfHostedEndpointDiscoveryTitle: "네트워크에서 Locoris Server 찾기",
+    selfHostedEndpointDiscoveryDescription:
+      "Locoris가 로컬 네트워크를 검색하고 동일한 서버 ID만 제안합니다.",
+    selfHostedEndpointWebDescription:
+      "Locoris Server에 표시된 주소를 입력하세요. 자동 검색은 데스크톱 및 Android 앱에서 사용할 수 있습니다.",
+    selfHostedEndpointDiscovering: "검색 중…",
+    selfHostedEndpointDiscover: "서버 찾기",
+    selfHostedEndpointNotFound: "이 로컬 네트워크에서 동일한 Locoris Server를 찾지 못했습니다.",
+    selfHostedEndpointFound: "동일한 서버",
+    selfHostedEndpointSafety:
+      "저장 전에 서버 ID와 이 기기의 자격 증명을 확인합니다. 보관함 연결, 동기화 기록 및 토큰은 변경되지 않습니다.",
+    selfHostedEndpointVerifying: "확인 중…",
+    selfHostedEndpointSave: "확인 후 업데이트",
+    selfHostedEndpointUpdated: "서버 주소가 업데이트되었습니다. 연결된 보관함을 동기화하고 있습니다.",
+    selfHostedEndpointConnectionNotFound:
+      "이 서버와 일치하는 기존 연결이 없습니다. 올바른 보관함 프로필을 열거나 새로 연결하세요.",
+    selfHostedEndpointServerMismatch:
+      "이 주소는 다른 Locoris Server에 속합니다. 기존 연결은 변경되지 않았습니다.",
+    selfHostedEndpointAddressUnchanged: "업데이트하기 전에 다른 서버 주소를 입력하세요.",
     selfHostedConnectAction: "확인하고 연결",
     selfHostedValidationHint:
       "Locoris 먼저 서버 URL과 관리 토큰을 검증합니다. 서버가 이를 받아들인 후에야 연결이 저장됩니다.",

@@ -179,7 +179,10 @@ interface SettingsPanelProps {
     name: string;
   }) => Promise<void>;
   onClearBinding: (localVaultId: string) => void | Promise<void>;
-  onRunVaultSync: (localVaultId: string) => void | Promise<void>;
+  onRunVaultSync: (
+    localVaultId: string,
+    connectionOverride?: SyncConnection
+  ) => void | Promise<void>;
   onEnableVaultEncryption: (input: {
     localVaultId: string;
     passphrase: string;

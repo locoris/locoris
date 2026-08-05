@@ -31,6 +31,107 @@ const GOOGLE_DESKTOP_LOOPBACK_LISTENER_TIMEOUT_SECS: u64 = 190;
 const GOOGLE_OAUTH_HTTP_TIMEOUT_SECS: u64 = 30;
 const GOOGLE_OAUTH_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 const GOOGLE_OAUTH_REVOKE_URL: &str = "https://oauth2.googleapis.com/revoke";
+const LOCORIS_SELF_HOSTED_MDNS_TYPE: &str = "_locoris-sync._tcp.local.";
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DiscoveredSelfHostedServer {
+  server_id: String,
+  name: String,
+  service_name: String,
+  host: String,
+  addresses: Vec<String>,
+  port: u16,
+  url: String,
+}
+
+fn discover_self_hosted_servers_blocking(timeout_ms: u64) -> Result<Vec<DiscoveredSelfHostedServer>, String> {
+  use mdns_sd::{ServiceDaemon, ServiceEvent};
+
+  let daemon = ServiceDaemon::new().map_err(|error| error.to_string())?;
+  let receiver = daemon
+    .browse(LOCORIS_SELF_HOSTED_MDNS_TYPE)
+    .map_err(|error| error.to_string())?;
+  let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(350, 6_000));
+  let mut discovered = Vec::<DiscoveredSelfHostedServer>::new();
+
+  while let Some(remaining) = deadline.checked_duration_since(Instant::now()) {
+    match receiver.recv_timeout(remaining) {
+      Ok(ServiceEvent::ServiceResolved(service)) => {
+        let server_id = service
+          .get_property_val_str("serverId")
+          .unwrap_or_default()
+          .trim()
+          .to_string();
+
+        if server_id.is_empty() {
+          continue;
+        }
+
+        let all_addresses: Vec<std::net::IpAddr> = service
+          .get_addresses()
+          .iter()
+          .map(|address| address.to_ip_addr())
+          .collect();
+        let mut addresses: Vec<String> = all_addresses
+          .iter()
+          .filter(|address| !address.is_loopback())
+          .map(ToString::to_string)
+          .collect();
+        if addresses.is_empty() {
+          addresses = all_addresses.iter().map(ToString::to_string).collect();
+        }
+        addresses.sort();
+        addresses.dedup();
+
+        let host = service.get_hostname().trim_end_matches('.').to_string();
+        let url_host = addresses
+          .iter()
+          .find(|address| address.parse::<std::net::Ipv4Addr>().is_ok())
+          .cloned()
+          .or_else(|| (!host.is_empty()).then_some(host.clone()))
+          .or_else(|| addresses.first().map(|address| format!("[{address}]")));
+        let Some(url_host) = url_host else {
+          continue;
+        };
+        let url = format!("http://{}:{}", url_host, service.get_port());
+
+        if discovered.iter().any(|candidate| candidate.server_id == server_id && candidate.url == url) {
+          continue;
+        }
+
+        discovered.push(DiscoveredSelfHostedServer {
+          server_id,
+          name: service
+            .get_property_val_str("product")
+            .unwrap_or("Locoris Server")
+            .to_string(),
+          service_name: service.get_fullname().to_string(),
+          host,
+          addresses,
+          port: service.get_port(),
+          url,
+        });
+      }
+      Ok(_) => {}
+      Err(_) => break,
+    }
+  }
+
+  let _ = daemon.stop_browse(LOCORIS_SELF_HOSTED_MDNS_TYPE);
+  let _ = daemon.shutdown();
+  discovered.sort_by(|left, right| left.name.cmp(&right.name).then_with(|| left.url.cmp(&right.url)));
+  Ok(discovered)
+}
+
+#[tauri::command]
+async fn discover_self_hosted_servers(timeout_ms: Option<u64>) -> Result<Vec<DiscoveredSelfHostedServer>, String> {
+  tauri::async_runtime::spawn_blocking(move || {
+    discover_self_hosted_servers_blocking(timeout_ms.unwrap_or(2_400))
+  })
+  .await
+  .map_err(|error| error.to_string())?
+}
 
 #[derive(Default)]
 struct DesktopGoogleOauthState {
@@ -1366,7 +1467,8 @@ pub fn run() {
       native_vault_store_delete,
       secure_secret_get,
       secure_secret_set,
-      secure_secret_delete
+      secure_secret_delete,
+      discover_self_hosted_servers
     ])
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_deep_link::init())

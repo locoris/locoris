@@ -592,7 +592,7 @@
   left: 10px;
   right: 10px;
   width: auto;
-  max-width: 720px;
+  max-width: var(--orbital-mobile-page-max-width);
   margin: 0 auto;
   transform: none;
 }
@@ -1121,7 +1121,10 @@
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0;
-  width: min(720px, calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  width: min(
+    var(--orbital-mobile-page-max-width, 720px),
+    calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right))
+  );
   transform: translateX(-50%);
   padding: 0;
   overflow: visible;
@@ -1732,7 +1735,10 @@
 
   .orbital-mobile-bottom-nav {
     gap: 0;
-    width: min(720px, calc(100vw - 14px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    width: min(
+      var(--orbital-mobile-page-max-width, 720px),
+      calc(100vw - 14px - env(safe-area-inset-left) - env(safe-area-inset-right))
+    );
   }
 
   .orbital-mobile-bottom-nav button {
@@ -1748,12 +1754,16 @@
   }
 }
 
+.orbital-overlay.is-android-tablet-portrait-shell {
+  --orbital-mobile-page-max-width: 100%;
+}
+
 .orbital-overlay.is-android-tablet-portrait-shell .orbital-inspector.panel {
-  width: min(720px, 100%);
+  width: 100%;
   margin: 0 auto;
 }
 
 .orbital-overlay.is-android-tablet-portrait-shell.is-mobile-section-map .orbital-scene-wrap {
-  width: min(920px, 100%);
+  width: 100%;
   margin: 0 auto;
 }

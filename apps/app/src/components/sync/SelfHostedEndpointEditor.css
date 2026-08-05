@@ -1,0 +1,246 @@
+.self-hosted-endpoint-editor {
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.self-hosted-endpoint-current,
+.self-hosted-endpoint-field,
+.self-hosted-endpoint-discovery,
+.self-hosted-endpoint-candidates,
+.self-hosted-endpoint-safety,
+.self-hosted-endpoint-error {
+  min-width: 0;
+}
+
+.self-hosted-endpoint-current {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 24%, rgba(255, 255, 255, 0.1));
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.self-hosted-endpoint-current span,
+.self-hosted-endpoint-field > span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.self-hosted-endpoint-current strong {
+  color: var(--text-primary);
+  font-size: 0.94rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.self-hosted-endpoint-field {
+  display: grid;
+  gap: 8px;
+}
+
+.self-hosted-endpoint-field input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 1px solid color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 28%, rgba(255, 255, 255, 0.11));
+  border-radius: 16px;
+  color: var(--text-primary);
+  background: rgba(5, 9, 20, 0.58);
+  font: inherit;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.self-hosted-endpoint-field input:focus {
+  border-color: color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 68%, white 5%);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 13%, transparent);
+}
+
+.self-hosted-endpoint-discovery {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.018));
+}
+
+.self-hosted-endpoint-discovery-copy {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.self-hosted-endpoint-discovery-copy > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.self-hosted-endpoint-discovery-copy strong,
+.self-hosted-endpoint-discovery-copy span {
+  overflow-wrap: break-word;
+}
+
+.self-hosted-endpoint-discovery-copy strong {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.self-hosted-endpoint-discovery-copy span {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.self-hosted-endpoint-discovery-icon {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 38%, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
+  color: var(--accent-theme-secondary, var(--cyan));
+  background: color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 10%, rgba(255, 255, 255, 0.025));
+}
+
+.self-hosted-endpoint-discovery-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.self-hosted-endpoint-icon-accent {
+  fill: var(--accent-theme-primary, var(--gold));
+  stroke: none;
+}
+
+.self-hosted-endpoint-discovery > button,
+.self-hosted-endpoint-actions button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 14px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.045);
+  font: inherit;
+  font-weight: 820;
+  cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.self-hosted-endpoint-discovery > button:active,
+.self-hosted-endpoint-actions button:active {
+  transform: scale(0.98);
+}
+
+.self-hosted-endpoint-candidates {
+  display: grid;
+  gap: 8px;
+}
+
+.self-hosted-endpoint-candidates button {
+  min-width: 0;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 15px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.025);
+  text-align: left;
+  cursor: pointer;
+}
+
+.self-hosted-endpoint-candidates button.is-selected {
+  border-color: color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 56%, rgba(255, 255, 255, 0.1));
+  background: color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 10%, rgba(255, 255, 255, 0.03));
+}
+
+.self-hosted-endpoint-candidates button > span:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.self-hosted-endpoint-candidates strong,
+.self-hosted-endpoint-candidates small {
+  overflow-wrap: anywhere;
+}
+
+.self-hosted-endpoint-candidates small,
+.self-hosted-endpoint-candidates button > span:last-child {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+
+.self-hosted-endpoint-safety {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.self-hosted-endpoint-error {
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 118, 157, 0.36);
+  border-radius: 14px;
+  color: #ffc0d2;
+  background: rgba(91, 21, 47, 0.24);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.self-hosted-endpoint-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.self-hosted-endpoint-actions .is-primary {
+  border-color: color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 52%, rgba(255, 255, 255, 0.12));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-theme-secondary, var(--cyan)) 24%, rgba(255, 255, 255, 0.06)), color-mix(in srgb, var(--accent-theme-primary, var(--gold)) 15%, rgba(255, 255, 255, 0.04)));
+}
+
+.self-hosted-endpoint-discovery > button:disabled,
+.self-hosted-endpoint-actions button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+@media (max-width: 620px) {
+  .self-hosted-endpoint-discovery {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .self-hosted-endpoint-discovery > button {
+    width: 100%;
+  }
+
+  .self-hosted-endpoint-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .self-hosted-endpoint-field input,
+  .self-hosted-endpoint-discovery > button,
+  .self-hosted-endpoint-actions button {
+    transition: none;
+  }
+}

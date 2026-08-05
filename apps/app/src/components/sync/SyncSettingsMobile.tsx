@@ -30,6 +30,7 @@ type SyncSettingsMobileProps = {
   vaultBindings: SyncVaultBinding[];
   vaultEncryptionById: Record<string, VaultEncryptionSummary>;
   connectionAvailability: Record<string, ConnectionAvailabilityState>;
+  selfHostedEndpointCandidates: Record<string, string>;
   remoteVaultsByConnectionId: Record<string, SyncRemoteVault[]>;
   remoteVaultErrors: Record<string, string | null>;
   remoteVaultLoading: Record<string, boolean>;
@@ -58,6 +59,7 @@ type SyncSettingsMobileProps = {
   onDeleteConnection: (connectionId: string) => void | Promise<void>;
   onRevokeGoogleDriveConnection: (connectionId: string) => void | Promise<void>;
   onRepairConnection: (connection: SyncConnection) => void | Promise<void>;
+  onEditSelfHostedEndpoint: (connection: SyncConnection, initialServerUrl?: string) => void;
   onManageSelfHostedAccess: (connection: SyncConnection) => void;
 };
 
@@ -242,6 +244,7 @@ export default function SyncSettingsMobile({
   vaultBindings,
   vaultEncryptionById,
   connectionAvailability,
+  selfHostedEndpointCandidates,
   remoteVaultsByConnectionId,
   remoteVaultErrors,
   remoteVaultLoading,
@@ -270,6 +273,7 @@ export default function SyncSettingsMobile({
   onDeleteConnection,
   onRevokeGoogleDriveConnection,
   onRepairConnection,
+  onEditSelfHostedEndpoint,
   onManageSelfHostedAccess
 }: SyncSettingsMobileProps) {
   const { t, i18n } = useTranslation();
@@ -328,7 +332,9 @@ export default function SyncSettingsMobile({
       return;
     }
 
-    const query = window.matchMedia("(max-width: 920px) and (orientation: portrait)");
+    const query = window.matchMedia(
+      "(max-width: 1180px) and (orientation: portrait), (pointer: coarse) and (orientation: portrait)"
+    );
     const updateMatches = () => setIsMobilePortrait(query.matches);
 
     updateMatches();
@@ -864,6 +870,7 @@ export default function SyncSettingsMobile({
         detailConnection.provider === "hosted" ||
         detailConnection.provider === "googleDrive") &&
       availability === "authError";
+    const endpointCandidate = selfHostedEndpointCandidates[detailConnection.id] ?? null;
 
     return renderMobilePortal(
       <div className="sync-mobile-sheet-layer" role="dialog" aria-modal="true">
@@ -902,6 +909,21 @@ export default function SyncSettingsMobile({
                 <span>{t("settings.remoteVaultCount", { count: remoteVaults.length })}</span>
               </div>
               <div className="sync-mobile-action-row">
+                {detailConnection.provider === "selfHosted" ? (
+                  <button
+                    type="button"
+                    className={`sync-mobile-secondary-action ${endpointCandidate ? "is-recovery" : ""}`}
+                    disabled={busyKey !== null}
+                    onClick={() => {
+                      setDetailConnectionId(null);
+                      onEditSelfHostedEndpoint(detailConnection, endpointCandidate ?? undefined);
+                    }}
+                  >
+                    {endpointCandidate
+                      ? t("settings.selfHostedEndpointFoundAction")
+                      : t("settings.selfHostedEndpointAction")}
+                  </button>
+                ) : null}
                 {detailConnection.provider === "selfHosted" && detailConnection.selfHostedRole !== "guest" ? (
                   <button
                     type="button"

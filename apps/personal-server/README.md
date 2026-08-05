@@ -40,22 +40,22 @@ For development from this repository, the same runtime can be started directly w
 ```bash
 npm install
 SYNC_DATA_DIR="$HOME/locoris-personal-data" \
-SYNC_PUBLIC_URL="http://localhost:8787" \
+SYNC_PUBLIC_URL="http://localhost:26747" \
 npm run sync-server
 ```
 
-Port `8787` is also the default local port for Locoris Cloud API development. If both servers run on the same computer, keep Cloud on `8787` and start Personal Sync on a different port, making `PORT` and `SYNC_PUBLIC_URL` match:
+Personal Sync uses the dedicated port `26747` by default. Locoris Cloud development can keep `8787`, so both runtimes can run on one computer without special configuration. For an advanced installation, make `PORT` and `SYNC_PUBLIC_URL` match:
 
 ```bash
 SYNC_DATA_DIR="$HOME/locoris-personal-data" \
-PORT=8788 \
-SYNC_PUBLIC_URL="http://localhost:8788" \
+PORT=26748 \
+SYNC_PUBLIC_URL="http://localhost:26748" \
 npm run sync-server
 ```
 
 The named `locoris-personal-data` volume is the complete persistence boundary. Recreating the container does not rotate tokens or remove vaults as long as this volume is preserved.
 
-Set `LOCORIS_PUBLIC_URL` in `.env` to the address other devices can reach. For a local network that can be `http://192.168.1.20:8787`; for remote access use an HTTPS reverse proxy or a private network such as Tailscale. `localhost` only works when Locoris and the server are on the same computer.
+Set `LOCORIS_PORT` and `LOCORIS_PUBLIC_URL` in `.env` to the port and address other devices can reach. For a local network that can be `26747` and `http://192.168.1.20:26747`; for remote access use an HTTPS reverse proxy or a private network such as Tailscale. `localhost` only works when Locoris and the server are on the same computer.
 
 ## Locoris Server For Desktop
 
@@ -68,6 +68,12 @@ Open the GitHub release whose tag starts with `server-v` and download the Locori
 Each platform also publishes a `SHA256SUMS-*.txt` file so the downloaded installer can be verified before launch.
 
 On first launch, Locoris Server creates a permanent data directory, starts the same SQLite + files runtime as Docker, and opens a one-time owner invitation. Use **Open in Locoris**, copy the invitation, or enter the shown server address and short code. Closing the window keeps the server running in the system tray; the tray menu can reopen it, enable start-at-login, or stop it completely.
+
+The desktop server always starts on `26747` unless a custom port was saved in **Network**. It never silently chooses a random replacement. If the port is occupied, the window explains the conflict and lets the user choose a free port from `1024` to `49151`; saving requires confirmation and restarts the server. Installations managed with the `PORT` environment variable remain read-only in this screen.
+
+Locoris Server advertises `_locoris-sync._tcp.local` on the local network. Desktop and Android apps can therefore find the same server identity after its address or port changes. An existing connection is updated only after Locoris verifies both the `serverId` and that device's existing credential; vault bindings, tokens, cursors, and sync history are preserved. Web clients can use the address shown in the server window or the endpoint-update link/QR.
+
+Linux containers using ordinary bridge networking may not forward multicast DNS to the LAN. In that case use the explicit reachable URL shown in Locoris, or host networking where appropriate; endpoint verification and manual address updates remain available.
 
 For another device on the same network, use the computer's LAN address instead of `localhost` and allow the selected port through the operating-system firewall. For access over the internet, do not expose plain HTTP directly: use an HTTPS reverse proxy or a private overlay network. When creating an invitation in Locoris, the address field must contain the URL that the invited device can actually reach.
 
@@ -128,9 +134,10 @@ Restore into an empty volume while the server is stopped. Never combine a databa
 
 ## Operational Settings
 
-- `PORT`: HTTP port, default `8787`.
+- `PORT`: advanced HTTP port override, default `26747`. Desktop users normally change it in **Network** instead.
 - `SYNC_DATA_DIR`: permanent server data directory.
 - `SYNC_PUBLIC_URL`: reachable base URL embedded into setup links and QR codes.
+- `SYNC_MDNS`: set to `0` to disable `_locoris-sync._tcp.local` discovery advertising.
 - `SYNC_PRINT_QR`: set to `0` to suppress the console QR code; desktop Locoris Server does this automatically.
 - `SYNC_MANAGEMENT_TOKEN`: optional disaster-recovery override; not required for normal device pairing.
 - `SYNC_JOURNAL_MAX_BYTES`: maximum journal size per vault, default `2097152` (2 MiB, minimum 64 KiB). When old deltas are pruned, clients automatically receive a full snapshot.
@@ -145,3 +152,12 @@ The `/health` response reports `storage.backend: "sqlite-files"`, the schema ver
 4. Check `/health` and confirm the expected vault count in the app.
 5. Sync one existing plain or private vault from two devices.
 6. Keep `legacy-json/` through at least one verified backup cycle.
+
+## License
+
+Locoris Server is part of the public Locoris project and is licensed under
+[`AGPL-3.0-or-later`](../../LICENSE). Third-party notices are maintained in
+[`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md). Modified network
+deployments must continue to provide their corresponding source as required by
+the AGPL. The Locoris name and brand are covered separately by the
+[trademark policy](../../TRADEMARKS.md).

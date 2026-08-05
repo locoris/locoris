@@ -1,10 +1,10 @@
 [package]
 name = "locoris-app"
-version = "1.0.46"
+version = "1.0.47"
 description = "Locoris desktop shell"
-authors = ["Locoris"]
-license = "UNLICENSED"
-repository = ""
+authors = ["angrein"]
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/angrein/locoris"
 edition = "2021"
 rust-version = "1.77.2"
 
@@ -21,6 +21,7 @@ tauri-build = { version = "2.6.0", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
+mdns-sd = { version = "0.20.3", default-features = false }
 reqwest = { version = "0.13.3", default-features = false, features = ["rustls"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 tauri = { version = "2.11.0", features = [] }

@@ -1651,6 +1651,31 @@ const messages = {
       "サーバーのURLや管理トークンを更新してください。Locorisまずアクセスを検証し、その後に変更を保存します。",
     selfHostedReconnect: "トークン更新",
     selfHostedReconnectSave: "チェックしてセーブ",
+    selfHostedEndpointAction: "アドレスを変更",
+    selfHostedEndpointFoundAction: "見つかったアドレスを使用",
+    selfHostedEndpointKicker: "ネットワークアドレス",
+    selfHostedEndpointTitle: "サーバーアドレスを変更",
+    selfHostedEndpointCurrent: "現在のアドレス",
+    selfHostedEndpointNew: "新しいアドレス",
+    selfHostedEndpointDiscoveryTitle: "ネットワーク上のLocoris Serverを検索",
+    selfHostedEndpointDiscoveryDescription:
+      "Locorisはローカルネットワークを検索し、同じサーバーIDだけを候補に表示します。",
+    selfHostedEndpointWebDescription:
+      "Locoris Serverに表示されたアドレスを入力してください。自動検索はデスクトップ版とAndroid版で利用できます。",
+    selfHostedEndpointDiscovering: "検索中…",
+    selfHostedEndpointDiscover: "サーバーを検索",
+    selfHostedEndpointNotFound: "このローカルネットワークで同じLocoris Serverが見つかりませんでした。",
+    selfHostedEndpointFound: "同じサーバー",
+    selfHostedEndpointSafety:
+      "保存前にサーバーIDとこのデバイスの認証情報を確認します。保管庫のリンク、同期履歴、トークンは変更されません。",
+    selfHostedEndpointVerifying: "確認中…",
+    selfHostedEndpointSave: "確認して更新",
+    selfHostedEndpointUpdated: "サーバーアドレスを更新しました。接続済みの保管庫を同期しています。",
+    selfHostedEndpointConnectionNotFound:
+      "このサーバーに一致する既存の接続がありません。正しい保管庫プロファイルを開くか、新規接続してください。",
+    selfHostedEndpointServerMismatch:
+      "このアドレスは別のLocoris Serverです。既存の接続は変更されませんでした。",
+    selfHostedEndpointAddressUnchanged: "更新する前に別のサーバーアドレスを入力してください。",
     selfHostedConnectAction: "確認して接続",
     selfHostedValidationHint:
       "LocorisまずサーバーのURLと管理トークンを検証します。サーバーがそれを受け入れてから接続が保存されます。",

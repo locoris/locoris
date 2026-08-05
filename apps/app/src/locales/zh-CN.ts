@@ -1651,6 +1651,31 @@ const messages = {
       "更新服务器网址或管理令牌。Locoris先验证访问，然后才保存变更。",
     selfHostedReconnect: "更新令牌",
     selfHostedReconnectSave: "检查并存档",
+    selfHostedEndpointAction: "更改地址",
+    selfHostedEndpointFoundAction: "使用找到的地址",
+    selfHostedEndpointKicker: "网络地址",
+    selfHostedEndpointTitle: "更改服务器地址",
+    selfHostedEndpointCurrent: "当前地址",
+    selfHostedEndpointNew: "新地址",
+    selfHostedEndpointDiscoveryTitle: "在网络中查找 Locoris Server",
+    selfHostedEndpointDiscoveryDescription:
+      "Locoris 会搜索本地网络，并且只推荐具有相同服务器标识的设备。",
+    selfHostedEndpointWebDescription:
+      "请输入 Locoris Server 中显示的地址。自动查找功能可在桌面版和 Android 版中使用。",
+    selfHostedEndpointDiscovering: "正在搜索…",
+    selfHostedEndpointDiscover: "查找服务器",
+    selfHostedEndpointNotFound: "在此本地网络中未找到同一个 Locoris Server。",
+    selfHostedEndpointFound: "同一服务器",
+    selfHostedEndpointSafety:
+      "保存前，Locoris 会验证服务器标识和此设备的凭据。存储库关联、同步历史和令牌都不会改变。",
+    selfHostedEndpointVerifying: "正在验证…",
+    selfHostedEndpointSave: "验证并更新",
+    selfHostedEndpointUpdated: "服务器地址已更新。已连接的存储库正在同步。",
+    selfHostedEndpointConnectionNotFound:
+      "没有与此服务器匹配的现有连接。请打开正确的存储库配置，或将服务器作为新连接添加。",
+    selfHostedEndpointServerMismatch:
+      "此地址属于另一个 Locoris Server。现有连接未被更改。",
+    selfHostedEndpointAddressUnchanged: "更新前请输入不同的服务器地址。",
     selfHostedConnectAction: "检查并连接",
     selfHostedValidationHint:
       "Locoris先验证服务器URL和管理令牌。只有服务器接受后，连接才会被保存。",

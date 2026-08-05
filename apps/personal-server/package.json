@@ -1,13 +1,16 @@
 {
   "name": "@locoris/personal-server",
-  "version": "0.1.2",
+  "version": "0.1.3",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "private": false,
-  "author": {
-    "name": "Locoris",
-    "email": "support@locoris.app"
+  "author": "angrein",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/angrein/locoris.git",
+    "directory": "apps/personal-server"
   },
-  "homepage": "https://locoris.app",
+  "homepage": "https://github.com/angrein/locoris/tree/main/apps/personal-server",
   "desktopName": "locoris-server",
   "description": "Private multi-vault self-hosted sync server for Locoris",
   "scripts": {
@@ -23,6 +26,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
+    "bonjour-service": "^1.4.4",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0"
   },
@@ -39,9 +43,25 @@
     "npmRebuild": false,
     "files": [
       "desktop-main.mjs",
+      "desktop-preload.mjs",
       "desktop-port.mjs",
+      "locales/**/*",
       "dist-server/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../../LICENSE",
+        "to": "legal/LICENSE"
+      },
+      {
+        "from": "../../THIRD_PARTY_NOTICES.md",
+        "to": "legal/THIRD_PARTY_NOTICES.md"
+      },
+      {
+        "from": "../../TRADEMARKS.md",
+        "to": "legal/TRADEMARKS.md"
+      }
     ],
     "asarUnpack": [
       "node_modules/better-sqlite3/**/*"
@@ -52,11 +72,16 @@
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "../app/src-tauri/icons/icon.icns",
-      "target": ["dmg", "zip"]
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "win": {
       "icon": "../app/src-tauri/icons/icon.ico",
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -69,7 +94,10 @@
       "executableName": "locoris-server",
       "icon": "../app/src-tauri/icons/128x128.png",
       "syncDesktopName": true,
-      "target": ["AppImage", "deb"]
+      "target": [
+        "AppImage",
+        "deb"
+      ]
     }
   }
 }

@@ -1651,6 +1651,31 @@ const messages = {
       "Actualice el servidor URL o el token de administración. Locoris primero valida el acceso y solo luego guarda el cambio.",
     selfHostedReconnect: "token de actualización",
     selfHostedReconnectSave: "Comprobar y guardar",
+    selfHostedEndpointAction: "Cambiar dirección",
+    selfHostedEndpointFoundAction: "Usar dirección encontrada",
+    selfHostedEndpointKicker: "Dirección de red",
+    selfHostedEndpointTitle: "Cambiar dirección del servidor",
+    selfHostedEndpointCurrent: "Dirección actual",
+    selfHostedEndpointNew: "Nueva dirección",
+    selfHostedEndpointDiscoveryTitle: "Buscar Locoris Server en la red",
+    selfHostedEndpointDiscoveryDescription:
+      "Locoris busca en la red local y solo sugiere la misma identidad de servidor.",
+    selfHostedEndpointWebDescription:
+      "Ingresa la dirección que muestra Locoris Server. La búsqueda automática está disponible en las apps de escritorio y Android.",
+    selfHostedEndpointDiscovering: "Buscando…",
+    selfHostedEndpointDiscover: "Buscar servidor",
+    selfHostedEndpointNotFound: "No se encontró el mismo Locoris Server en esta red local.",
+    selfHostedEndpointFound: "Mismo servidor",
+    selfHostedEndpointSafety:
+      "Antes de guardar, Locoris verifica la identidad del servidor y la credencial de este dispositivo. Los vínculos, el historial y los tokens no cambian.",
+    selfHostedEndpointVerifying: "Verificando…",
+    selfHostedEndpointSave: "Verificar y actualizar",
+    selfHostedEndpointUpdated: "Se actualizó la dirección del servidor. Las bóvedas conectadas ya se están sincronizando.",
+    selfHostedEndpointConnectionNotFound:
+      "No hay una conexión existente que coincida con este servidor. Abre el perfil correcto o conéctalo como nuevo.",
+    selfHostedEndpointServerMismatch:
+      "Esta dirección pertenece a otro Locoris Server. La conexión existente no se modificó.",
+    selfHostedEndpointAddressUnchanged: "Ingresa una dirección diferente antes de actualizar.",
     selfHostedConnectAction: "Comprobar y conectar",
     selfHostedValidationHint:
       "Locoris verifica primero el servidor URL y el token de administración. La conexión sólo se guarda después de que el servidor la acepta.",

@@ -1,26 +1,48 @@
 import { isTauriRuntime } from "./runtime";
+import { queueSelfHostedEndpointUpdate } from "./selfHostedEndpointUpdates";
 import { queueIncomingSelfHostedConnectionPackage } from "./selfHostedPairing";
 
-function readPayloadFromDeepLink(value: string) {
+type ParsedSelfHostedDeepLink =
+  | { kind: "connect"; payload: string }
+  | { kind: "update"; serverId: string; serverUrl: string }
+  | null;
+
+function parseSelfHostedDeepLink(value: string): ParsedSelfHostedDeepLink {
   try {
     const url = new URL(value);
-    if (url.protocol !== "locoris:" || url.hostname !== "self-hosted" || url.pathname !== "/connect") {
-      return "";
+    if (url.protocol !== "locoris:" || url.hostname !== "self-hosted") {
+      return null;
     }
-    return url.searchParams.get("payload")?.trim() ?? "";
+
+    if (url.pathname === "/connect") {
+      const payload = url.searchParams.get("payload")?.trim() ?? "";
+      return payload ? { kind: "connect", payload } : null;
+    }
+
+    if (url.pathname === "/update") {
+      const serverId = url.searchParams.get("serverId")?.trim() ?? "";
+      const serverUrl = url.searchParams.get("serverUrl")?.trim() ?? "";
+      return serverId && serverUrl ? { kind: "update", serverId, serverUrl } : null;
+    }
+
+    return null;
   } catch {
-    return "";
+    return null;
   }
 }
 
 function acceptDeepLinks(urls: readonly string[]) {
   for (const value of urls) {
-    const payload = readPayloadFromDeepLink(value);
-    if (!payload) continue;
+    const deepLink = parseSelfHostedDeepLink(value);
+    if (!deepLink) continue;
     try {
-      queueIncomingSelfHostedConnectionPackage(payload);
+      if (deepLink.kind === "connect") {
+        queueIncomingSelfHostedConnectionPackage(deepLink.payload);
+      } else {
+        queueSelfHostedEndpointUpdate(deepLink);
+      }
     } catch {
-      // Ignore malformed external URLs; the pairing wizard validates accepted packages again.
+      // Ignore malformed external URLs; the relevant settings flow validates them again.
     }
   }
 }

@@ -1651,6 +1651,31 @@ const messages = {
       "Aggiorna l'URL del server o il token di gestione. Locoris valida prima l'accesso e solo poi salva la modifica.",
     selfHostedReconnect: "Token di aggiornamento",
     selfHostedReconnectSave: "Controlla e salva",
+    selfHostedEndpointAction: "Cambia indirizzo",
+    selfHostedEndpointFoundAction: "Usa l’indirizzo trovato",
+    selfHostedEndpointKicker: "Indirizzo di rete",
+    selfHostedEndpointTitle: "Cambia l’indirizzo del server",
+    selfHostedEndpointCurrent: "Indirizzo attuale",
+    selfHostedEndpointNew: "Nuovo indirizzo",
+    selfHostedEndpointDiscoveryTitle: "Trova Locoris Server nella rete",
+    selfHostedEndpointDiscoveryDescription:
+      "Locoris cerca nella rete locale e propone solo la stessa identità del server.",
+    selfHostedEndpointWebDescription:
+      "Inserisci l’indirizzo mostrato in Locoris Server. La ricerca automatica è disponibile nelle app desktop e Android.",
+    selfHostedEndpointDiscovering: "Ricerca…",
+    selfHostedEndpointDiscover: "Trova server",
+    selfHostedEndpointNotFound: "Lo stesso Locoris Server non è stato trovato in questa rete locale.",
+    selfHostedEndpointFound: "Stesso server",
+    selfHostedEndpointSafety:
+      "Prima del salvataggio, Locoris verifica l’identità del server e la credenziale del dispositivo. Collegamenti, cronologia e token restano invariati.",
+    selfHostedEndpointVerifying: "Verifica…",
+    selfHostedEndpointSave: "Verifica e aggiorna",
+    selfHostedEndpointUpdated: "L’indirizzo del server è stato aggiornato. Gli archivi collegati si stanno sincronizzando.",
+    selfHostedEndpointConnectionNotFound:
+      "Nessuna connessione esistente corrisponde a questo server. Apri il profilo corretto o collegalo come nuovo.",
+    selfHostedEndpointServerMismatch:
+      "Questo indirizzo appartiene a un altro Locoris Server. La connessione esistente non è stata modificata.",
+    selfHostedEndpointAddressUnchanged: "Inserisci un indirizzo diverso prima di aggiornare.",
     selfHostedConnectAction: "Controlla e connettiti",
     selfHostedValidationHint:
       "Locoris verifica prima l'URL del server e il token di gestione. La connessione viene salvata solo dopo che il server le accetta.",

@@ -1638,6 +1638,31 @@ const messages = {
       "Aktualisieren Sie die Server-URL oder das Verwaltungstoken. Locoris validiert zuerst den Zugriff und speichert erst dann die Änderung.",
     selfHostedReconnect: "Token aktualisieren",
     selfHostedReconnectSave: "Prüfen und speichern",
+    selfHostedEndpointAction: "Adresse ändern",
+    selfHostedEndpointFoundAction: "Gefundene Adresse verwenden",
+    selfHostedEndpointKicker: "Netzwerkadresse",
+    selfHostedEndpointTitle: "Serveradresse ändern",
+    selfHostedEndpointCurrent: "Aktuelle Adresse",
+    selfHostedEndpointNew: "Neue Adresse",
+    selfHostedEndpointDiscoveryTitle: "Locoris Server im Netzwerk finden",
+    selfHostedEndpointDiscoveryDescription:
+      "Locoris durchsucht das lokale Netzwerk und schlägt nur dieselbe Serveridentität vor.",
+    selfHostedEndpointWebDescription:
+      "Gib die in Locoris Server angezeigte Adresse ein. Die automatische Suche ist in den Desktop- und Android-Apps verfügbar.",
+    selfHostedEndpointDiscovering: "Suche läuft…",
+    selfHostedEndpointDiscover: "Server suchen",
+    selfHostedEndpointNotFound: "Derselbe Locoris Server wurde in diesem lokalen Netzwerk nicht gefunden.",
+    selfHostedEndpointFound: "Derselbe Server",
+    selfHostedEndpointSafety:
+      "Vor dem Speichern prüft Locoris die Serveridentität und die Zugangsdaten dieses Geräts. Tresorverknüpfungen, Verlauf und Token bleiben unverändert.",
+    selfHostedEndpointVerifying: "Wird geprüft…",
+    selfHostedEndpointSave: "Prüfen und aktualisieren",
+    selfHostedEndpointUpdated: "Die Serveradresse wurde aktualisiert. Verbundene Tresore werden jetzt synchronisiert.",
+    selfHostedEndpointConnectionNotFound:
+      "Keine bestehende Verbindung passt zu diesem Server. Öffne das richtige Tresorprofil oder verbinde den Server neu.",
+    selfHostedEndpointServerMismatch:
+      "Diese Adresse gehört zu einem anderen Locoris Server. Die bestehende Verbindung wurde nicht geändert.",
+    selfHostedEndpointAddressUnchanged: "Gib vor dem Aktualisieren eine andere Serveradresse ein.",
     selfHostedConnectAction: "Prüfen und anschließen",
     selfHostedValidationHint:
       "Locoris überprüft zuerst die Server-URL und das Verwaltungstoken. Die Verbindung wird erst gespeichert, nachdem der Server sie akzeptiert hat.",

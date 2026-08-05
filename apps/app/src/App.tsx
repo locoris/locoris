@@ -166,6 +166,10 @@ import {
   hasIncomingSelfHostedConnectionPackage,
   SELF_HOSTED_INVITE_EVENT
 } from "./lib/selfHostedPairing";
+import {
+  hasPendingSelfHostedEndpointUpdate,
+  SELF_HOSTED_ENDPOINT_UPDATE_EVENT
+} from "./lib/selfHostedEndpointUpdates";
 import { DEFAULT_NOTE_COLOR } from "./lib/palette";
 import { getErrorMessage } from "./lib/errors";
 import { useAdaptiveLayout } from "./lib/useAdaptiveLayout";
@@ -395,7 +399,7 @@ export default function App() {
     view: "accountCloud" | "sync";
     requestId: number;
   } | null>(() =>
-    hasIncomingSelfHostedConnectionPackage()
+    hasIncomingSelfHostedConnectionPackage() || hasPendingSelfHostedEndpointUpdate()
       ? { view: "sync", requestId: 1 }
       : null
   );
@@ -427,7 +431,11 @@ export default function App() {
       }));
     };
     window.addEventListener(SELF_HOSTED_INVITE_EVENT, openSelfHostedInvite);
-    return () => window.removeEventListener(SELF_HOSTED_INVITE_EVENT, openSelfHostedInvite);
+    window.addEventListener(SELF_HOSTED_ENDPOINT_UPDATE_EVENT, openSelfHostedInvite);
+    return () => {
+      window.removeEventListener(SELF_HOSTED_INVITE_EVENT, openSelfHostedInvite);
+      window.removeEventListener(SELF_HOSTED_ENDPOINT_UPDATE_EVENT, openSelfHostedInvite);
+    };
   }, []);
   const [vaultBooting, setVaultBooting] = useState(true);
   const projects = useLiveQuery(() => db.projects.toArray(), [activeLocalVaultId], []);
@@ -1234,7 +1242,11 @@ export default function App() {
       return;
     }
 
-    setWebCloudAuthState("checking");
+    // Only the first Cloud Web check is blocking. Background retries must keep
+    // the authenticated shell mounted instead of flashing the access gate.
+    if (!webCloudInitialCheckComplete) {
+      setWebCloudAuthState("checking");
+    }
 
     const loadOverview = async () => {
       let connection = locorisCloudConnection;
@@ -4594,9 +4606,13 @@ export default function App() {
     });
   };
 
-  const handleRunVaultSync = async (localVaultId: string) => {
+  const handleRunVaultSync = async (
+    localVaultId: string,
+    connectionOverride?: SyncConnection
+  ) => {
     await runBoundVaultSync(localVaultId, {
-      showFeedback: true
+      showFeedback: true,
+      connectionOverride
     });
   };
 
@@ -5266,7 +5282,9 @@ export default function App() {
             onDeleteRemoteVault={(input) => handleDeleteRemoteVault(input)}
             onRenameRemoteVault={(input) => handleRenameRemoteVault(input)}
             onClearBinding={(localVaultId) => void handleClearVaultBinding(localVaultId)}
-            onRunVaultSync={(localVaultId) => handleRunVaultSync(localVaultId)}
+            onRunVaultSync={(localVaultId, connectionOverride) =>
+              handleRunVaultSync(localVaultId, connectionOverride)
+            }
             onEnableVaultEncryption={(input) => void handleEnableVaultEncryption(input)}
             onUnlockVaultEncryption={(input) => void handleUnlockVaultEncryption(input)}
             onChangeVaultEncryptionPassphrase={(input) =>

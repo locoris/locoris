@@ -38,6 +38,14 @@ import {
   startHostedDeviceLogin,
   type HostedAccountOverview
 } from "../lib/sync";
+import {
+  discoverSelfHostedServers,
+  selfHostedDiscoveryAvailable
+} from "../lib/selfHostedDiscovery";
+import {
+  consumeSelfHostedEndpointUpdate,
+  SELF_HOSTED_ENDPOINT_UPDATE_EVENT
+} from "../lib/selfHostedEndpointUpdates";
 import type {
   AppSettings,
   RemoteVaultImportResult,
@@ -56,6 +64,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import CloudConnectionWizard, { type CloudWizardAuthResult } from "./sync/CloudConnectionWizard";
 import SelfHostedAccessManager from "./sync/SelfHostedAccessManager";
 import SelfHostedConnectionWizard from "./sync/SelfHostedConnectionWizard";
+import SelfHostedEndpointEditor from "./sync/SelfHostedEndpointEditor";
 import { SyncSettingsDialog, SyncSettingsLayout } from "./sync/SyncSettingsLayout";
 import SyncSettingsMobile from "./sync/SyncSettingsMobile";
 import "./SyncSettingsPanel.css";
@@ -135,7 +144,10 @@ interface SyncSettingsPanelProps {
     remoteVaultId: string;
   }) => Promise<void>;
   onClearBinding: (localVaultId: string) => void | Promise<void>;
-  onRunVaultSync: (localVaultId: string) => void | Promise<void>;
+  onRunVaultSync: (
+    localVaultId: string,
+    connectionOverride?: SyncConnection
+  ) => void | Promise<void>;
   onEnableVaultEncryption: (input: {
     localVaultId: string;
     passphrase: string;
@@ -171,6 +183,7 @@ type PanelModal =
   | { kind: "addConnection" }
   | { kind: "addSelfHosted" }
   | { kind: "manageSelfHosted"; connection: SyncConnection }
+  | { kind: "editSelfHostedEndpoint"; connection: SyncConnection; initialServerUrl?: string }
   | { kind: "hostedWizard"; connection?: SyncConnection | null }
   | { kind: "addHosted"; connection?: SyncConnection | null }
   | { kind: "addGoogleDrive" }
@@ -386,6 +399,12 @@ function translateSyncManagerError(message: string, t: ReturnType<typeof useTran
       return t("settings.selfHostedPairingRateLimited");
     case "PAIRING_SERVER_URL_INVALID":
       return t("settings.selfHostedPairingServerUrlInvalid");
+    case "SELF_HOSTED_SERVER_MISMATCH":
+      return t("settings.selfHostedEndpointServerMismatch");
+    case "SELF_HOSTED_ADDRESS_UNCHANGED":
+      return t("settings.selfHostedEndpointAddressUnchanged");
+    case "SELF_HOSTED_SERVER_ID_REQUIRED":
+      return t("settings.selfHostedEndpointConnectionNotFound");
     case "PAIRING_SETUP_ALREADY_COMPLETED":
       return t("settings.selfHostedPairingInvalid");
     case "PAIRING_REQUEST_EXPIRED":
@@ -669,6 +688,7 @@ export default function SyncSettingsPanel({
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [linkMetrics, setLinkMetrics] = useState<LinkMetric[]>([]);
   const [connectionAvailability, setConnectionAvailability] = useState<Record<string, ConnectionAvailabilityState>>({});
+  const [selfHostedEndpointCandidates, setSelfHostedEndpointCandidates] = useState<Record<string, string>>({});
   const [remoteVaultsByConnectionId, setRemoteVaultsByConnectionId] = useState<
     Record<string, RemoteVaultCatalogEntry[]>
   >({});
@@ -686,6 +706,7 @@ export default function SyncSettingsPanel({
   const pendingVaultEncryptionContinuationRef = useRef<(() => Promise<void>) | null>(null);
   const vaultRefs = useRef(new Map<string, HTMLElement>());
   const connectionRefs = useRef(new Map<string, HTMLElement>());
+  const selfHostedDiscoveryAttemptsRef = useRef(new Set<string>());
   const feedbackAnchor = useActionFeedbackAnchor([
     ".sync-settings-panel-shell",
     ".sync-settings-premium-dialog"
@@ -1112,6 +1133,68 @@ export default function SyncSettingsPanel({
   }, [authErrorConnectionIds, authErrorConnectionSignature, availabilitySignature, online, syncConnections]);
 
   useEffect(() => {
+    if (!online || !selfHostedDiscoveryAvailable()) {
+      return;
+    }
+
+    const unavailableConnections = syncConnections.filter(
+      (connection) =>
+        connection.provider === "selfHosted" &&
+        Boolean(connection.selfHostedServerId) &&
+        connectionAvailability[connection.id] === "unavailable"
+    );
+    const pendingConnections = unavailableConnections.filter((connection) => {
+      const key = `${connection.id}:${connection.serverUrl}:${connection.updatedAt}`;
+      if (selfHostedDiscoveryAttemptsRef.current.has(key)) return false;
+      selfHostedDiscoveryAttemptsRef.current.add(key);
+      return true;
+    });
+
+    if (pendingConnections.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+    void discoverSelfHostedServers(2_800)
+      .then((discovered) => {
+        if (cancelled) return;
+        setSelfHostedEndpointCandidates((current) => {
+          const next = { ...current };
+          pendingConnections.forEach((connection) => {
+            const candidate = discovered.find(
+              (entry) =>
+                entry.serverId === connection.selfHostedServerId &&
+                entry.url.replace(/\/+$/, "") !== connection.serverUrl.replace(/\/+$/, "")
+            );
+            if (candidate) {
+              next[connection.id] = candidate.url;
+            }
+          });
+          return next;
+        });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [connectionAvailability, online, syncConnections]);
+
+  useEffect(() => {
+    setSelfHostedEndpointCandidates((current) => {
+      const next = { ...current };
+      let changed = false;
+      syncConnections.forEach((connection) => {
+        if (connectionAvailability[connection.id] === "available" && next[connection.id]) {
+          delete next[connection.id];
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+  }, [connectionAvailability, syncConnections]);
+
+  useEffect(() => {
     if (syncConnections.length === 0) {
       setRemoteVaultsByConnectionId({});
       setRemoteVaultErrors({});
@@ -1225,6 +1308,10 @@ export default function SyncSettingsPanel({
     setPanelModal({ kind: "addSelfHosted" });
   };
 
+  const openSelfHostedEndpointModal = (connection: SyncConnection, initialServerUrl?: string) => {
+    setPanelModal({ kind: "editSelfHostedEndpoint", connection, initialServerUrl });
+  };
+
   useEffect(() => {
     const openIncomingInvite = () => {
       const connectionPackage = consumeIncomingSelfHostedConnectionPackage();
@@ -1237,6 +1324,71 @@ export default function SyncSettingsPanel({
     window.addEventListener(SELF_HOSTED_INVITE_EVENT, openIncomingInvite);
     return () => window.removeEventListener(SELF_HOSTED_INVITE_EVENT, openIncomingInvite);
   }, []);
+
+  useEffect(() => {
+    const openIncomingEndpointUpdate = () => {
+      const update = consumeSelfHostedEndpointUpdate();
+      if (!update) return;
+      const connection = syncConnections.find(
+        (entry) =>
+          entry.provider === "selfHosted" && entry.selfHostedServerId === update.serverId
+      );
+      if (!connection) {
+        showFeedback("error", t("settings.selfHostedEndpointConnectionNotFound"));
+        return;
+      }
+      openSelfHostedEndpointModal(connection, update.serverUrl);
+    };
+
+    openIncomingEndpointUpdate();
+    window.addEventListener(SELF_HOSTED_ENDPOINT_UPDATE_EVENT, openIncomingEndpointUpdate);
+    return () =>
+      window.removeEventListener(SELF_HOSTED_ENDPOINT_UPDATE_EVENT, openIncomingEndpointUpdate);
+  }, [syncConnections, t]);
+
+  const handleSelfHostedEndpointUpdated = async (
+    connection: SyncConnection,
+    result: {
+      serverUrl: string;
+      serverId: string;
+      remoteVaults: SyncRemoteVault[];
+    }
+  ) => {
+    await Promise.resolve(
+      onUpdateConnection(connection.id, {
+        serverUrl: result.serverUrl,
+        selfHostedServerId: result.serverId
+      })
+    );
+    setRemoteVaultsByConnectionId((current) => ({
+      ...current,
+      [connection.id]: normalizeRemoteVaultEntries(result.remoteVaults)
+    }));
+    setRemoteVaultErrors((current) => ({ ...current, [connection.id]: null }));
+    setConnectionAvailability((current) => ({ ...current, [connection.id]: "available" }));
+    setSelfHostedEndpointCandidates((current) => {
+      const next = { ...current };
+      delete next[connection.id];
+      return next;
+    });
+    closeModal();
+    showFeedback("success", t("settings.selfHostedEndpointUpdated"));
+
+    const localVaultIds = syncBindings
+      .filter((binding) => binding.connectionId === connection.id)
+      .map((binding) => binding.localVaultId);
+    const updatedConnection: SyncConnection = {
+      ...connection,
+      serverUrl: result.serverUrl,
+      selfHostedServerId: result.serverId,
+      updatedAt: Date.now()
+    };
+    void (async () => {
+      for (const localVaultId of localVaultIds) {
+        await Promise.resolve(onRunVaultSync(localVaultId, updatedConnection));
+      }
+    })();
+  };
 
   const openHostedConnectionModal = (connection?: SyncConnection | null) => {
     setHostedMode("login");
@@ -2871,6 +3023,7 @@ export default function SyncSettingsPanel({
           vaultBindings={allSyncBindings}
           vaultEncryptionById={vaultEncryptionById}
           connectionAvailability={connectionAvailability}
+          selfHostedEndpointCandidates={selfHostedEndpointCandidates}
           remoteVaultsByConnectionId={remoteVaultsByConnectionId}
           remoteVaultErrors={remoteVaultErrors}
           remoteVaultLoading={remoteVaultLoading}
@@ -2905,6 +3058,7 @@ export default function SyncSettingsPanel({
           onDeleteConnection={onDeleteConnection}
           onRevokeGoogleDriveConnection={onRevokeGoogleDriveConnection}
           onRepairConnection={repairConnectionAuth}
+          onEditSelfHostedEndpoint={openSelfHostedEndpointModal}
           onManageSelfHostedAccess={(connection) =>
             setPanelModal({ kind: "manageSelfHosted", connection })
           }
@@ -3222,6 +3376,7 @@ export default function SyncSettingsPanel({
                     connection.provider === "hosted" && availability === "authError";
                   const canRepairGoogleDriveAuth =
                     connection.provider === "googleDrive" && availability === "authError";
+                  const endpointCandidate = selfHostedEndpointCandidates[connection.id] ?? null;
 
                   return (
                     <article
@@ -3597,6 +3752,21 @@ export default function SyncSettingsPanel({
                       </div>
 
                       <div className="sync-settings-card-actions sync-settings-card-actions-wide">
+                        {connection.provider === "selfHosted" ? (
+                          <button
+                            type="button"
+                            className="sync-settings-inline-action"
+                            disabled={busyKey !== null}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openSelfHostedEndpointModal(connection, endpointCandidate ?? undefined);
+                            }}
+                          >
+                            {endpointCandidate
+                              ? t("settings.selfHostedEndpointFoundAction")
+                              : t("settings.selfHostedEndpointAction")}
+                          </button>
+                        ) : null}
                         {connection.provider === "selfHosted" && connection.selfHostedRole !== "guest" ? (
                           <button
                             type="button"
@@ -3672,6 +3842,8 @@ export default function SyncSettingsPanel({
                   ? t("settings.addConnection")
                   : panelModal?.kind === "manageSelfHosted"
                     ? t("settings.selfHostedAccessKicker")
+                  : panelModal?.kind === "editSelfHostedEndpoint"
+                    ? t("settings.selfHostedEndpointKicker")
                   : panelModal?.kind === "addGoogleDrive"
                     ? t("sync.googleDrive")
                     : panelModal?.kind === "hostedWizard" || panelModal?.kind === "addHosted"
@@ -3689,8 +3861,10 @@ export default function SyncSettingsPanel({
                   })
                 : panelModal?.kind === "addConnection"
                   ? t("settings.connectionCatalogTitle")
-                  : panelModal?.kind === "manageSelfHosted"
+                : panelModal?.kind === "manageSelfHosted"
                     ? t("settings.selfHostedAccessTitle")
+                  : panelModal?.kind === "editSelfHostedEndpoint"
+                    ? t("settings.selfHostedEndpointTitle")
                   : panelModal?.kind === "addGoogleDrive"
                     ? t("settings.googleDriveConnectionTitle")
                     : panelModal?.kind === "hostedWizard"
@@ -4114,6 +4288,18 @@ export default function SyncSettingsPanel({
                 connection={panelModal.connection}
                 remoteVaults={remoteVaultsByConnectionId[panelModal.connection.id] ?? []}
                 translateError={(message) => translateSyncManagerError(message, t)}
+              />
+            ) : null}
+
+            {panelModal.kind === "editSelfHostedEndpoint" ? (
+              <SelfHostedEndpointEditor
+                connection={panelModal.connection}
+                initialServerUrl={panelModal.initialServerUrl}
+                translateError={(message) => translateSyncManagerError(message, t)}
+                onUpdated={(result) =>
+                  handleSelfHostedEndpointUpdated(panelModal.connection, result)
+                }
+                onCancel={closeModal}
               />
             ) : null}
 

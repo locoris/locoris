@@ -1635,6 +1635,31 @@ const messages = {
       "Update the server URL or management token. Locoris validates access first and only then saves the change.",
     selfHostedReconnect: "Update token",
     selfHostedReconnectSave: "Check and save",
+    selfHostedEndpointAction: "Change address",
+    selfHostedEndpointFoundAction: "Use found address",
+    selfHostedEndpointKicker: "Network address",
+    selfHostedEndpointTitle: "Change server address",
+    selfHostedEndpointCurrent: "Current address",
+    selfHostedEndpointNew: "New address",
+    selfHostedEndpointDiscoveryTitle: "Find Locoris Server nearby",
+    selfHostedEndpointDiscoveryDescription:
+      "Locoris searches the local network and only suggests the same server identity.",
+    selfHostedEndpointWebDescription:
+      "Enter the address shown in Locoris Server. Automatic local discovery is available in the desktop and Android apps.",
+    selfHostedEndpointDiscovering: "Searching…",
+    selfHostedEndpointDiscover: "Find server",
+    selfHostedEndpointNotFound: "The same Locoris Server was not found on this local network.",
+    selfHostedEndpointFound: "Same server",
+    selfHostedEndpointSafety:
+      "Before saving, Locoris verifies the server identity and this device credential. Vault links, sync history, and tokens stay unchanged.",
+    selfHostedEndpointVerifying: "Verifying…",
+    selfHostedEndpointSave: "Verify and update",
+    selfHostedEndpointUpdated: "The server address was updated. Connected vaults are syncing now.",
+    selfHostedEndpointConnectionNotFound:
+      "No existing connection matches this server. Open the correct vault profile or connect the server as new.",
+    selfHostedEndpointServerMismatch:
+      "This address belongs to another Locoris Server. The existing connection was not changed.",
+    selfHostedEndpointAddressUnchanged: "Enter a different server address before updating.",
     selfHostedConnectAction: "Check and connect",
     selfHostedValidationHint:
       "Locoris verifies the server URL and management token first. The connection is only saved after the server accepts them.",

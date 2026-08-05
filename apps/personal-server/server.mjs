@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 
 import qrcode from "qrcode-terminal";
 import QRCode from "qrcode";
+import { getServerLocalePack, publishedLocales, resolveSetupLocale } from "./locales/index.mjs";
+import Bonjour from "bonjour-service";
 
 import {
   applyChangeSetToSnapshot,
@@ -33,7 +35,7 @@ import {
 } from "./personal-server-storage.mjs";
 import { VaultFileStore } from "./vault-file-store.mjs";
 
-const PORT = Number.parseInt(process.env.PORT ?? "8787", 10);
+const PORT = Number.parseInt(process.env.PORT ?? "26747", 10);
 const SERVER_FILE = fileURLToPath(import.meta.url);
 const SERVER_DIR = path.dirname(SERVER_FILE);
 const IS_DIRECT_RUN = process.argv[1] ? path.resolve(process.argv[1]) === SERVER_FILE : false;
@@ -87,7 +89,17 @@ function listDesktopNetworkUrls(port) {
       }
     }
   }
-  return [...new Set(urls)].sort();
+  const uniqueUrls = [...new Set(urls)];
+  const addressPriority = (value) => {
+    const hostname = new URL(value).hostname;
+    if (hostname.startsWith("192.168.")) return 0;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return 1;
+    if (hostname.startsWith("10.")) return 2;
+    return 3;
+  };
+  return uniqueUrls.sort(
+    (left, right) => addressPriority(left) - addressPriority(right) || left.localeCompare(right)
+  );
 }
 
 function isLoopbackRequest(request) {
@@ -102,6 +114,80 @@ const STATIC_DIR = path.join(SERVER_DIR, "public");
 const LEGACY_SYNC_TOKEN = String(process.env.SYNC_TOKEN ?? "").trim();
 const ENV_MANAGEMENT_TOKEN = String(process.env.SYNC_MANAGEMENT_TOKEN ?? "").trim();
 const JOURNAL_MAX_BYTES = process.env.SYNC_JOURNAL_MAX_BYTES;
+const MDNS_ENABLED = process.env.SYNC_MDNS !== "0";
+const MDNS_SERVICE_TYPE = "locoris-sync";
+
+let mdnsBonjour = null;
+let mdnsService = null;
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function buildEndpointUpdateDeepLink(serverUrl, serverId) {
+  const params = new URLSearchParams({ serverUrl, serverId });
+  return `locoris://self-hosted/update?${params.toString()}`;
+}
+
+function startMdnsAdvertisement(port) {
+  if (!MDNS_ENABLED) {
+    return;
+  }
+
+  try {
+    const serverId = storage.getConfig().serverId;
+    const discoverySuffix = serverId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 12).toLowerCase();
+    const discoveryHost = `locoris-${discoverySuffix || "server"}.local`;
+    mdnsBonjour = new Bonjour();
+    mdnsService = mdnsBonjour.publish({
+      name: `Locoris Server ${discoverySuffix || "local"}`,
+      host: discoveryHost,
+      type: MDNS_SERVICE_TYPE,
+      protocol: "tcp",
+      port,
+      probe: true,
+      txt: {
+        serverId,
+        product: "locoris-personal-server",
+        protocolVersion: "1",
+        tls: "0"
+      }
+    });
+    mdnsService.on("error", (error) => {
+      console.warn(`Locoris mDNS advertisement warning: ${error?.message ?? String(error)}`);
+    });
+  } catch (error) {
+    mdnsBonjour = null;
+    mdnsService = null;
+    console.warn(`Locoris mDNS discovery is unavailable: ${error?.message ?? String(error)}`);
+  }
+}
+
+function stopMdnsAdvertisement() {
+  return new Promise((resolve) => {
+    const bonjour = mdnsBonjour;
+    const service = mdnsService;
+    mdnsBonjour = null;
+    mdnsService = null;
+
+    if (!bonjour) {
+      resolve();
+      return;
+    }
+
+    const destroy = () => bonjour.destroy(() => resolve());
+    if (service) {
+      service.stop(destroy);
+    } else {
+      destroy();
+    }
+  });
+}
 
 function createVaultSyncToken(vaultId) {
   return `zpt_${vaultId}_${randomUUID().replace(/-/g, "")}`;
@@ -203,88 +289,29 @@ function resolveEnvelopeVaultKind(envelope) {
   return envelope?.metadata?.payloadMode === "encrypted" ? "private" : "regular";
 }
 
-const SETUP_PAGE_COPY = {
-  en: {
-    title: "Locoris Personal Server",
-    eyebrow: "Locoris Personal Server",
-    heroTitle: "Your private sync space is ready.",
-    heroDescription: "Connect Locoris with a one-time invitation. The permanent recovery token stays on the server.",
-    inviteEyebrow: "One-time invitation",
-    inviteTitle: "Connect this device",
-    inviteDescription: "Open Locoris directly, copy the invitation link, or enter the short code with the server address. The QR is only a shortcut.",
-    setupCode: "One-time setup code",
-    qrAlt: "QR code for this one-time Locoris invitation",
-    qrCaption: "Scan from a phone or tablet",
-    openLocoris: "Open in Locoris",
-    copyLink: "Copy invitation link",
-    packageSummary: "Connection package for manual paste",
-    copyPackage: "Copy package",
-    serverSetup: "Server setup",
-    storageBackend: "Storage backend",
-    storageValue: "SQLite metadata + atomic vault files",
-    pairing: "Pairing",
-    ownerConnected: "Owner device connected",
-    waitingOwner: "Waiting for the first owner device",
-    networkAccess: "Network access",
-    networkValue: "Protected by per-device credentials",
-    reachableAddresses: "Addresses for devices on this network",
-    dataVolume: "Data volume",
-    backupComplete: "Back up the complete server data directory",
-    snapshots: "Vault snapshots and bounded delta journals live in vaults/",
-    legacy: "Legacy JSON metadata is imported once and archived under legacy-json/",
-    privateVaults: "Private vault passphrases and plaintext never reach the server",
-    copiedLink: "Invitation link copied.",
-    copyAddress: "Copy the address from your browser.",
-    copiedPackage: "Connection package copied.",
-    copySelection: "Copy the selected connection package.",
-    useInvite: "Use invitation link"
-  },
-  ru: {
-    title: "Персональный сервер Locoris",
-    eyebrow: "Персональный сервер Locoris",
-    heroTitle: "Личное пространство синхронизации готово.",
-    heroDescription: "Подключи Locoris одноразовым приглашением. Постоянный recovery token останется только на сервере.",
-    inviteEyebrow: "Одноразовое приглашение",
-    inviteTitle: "Подключить это устройство",
-    inviteDescription: "Открой Locoris, скопируй ссылку или введи короткий код вместе с адресом сервера. QR нужен только для ускорения.",
-    setupCode: "Одноразовый код подключения",
-    qrAlt: "QR-код одноразового приглашения Locoris",
-    qrCaption: "Отсканируй с телефона или планшета",
-    openLocoris: "Открыть в Locoris",
-    copyLink: "Скопировать приглашение",
-    packageSummary: "Пакет для ручной вставки",
-    copyPackage: "Скопировать пакет",
-    serverSetup: "Состояние сервера",
-    storageBackend: "Хранение данных",
-    storageValue: "SQLite-метаданные + атомарные файлы хранилищ",
-    pairing: "Подключение",
-    ownerConnected: "Устройство владельца подключено",
-    waitingOwner: "Ожидается первое устройство владельца",
-    networkAccess: "Сетевой доступ",
-    networkValue: "Защищён отдельными credentials устройств",
-    reachableAddresses: "Адреса для устройств в этой сети",
-    dataVolume: "Данные сервера",
-    backupComplete: "Создавай резервную копию всей папки данных сервера",
-    snapshots: "Снимки хранилищ и ограниченные delta-журналы находятся в vaults/",
-    legacy: "Старые JSON-метаданные один раз импортируются и архивируются в legacy-json/",
-    privateVaults: "Кодовые фразы и открытые данные приватных хранилищ не попадают на сервер",
-    copiedLink: "Ссылка-приглашение скопирована.",
-    copyAddress: "Скопируй адрес из браузера.",
-    copiedPackage: "Пакет подключения скопирован.",
-    copySelection: "Скопируй выделенный пакет подключения.",
-    useInvite: "Используй ссылку-приглашение"
-  }
-};
-
-function renderSetupPage(storage, language = "en", networkUrls = [], qrDataUrl = "") {
-  const locale = language === "ru" ? "ru" : "en";
-  const copy = SETUP_PAGE_COPY[locale];
+function renderSetupPage(storage, language = "en", networkUrls = [], qrDataUrl = "", options = {}) {
+  const localePack = getServerLocalePack(language);
+  const locale = localePack.meta.locale;
+  const copy = localePack.setup;
+  const requestServerUrl = String(options.requestServerUrl ?? "").replace(/\/+$/, "");
+  const publicAddress = String(options.publicUrl ?? "").replace(/\/+$/, "");
+  const listeningPort = Number(options.listeningPort) || PORT;
+  const serverId = storage.getConfig().serverId;
+  const updateDeepLink = requestServerUrl
+    ? buildEndpointUpdateDeepLink(requestServerUrl, serverId)
+    : "";
   const clientCopy = JSON.stringify({
     copiedLink: copy.copiedLink,
     copyAddress: copy.copyAddress,
     copiedPackage: copy.copiedPackage,
     copySelection: copy.copySelection,
-    useInvite: copy.useInvite
+    useInvite: copy.useInvite,
+    portRange: copy.portRange,
+    portEnvironmentManaged: copy.portEnvironmentManaged,
+    portInvalid: copy.portInvalid,
+    portInUse: copy.portInUse,
+    portSaveFailed: copy.portSaveFailed,
+    restarting: copy.restarting
   });
   return `<!doctype html>
 <html lang="${locale}">
@@ -296,6 +323,9 @@ function renderSetupPage(storage, language = "en", networkUrls = [], qrDataUrl =
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <nav class="locale-switcher" aria-label="${copy.language}">
+      ${publishedLocales.map((candidate) => `<a href="?lang=${candidate}" lang="${candidate}"${candidate === locale ? " aria-current=\"true\"" : ""}>${getServerLocalePack(candidate).meta.nativeName}</a>`).join("")}
+    </nav>
     <main class="shell">
       <section class="hero">
         <span class="eyebrow">${copy.eyebrow}</span>
@@ -346,9 +376,61 @@ function renderSetupPage(storage, language = "en", networkUrls = [], qrDataUrl =
           ${networkUrls.length > 0 ? `
           <div>
             <dt>${copy.reachableAddresses}</dt>
-            <dd>${networkUrls.map((url) => `<code>${url}</code>`).join("<br />")}</dd>
+            <dd>${networkUrls.map((url) => `<code>${escapeHtml(url)}</code>`).join("<br />")}</dd>
           </div>` : ""}
         </dl>
+      </section>
+
+      <section class="card network-card">
+        <div class="network-card-head">
+          <div>
+            <span class="eyebrow">${copy.networkTitle}</span>
+            <h2>${copy.networkTitle}</h2>
+          </div>
+          <span class="network-port-chip">:${listeningPort}</span>
+        </div>
+        <dl class="details network-details">
+          <div>
+            <dt>${copy.listeningPort}</dt>
+            <dd><code>${listeningPort}</code></dd>
+          </div>
+          <div>
+            <dt>${copy.publicAddress}</dt>
+            <dd>${publicAddress ? `<code>${escapeHtml(publicAddress)}</code>` : copy.publicAddressAutomatic}</dd>
+          </div>
+          <div>
+            <dt>${copy.automaticDiscovery}</dt>
+            <dd>${copy.automaticDiscoveryValue}</dd>
+          </div>
+        </dl>
+        ${updateDeepLink ? `
+        <details class="network-update-details">
+          <summary>${copy.updateConnection}</summary>
+          <p>${copy.updateConnectionHint}</p>
+          <div class="network-update-grid">
+            ${options.updateQrDataUrl ? `<figure class="network-update-qr">
+              <img src="${options.updateQrDataUrl}" alt="${copy.updateQrAlt}" width="154" height="154" />
+              <figcaption>${copy.updateQrCaption}</figcaption>
+            </figure>` : ""}
+            <a class="primary-action network-update-action" href="${escapeHtml(updateDeepLink)}">${copy.updateConnection}</a>
+          </div>
+        </details>` : ""}
+        <div class="desktop-network-settings" id="desktop-network-settings" hidden>
+          <span class="eyebrow">${copy.desktopNetworkSettings}</span>
+          <label for="desktop-port-input">${copy.customPort}</label>
+          <div class="desktop-port-row">
+            <input id="desktop-port-input" type="number" inputmode="numeric" min="1024" max="49151" value="${listeningPort}" />
+            <button type="button" class="secondary-action" id="desktop-port-review">${copy.reviewRestart}</button>
+          </div>
+          <span class="desktop-port-hint" id="desktop-port-hint">${copy.portRange}</span>
+          <div class="desktop-port-confirm" id="desktop-port-confirm" hidden>
+            <p>${copy.confirmRestart}</p>
+            <div class="connection-actions">
+              <button type="button" class="primary-action" id="desktop-port-apply">${copy.restartNow}</button>
+              <button type="button" class="secondary-action" id="desktop-port-cancel">${copy.cancel}</button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="card">
@@ -363,47 +445,105 @@ function renderSetupPage(storage, language = "en", networkUrls = [], qrDataUrl =
     </main>
     <script>
       (() => {
+        const selectedLocale = ${JSON.stringify(locale)};
+        if (!new URLSearchParams(window.location.search).has("lang")) {
+          const savedLocale = localStorage.getItem("locoris-server-locale");
+          if (savedLocale && savedLocale !== selectedLocale) {
+            const nextUrl = new URL(window.location.href);
+            nextUrl.searchParams.set("lang", savedLocale);
+            window.location.replace(nextUrl);
+            return;
+          }
+        }
+        localStorage.setItem("locoris-server-locale", selectedLocale);
         const copy = ${clientCopy};
         const params = new URLSearchParams(window.location.hash.slice(1));
         const payload = params.get("lcrs");
-        if (!payload) return;
-        const card = document.getElementById("connection-card");
-        const output = document.getElementById("connection-package");
-        const status = document.getElementById("copy-status");
-        const pairingCode = document.getElementById("pairing-code");
-        card.hidden = false;
-        output.textContent = payload;
-        try {
-          const encoded = payload.replace(/^lcrs1_/, "").replace(/-/g, "+").replace(/_/g, "/");
-          const decoded = JSON.parse(atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, "=")));
-          pairingCode.textContent = decoded.code || "••••-••••";
-        } catch {
-          pairingCode.textContent = copy.useInvite;
+        if (payload) {
+          const card = document.getElementById("connection-card");
+          const output = document.getElementById("connection-package");
+          const status = document.getElementById("copy-status");
+          const pairingCode = document.getElementById("pairing-code");
+          card.hidden = false;
+          output.textContent = payload;
+          try {
+            const encoded = payload.replace(/^lcrs1_/, "").replace(/-/g, "+").replace(/_/g, "/");
+            const decoded = JSON.parse(atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, "=")));
+            pairingCode.textContent = decoded.code || "••••-••••";
+          } catch {
+            pairingCode.textContent = copy.useInvite;
+          }
+          document.getElementById("open-locoris").addEventListener("click", () => {
+            window.location.href = "locoris://self-hosted/connect?payload=" + encodeURIComponent(payload);
+          });
+          document.getElementById("copy-link").addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(window.location.href);
+              status.textContent = copy.copiedLink;
+            } catch {
+              status.textContent = copy.copyAddress;
+            }
+          });
+          document.getElementById("copy-package").addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(payload);
+              status.textContent = copy.copiedPackage;
+            } catch {
+              const selection = window.getSelection();
+              const range = document.createRange();
+              range.selectNodeContents(output);
+              selection.removeAllRanges();
+              selection.addRange(range);
+              status.textContent = copy.copySelection;
+            }
+          });
         }
-        document.getElementById("open-locoris").addEventListener("click", () => {
-          window.location.href = "locoris://self-hosted/connect?payload=" + encodeURIComponent(payload);
-        });
-        document.getElementById("copy-link").addEventListener("click", async () => {
-          try {
-            await navigator.clipboard.writeText(window.location.href);
-            status.textContent = copy.copiedLink;
-          } catch {
-            status.textContent = copy.copyAddress;
-          }
-        });
-        document.getElementById("copy-package").addEventListener("click", async () => {
-          try {
-            await navigator.clipboard.writeText(payload);
-            status.textContent = copy.copiedPackage;
-          } catch {
-            const selection = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(output);
-            selection.removeAllRanges();
-            selection.addRange(range);
-            status.textContent = copy.copySelection;
-          }
-        });
+
+        const bridge = window.locorisServerDesktop;
+        const networkSettings = document.getElementById("desktop-network-settings");
+        if (bridge && networkSettings) {
+          const input = document.getElementById("desktop-port-input");
+          const review = document.getElementById("desktop-port-review");
+          const apply = document.getElementById("desktop-port-apply");
+          const cancel = document.getElementById("desktop-port-cancel");
+          const confirmation = document.getElementById("desktop-port-confirm");
+          const hint = document.getElementById("desktop-port-hint");
+          networkSettings.hidden = false;
+          bridge.getNetworkSettings().then((settings) => {
+            input.value = String(settings.configuredPort);
+            if (settings.environmentManaged) {
+              input.disabled = true;
+              review.disabled = true;
+              hint.textContent = copy.portEnvironmentManaged;
+            }
+          });
+          review.addEventListener("click", () => {
+            const port = Number(input.value);
+            hint.classList.remove("is-error");
+            if (!Number.isInteger(port) || port < 1024 || port > 49151) {
+              hint.textContent = copy.portInvalid;
+              hint.classList.add("is-error");
+              return;
+            }
+            confirmation.hidden = false;
+            confirmation.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
+          });
+          cancel.addEventListener("click", () => {
+            confirmation.hidden = true;
+          });
+          apply.addEventListener("click", async () => {
+            apply.disabled = true;
+            hint.classList.remove("is-error");
+            const result = await bridge.applyNetworkPort(Number(input.value));
+            if (!result?.ok) {
+              hint.textContent = result?.code === "PORT_IN_USE" ? copy.portInUse : result?.message || copy.portSaveFailed;
+              hint.classList.add("is-error");
+              apply.disabled = false;
+              return;
+            }
+            hint.textContent = copy.restarting;
+          });
+        }
       })();
     </script>
   </body>
@@ -917,15 +1057,15 @@ const server = createServer(async (request, response) => {
     const pathname = url.pathname;
 
     if ((pathname === "/" || pathname === "/connect") && request.method === "GET") {
-      const setupLanguage = String(request.headers["accept-language"] ?? "")
-        .toLowerCase()
-        .startsWith("ru")
-        ? "ru"
-        : "en";
+      const setupLanguage = resolveSetupLocale(url, request.headers["accept-language"] ?? "");
       const address = server.address();
       const activePort = address && typeof address === "object" ? address.port : PORT;
       const networkUrls = isLoopbackRequest(request) ? listDesktopNetworkUrls(activePort) : [];
-      const requestServerUrl = PUBLIC_URL || `${url.protocol}//${url.host}`;
+      const automaticDesktopPublicUrl =
+        process.env.LOCORIS_DESKTOP_PUBLIC_URL_AUTOMATIC === "1";
+      const requestServerUrl = automaticDesktopPublicUrl
+        ? networkUrls[0] ?? `${url.protocol}//${url.host}`
+        : PUBLIC_URL || `${url.protocol}//${url.host}`;
       const setupConnection = bootstrapPairingInvite
         ? buildConnectionLink(requestServerUrl, bootstrapPairingInvite)
         : null;
@@ -936,11 +1076,22 @@ const server = createServer(async (request, response) => {
             color: { dark: "#101827ff", light: "#effffaff" }
           })
         : "";
+      const updateDeepLink = buildEndpointUpdateDeepLink(requestServerUrl, config.serverId);
+      const updateQrDataUrl = await QRCode.toDataURL(updateDeepLink, {
+        width: 154,
+        margin: 1,
+        color: { dark: "#101827ff", light: "#effffaff" }
+      });
       sendText(
         response,
         200,
         "text/html; charset=utf-8",
-        renderSetupPage(storage, setupLanguage, networkUrls, qrDataUrl)
+        renderSetupPage(storage, setupLanguage, networkUrls, qrDataUrl, {
+          requestServerUrl,
+          publicUrl: automaticDesktopPublicUrl ? "" : PUBLIC_URL,
+          listeningPort: activePort,
+          updateQrDataUrl
+        })
       );
       return;
     }
@@ -1322,16 +1473,19 @@ export function closePersonalServer() {
     return closePromise;
   }
 
-  closePromise = new Promise((resolve, reject) => {
-    server.close((error) => {
-      closeStorageOnce();
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
+  closePromise = (async () => {
+    await stopMdnsAdvertisement();
+    await new Promise((resolve, reject) => {
+      server.close((error) => {
+        closeStorageOnce();
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
     });
-  });
+  })();
   return closePromise;
 }
 
@@ -1364,10 +1518,9 @@ process.once("SIGTERM", () => void shutdown("SIGTERM"));
 server.once("error", (error) => {
   closeStorageOnce();
   if (error?.code === "EADDRINUSE") {
-    const suggestedPort = PORT + 1;
     console.error(`Locoris Personal Sync could not start: port ${PORT} is already in use.`);
     console.error(
-      `Stop the service using that port or start Locoris on another one, for example: PORT=${suggestedPort} SYNC_PUBLIC_URL=http://localhost:${suggestedPort} npm run sync-server`
+      `Stop the service using that port or choose an explicit custom port, for example: PORT=26748 SYNC_PUBLIC_URL=http://localhost:26748 npm run sync-server`
     );
   } else {
     console.error(`Locoris Personal Sync could not start: ${error?.message ?? String(error)}`);
@@ -1388,6 +1541,8 @@ server.listen(PORT, () => {
   const bootstrapConnection = bootstrapPairingInvite
     ? buildConnectionLink(serverUrl, bootstrapPairingInvite)
     : null;
+
+  startMdnsAdvertisement(actualPort);
 
   resolvePersonalServerReady?.({
     baseUrl: `http://127.0.0.1:${actualPort}`,

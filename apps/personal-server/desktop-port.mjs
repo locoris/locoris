@@ -2,16 +2,22 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 
-const DESKTOP_PORT_STATE_VERSION = 1;
+export const DEFAULT_LOCORIS_SERVER_PORT = 26_747;
+export const MIN_USER_SERVER_PORT = 1_024;
+export const MAX_USER_SERVER_PORT = 49_151;
+
+const DESKTOP_PORT_STATE_VERSION = 2;
 const MIN_PORT = 1;
 const MAX_PORT = 65_535;
 
-function normalizePort(value) {
+export function normalizeServerPort(value, options = {}) {
   const port = Number(value);
-  return Number.isInteger(port) && port >= MIN_PORT && port <= MAX_PORT ? port : null;
+  const minimum = options.userSelectable ? MIN_USER_SERVER_PORT : MIN_PORT;
+  const maximum = options.userSelectable ? MAX_USER_SERVER_PORT : MAX_PORT;
+  return Number.isInteger(port) && port >= minimum && port <= maximum ? port : null;
 }
 
-function probePort(port) {
+export function probeDesktopServerPort(port) {
   return new Promise((resolve, reject) => {
     const probe = net.createServer();
     probe.unref();
@@ -29,43 +35,57 @@ function probePort(port) {
   });
 }
 
-function reserveEphemeralPort() {
-  return new Promise((resolve, reject) => {
-    const probe = net.createServer();
-    probe.unref();
-    probe.once("error", reject);
-    probe.listen(0, () => {
-      const address = probe.address();
-      const port = typeof address === "object" && address ? address.port : null;
-
-      if (!normalizePort(port)) {
-        probe.close(() => reject(new Error("LOCORIS_SERVER_PORT_UNAVAILABLE")));
-        return;
-      }
-
-      probe.close((error) => error ? reject(error) : resolve(port));
-    });
-  });
+function defaultConfig() {
+  return {
+    version: DESKTOP_PORT_STATE_VERSION,
+    port: DEFAULT_LOCORIS_SERVER_PORT,
+    source: "default",
+    updatedAt: null
+  };
 }
 
-async function readPersistedPort(stateFile) {
+export async function readDesktopServerPortConfig(stateFile) {
   try {
     const state = JSON.parse(await readFile(stateFile, "utf8"));
-    return state?.version === DESKTOP_PORT_STATE_VERSION ? normalizePort(state.port) : null;
+    const port = normalizeServerPort(state?.port, { userSelectable: true });
+
+    if (
+      state?.version !== DESKTOP_PORT_STATE_VERSION ||
+      !port ||
+      !["default", "custom"].includes(state?.source)
+    ) {
+      return defaultConfig();
+    }
+
+    return {
+      version: DESKTOP_PORT_STATE_VERSION,
+      port,
+      source: state.source,
+      updatedAt: Number.isFinite(state.updatedAt) ? state.updatedAt : null
+    };
   } catch {
-    return null;
+    return defaultConfig();
   }
 }
 
-async function persistPort(stateFile, port) {
+export async function saveDesktopServerPortConfig(stateFile, port) {
+  const normalizedPort = normalizeServerPort(port, { userSelectable: true });
+  if (!normalizedPort) {
+    throw new Error("LOCORIS_SERVER_PORT_INVALID");
+  }
+
+  const state = {
+    version: DESKTOP_PORT_STATE_VERSION,
+    port: normalizedPort,
+    source: normalizedPort === DEFAULT_LOCORIS_SERVER_PORT ? "default" : "custom",
+    updatedAt: Date.now()
+  };
+
   await mkdir(path.dirname(stateFile), { recursive: true });
   const temporaryFile = `${stateFile}.${process.pid}.tmp`;
-  await writeFile(
-    temporaryFile,
-    `${JSON.stringify({ version: DESKTOP_PORT_STATE_VERSION, port }, null, 2)}\n`,
-    "utf8"
-  );
+  await writeFile(temporaryFile, `${JSON.stringify(state, null, 2)}\n`, "utf8");
   await rename(temporaryFile, stateFile);
+  return state;
 }
 
 function portInUseError(port) {
@@ -74,38 +94,33 @@ function portInUseError(port) {
 
 export async function resolveDesktopServerPort({
   stateFile,
-  explicitPort = null,
-  preferredPort = 8787
+  explicitPort = null
 }) {
-  const configuredPort = normalizePort(explicitPort);
+  const configuredPort = normalizeServerPort(explicitPort);
 
   if (explicitPort !== null && explicitPort !== undefined && !configuredPort) {
     throw new Error("LOCORIS_SERVER_PORT_INVALID");
   }
 
   if (configuredPort) {
-    if (!(await probePort(configuredPort))) {
+    if (!(await probeDesktopServerPort(configuredPort))) {
       throw portInUseError(configuredPort);
     }
 
     return configuredPort;
   }
 
-  const persistedPort = await readPersistedPort(stateFile);
+  const persisted = await readDesktopServerPortConfig(stateFile);
 
-  if (persistedPort) {
-    if (!(await probePort(persistedPort))) {
-      throw portInUseError(persistedPort);
-    }
-
-    return persistedPort;
+  // Version 1 stored an automatically selected random port. Writing the v2
+  // config here deliberately migrates that legacy behavior to the fixed port.
+  if (persisted.updatedAt === null) {
+    await saveDesktopServerPortConfig(stateFile, persisted.port);
   }
 
-  const normalizedPreferredPort = normalizePort(preferredPort) ?? 8787;
-  const selectedPort = (await probePort(normalizedPreferredPort))
-    ? normalizedPreferredPort
-    : await reserveEphemeralPort();
+  if (!(await probeDesktopServerPort(persisted.port))) {
+    throw portInUseError(persisted.port);
+  }
 
-  await persistPort(stateFile, selectedPort);
-  return selectedPort;
+  return persisted.port;
 }

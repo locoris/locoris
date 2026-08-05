@@ -25,6 +25,37 @@ body {
     linear-gradient(180deg, #10162a 0%, #0a0f1d 100%);
 }
 
+.locale-switcher {
+  position: fixed;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 10;
+  display: inline-flex;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid rgba(153, 229, 218, 0.24);
+  border-radius: 14px;
+  background: rgba(16, 25, 38, 0.7);
+  backdrop-filter: blur(20px);
+}
+
+.locale-switcher a {
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0 11px;
+  border-radius: 10px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.locale-switcher a[aria-current="true"] {
+  color: #07131b;
+  background: var(--mint);
+}
+
 body::before {
   content: "";
   position: fixed;
@@ -131,6 +162,191 @@ body::before {
 .details dd {
   margin: 0;
   font-size: 0.92rem;
+}
+
+.network-card {
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--panel-border));
+  background:
+    linear-gradient(145deg, rgba(104, 232, 255, 0.07), rgba(197, 118, 237, 0.05)),
+    var(--panel);
+}
+
+.network-card-head,
+.desktop-port-row,
+.network-update-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.network-card-head h2 {
+  margin-top: 8px;
+}
+
+.network-port-chip {
+  flex: 0 0 auto;
+  padding: 9px 13px;
+  border: 1px solid rgba(104, 232, 255, 0.32);
+  border-radius: 999px;
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 800;
+  background: rgba(4, 12, 25, 0.48);
+}
+
+.network-details {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 6px;
+}
+
+.network-details > div {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.network-details dd,
+.network-details code {
+  overflow-wrap: anywhere;
+}
+
+.network-update-details,
+.desktop-network-settings {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(5, 10, 22, 0.42);
+}
+
+.network-update-details summary {
+  color: var(--text);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.network-update-details p,
+.desktop-port-hint,
+.desktop-port-confirm p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.network-update-grid {
+  justify-content: flex-start;
+  margin-top: 14px;
+}
+
+.network-update-qr {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.network-update-qr img {
+  display: block;
+  width: 126px;
+  height: 126px;
+  padding: 7px;
+  border-radius: 8px;
+  background: #effffa;
+}
+
+.network-update-qr figcaption {
+  max-width: 22ch;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.network-update-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.desktop-network-settings {
+  display: grid;
+  gap: 12px;
+}
+
+.desktop-network-settings[hidden],
+.desktop-port-confirm[hidden] {
+  display: none;
+}
+
+.desktop-network-settings label {
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 760;
+}
+
+.desktop-port-row input {
+  min-width: 0;
+  min-height: 46px;
+  flex: 1 1 auto;
+  padding: 9px 14px;
+  border: 1px solid rgba(104, 232, 255, 0.28);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  background: rgba(3, 7, 16, 0.6);
+  outline: none;
+}
+
+.desktop-port-row input:focus {
+  border-color: rgba(104, 232, 255, 0.72);
+  box-shadow: 0 0 0 4px rgba(104, 232, 255, 0.09);
+}
+
+.desktop-port-hint {
+  font-size: 0.78rem;
+}
+
+.desktop-port-hint.is-error {
+  color: #ffabc0;
+}
+
+.desktop-port-confirm {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  animation: network-confirm-in 180ms ease-out both;
+}
+
+.desktop-port-confirm p {
+  margin: 0;
+}
+
+.primary-action,
+.secondary-action,
+.text-action,
+.network-update-details summary {
+  transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.primary-action:hover,
+.secondary-action:hover,
+.network-update-action:hover {
+  transform: translateY(-1px);
+}
+
+.primary-action:active,
+.secondary-action:active,
+.network-update-action:active {
+  transform: scale(0.985);
+}
+
+@keyframes network-confirm-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .feature-list {
@@ -284,5 +500,30 @@ code {
 
   .connection-actions {
     display: grid;
+  }
+
+  .network-details {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-port-row,
+  .network-update-grid {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .network-update-action {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

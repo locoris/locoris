@@ -1,8 +1,9 @@
 .account-cloud-device-list {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(460px, 100%), 1fr));
+  gap: 12px;
+  container-type: inline-size;
 }
 
 .account-cloud-device {
@@ -10,15 +11,22 @@
   min-width: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
+  align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid color-mix(in srgb, var(--account-device-accent) 19%, rgba(255, 255, 255, 0.09));
   border-radius: 20px;
   background:
     radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--account-device-accent) 11%, transparent), transparent 54%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.044), rgba(255, 255, 255, 0.014)),
     rgba(255, 255, 255, 0.02);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .account-cloud-device.is-mac { --account-device-accent: #7ee9e1; }
@@ -31,7 +39,19 @@
 
 .account-cloud-device.is-current {
   border-color: color-mix(in srgb, var(--account-device-accent) 38%, rgba(255, 255, 255, 0.13));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  box-shadow:
+    0 16px 38px color-mix(in srgb, var(--account-device-accent) 8%, rgba(0, 0, 0, 0.14)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.065);
+}
+
+@media (hover: hover) {
+  .account-cloud-device:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--account-device-accent) 30%, rgba(255, 255, 255, 0.12));
+    box-shadow:
+      0 18px 42px color-mix(in srgb, var(--account-device-accent) 7%, rgba(0, 0, 0, 0.18)),
+      inset 0 1px 0 rgba(255, 255, 255, 0.065);
+  }
 }
 
 .account-cloud-device-icon {
@@ -69,7 +89,7 @@
 .account-cloud-device-titleline {
   min-width: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 9px;
 }
@@ -80,7 +100,9 @@
   font-size: 0.84rem;
   font-weight: 820;
   line-height: 1.28;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
 }
 
 .account-cloud-device-state,
@@ -124,6 +146,7 @@
 }
 
 .account-cloud-device-revoke {
+  min-width: 126px;
   min-height: 38px;
   align-self: center;
   display: inline-flex;
@@ -143,6 +166,10 @@
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .account-cloud-device-revoke.is-current {
@@ -174,9 +201,10 @@
   transform: none;
 }
 
-@media (max-width: 520px) {
+@container (max-width: 560px) {
   .account-cloud-device {
     grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
   }
 
   .account-cloud-device-titleline {
@@ -185,8 +213,33 @@
   }
 
   .account-cloud-device-revoke {
+    grid-column: 2;
+    width: fit-content;
+    max-width: 100%;
+    min-height: 42px;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 420px) {
+  .account-cloud-device-list {
+    gap: 10px;
+  }
+
+  .account-cloud-device {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .account-cloud-device-revoke {
     grid-column: 1 / -1;
     width: 100%;
-    min-height: 42px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-cloud-device,
+  .account-cloud-device-revoke {
+    transition: none;
   }
 }

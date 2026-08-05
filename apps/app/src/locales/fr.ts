@@ -1651,6 +1651,31 @@ const messages = {
       "Mettez à jour l’URL du serveur ou le jeton de gestion. Locoris valide l’accès en premier et ne sauvegarde la modification qu’ensuite.",
     selfHostedReconnect: "Jeton de mise à jour",
     selfHostedReconnectSave: "Vérifiez et enregistrez",
+    selfHostedEndpointAction: "Changer l’adresse",
+    selfHostedEndpointFoundAction: "Utiliser l’adresse trouvée",
+    selfHostedEndpointKicker: "Adresse réseau",
+    selfHostedEndpointTitle: "Changer l’adresse du serveur",
+    selfHostedEndpointCurrent: "Adresse actuelle",
+    selfHostedEndpointNew: "Nouvelle adresse",
+    selfHostedEndpointDiscoveryTitle: "Rechercher Locoris Server sur le réseau",
+    selfHostedEndpointDiscoveryDescription:
+      "Locoris recherche sur le réseau local et ne propose que la même identité de serveur.",
+    selfHostedEndpointWebDescription:
+      "Saisissez l’adresse affichée dans Locoris Server. La recherche automatique est disponible dans les applications de bureau et Android.",
+    selfHostedEndpointDiscovering: "Recherche…",
+    selfHostedEndpointDiscover: "Rechercher le serveur",
+    selfHostedEndpointNotFound: "Le même Locoris Server n’a pas été trouvé sur ce réseau local.",
+    selfHostedEndpointFound: "Même serveur",
+    selfHostedEndpointSafety:
+      "Avant l’enregistrement, Locoris vérifie l’identité du serveur et l’accès de cet appareil. Les liens, l’historique et les jetons restent inchangés.",
+    selfHostedEndpointVerifying: "Vérification…",
+    selfHostedEndpointSave: "Vérifier et mettre à jour",
+    selfHostedEndpointUpdated: "L’adresse du serveur a été mise à jour. Les espaces connectés se synchronisent maintenant.",
+    selfHostedEndpointConnectionNotFound:
+      "Aucune connexion existante ne correspond à ce serveur. Ouvrez le bon profil ou connectez le serveur comme nouveau.",
+    selfHostedEndpointServerMismatch:
+      "Cette adresse appartient à un autre Locoris Server. La connexion existante n’a pas été modifiée.",
+    selfHostedEndpointAddressUnchanged: "Saisissez une autre adresse de serveur avant la mise à jour.",
     selfHostedConnectAction: "Vérifiez et connectez-vous",
     selfHostedValidationHint:
       "Locoris vérifie d’abord l’URL du serveur et le jeton de gestion. La connexion n’est sauvegardée qu’après que le serveur les a acceptées.",

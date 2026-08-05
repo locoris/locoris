@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { resolveDesktopServerPort } from "../desktop-port.mjs";
+import {
+  DEFAULT_LOCORIS_SERVER_PORT,
+  readDesktopServerPortConfig,
+  resolveDesktopServerPort,
+  saveDesktopServerPortConfig
+} from "../desktop-port.mjs";
 
 function listen(port = 0) {
   return new Promise((resolve, reject) => {
@@ -28,68 +33,90 @@ function serverPort(server) {
   return address.port;
 }
 
-test("desktop server persists its first available port and reuses it", async () => {
+async function availableUserPort() {
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    const port = 10_000 + Math.floor(Math.random() * 30_000);
+    try {
+      const probe = await listen(port);
+      await close(probe);
+      return port;
+    } catch {
+      // Try another port inside the user-selectable range.
+    }
+  }
+
+  throw new Error("No free user-selectable port found for the test.");
+}
+
+test("desktop server persists and reuses the fixed Locoris port", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "locoris-desktop-port-"));
   const stateFile = path.join(directory, "desktop-server.json");
-  const preferredProbe = await listen();
-  const preferredPort = serverPort(preferredProbe);
-  await close(preferredProbe);
 
-  const firstPort = await resolveDesktopServerPort({ stateFile, preferredPort });
-  const secondPort = await resolveDesktopServerPort({ stateFile, preferredPort: preferredPort + 1 });
+  const firstPort = await resolveDesktopServerPort({ stateFile });
+  const secondPort = await resolveDesktopServerPort({ stateFile });
   const state = JSON.parse(await readFile(stateFile, "utf8"));
 
-  assert.equal(firstPort, preferredPort);
-  assert.equal(secondPort, preferredPort);
-  assert.equal(state.port, preferredPort);
+  assert.equal(firstPort, DEFAULT_LOCORIS_SERVER_PORT);
+  assert.equal(secondPort, DEFAULT_LOCORIS_SERVER_PORT);
+  assert.equal(state.port, DEFAULT_LOCORIS_SERVER_PORT);
+  assert.equal(state.source, "default");
+  assert.equal(state.version, 2);
 });
 
-test("desktop server chooses one fallback when the default port is occupied", async (context) => {
+test("desktop server reports a conflict instead of choosing a random port", async (context) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "locoris-desktop-port-"));
   const stateFile = path.join(directory, "desktop-server.json");
-  const blocker = await listen();
-  context.after(() => close(blocker));
-  const preferredPort = serverPort(blocker);
-
-  const firstPort = await resolveDesktopServerPort({ stateFile, preferredPort });
-  const secondPort = await resolveDesktopServerPort({ stateFile, preferredPort });
-
-  assert.notEqual(firstPort, preferredPort);
-  assert.equal(secondPort, firstPort);
-});
-
-test("desktop server never silently changes a persisted port", async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), "locoris-desktop-port-"));
-  const stateFile = path.join(directory, "desktop-server.json");
-  const initialProbe = await listen();
-  const persistedPort = serverPort(initialProbe);
-  await close(initialProbe);
-
-  assert.equal(
-    await resolveDesktopServerPort({ stateFile, preferredPort: persistedPort }),
-    persistedPort
-  );
-
-  const blocker = await listen(persistedPort);
+  const blocker = await listen(DEFAULT_LOCORIS_SERVER_PORT);
   context.after(() => close(blocker));
 
   await assert.rejects(
-    resolveDesktopServerPort({ stateFile, preferredPort: persistedPort }),
-    new RegExp(`LOCORIS_SERVER_PORT_IN_USE:${persistedPort}`)
+    resolveDesktopServerPort({ stateFile }),
+    new RegExp(`LOCORIS_SERVER_PORT_IN_USE:${DEFAULT_LOCORIS_SERVER_PORT}`)
+  );
+
+  const state = await readDesktopServerPortConfig(stateFile);
+  assert.equal(state.port, DEFAULT_LOCORIS_SERVER_PORT);
+});
+
+test("a custom desktop port is explicit, persisted, and never silently changed", async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "locoris-desktop-port-"));
+  const stateFile = path.join(directory, "desktop-server.json");
+  const customPort = await availableUserPort();
+
+  await saveDesktopServerPortConfig(stateFile, customPort);
+  assert.equal(await resolveDesktopServerPort({ stateFile }), customPort);
+
+  const blocker = await listen(customPort);
+  context.after(() => close(blocker));
+
+  await assert.rejects(
+    resolveDesktopServerPort({ stateFile }),
+    new RegExp(`LOCORIS_SERVER_PORT_IN_USE:${customPort}`)
   );
 });
 
-test("an explicit port is authoritative and is not persisted", async (context) => {
+test("legacy random-port state migrates to the fixed default", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "locoris-desktop-port-"));
+  const stateFile = path.join(directory, "desktop-server.json");
+  await writeFile(stateFile, `${JSON.stringify({ version: 1, port: 62_341 })}\n`, "utf8");
+
+  assert.equal(await resolveDesktopServerPort({ stateFile }), DEFAULT_LOCORIS_SERVER_PORT);
+  const state = await readDesktopServerPortConfig(stateFile);
+  assert.equal(state.version, 2);
+  assert.equal(state.port, DEFAULT_LOCORIS_SERVER_PORT);
+  assert.equal(state.source, "default");
+});
+
+test("PORT remains authoritative and is never persisted", async (context) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "locoris-desktop-port-"));
   const stateFile = path.join(directory, "desktop-server.json");
   const explicitProbe = await listen();
   const explicitPort = serverPort(explicitProbe);
   await close(explicitProbe);
 
-  assert.equal(
-    await resolveDesktopServerPort({ stateFile, explicitPort }),
-    explicitPort
-  );
+  assert.equal(await resolveDesktopServerPort({ stateFile, explicitPort }), explicitPort);
+  const state = await readDesktopServerPortConfig(stateFile);
+  assert.equal(state.port, DEFAULT_LOCORIS_SERVER_PORT);
 
   const blocker = await listen(explicitPort);
   context.after(() => close(blocker));
@@ -98,4 +125,12 @@ test("an explicit port is authoritative and is not persisted", async (context) =
     resolveDesktopServerPort({ stateFile, explicitPort }),
     new RegExp(`LOCORIS_SERVER_PORT_IN_USE:${explicitPort}`)
   );
+});
+
+test("custom port settings reject reserved and invalid values", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "locoris-desktop-port-"));
+  const stateFile = path.join(directory, "desktop-server.json");
+
+  await assert.rejects(saveDesktopServerPortConfig(stateFile, 80), /LOCORIS_SERVER_PORT_INVALID/);
+  await assert.rejects(saveDesktopServerPortConfig(stateFile, 70_000), /LOCORIS_SERVER_PORT_INVALID/);
 });

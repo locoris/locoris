@@ -1663,7 +1663,8 @@
   }
 }
 
-@media (max-width: 920px) and (orientation: portrait) {
+@media (max-width: 1180px) and (orientation: portrait),
+  (pointer: coarse) and (orientation: portrait) {
   .sync-settings-desktop-surface {
     display: none;
   }
