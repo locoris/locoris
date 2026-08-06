@@ -41,7 +41,7 @@
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/ibm-plex-sans": "^5.2.8",
     "@fontsource/ibm-plex-serif": "^5.2.7",
-    "@mantine/core": "^8.3.18",
+    "@mantine/core": "^9.5.1",
     "@mantine/hooks": "^8.3.18",
     "@mantine/utils": "^6.0.22",
     "@tauri-apps/api": "^2.11.1",
