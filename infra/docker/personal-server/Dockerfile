@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS dependencies
+FROM node:25-bookworm-slim AS dependencies
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ COPY packages/sync-core/package.json /app/packages/sync-core/package.json
 
 RUN npm ci --omit=dev --workspace @locoris/personal-server --include-workspace-root=false
 
-FROM node:24-bookworm-slim
+FROM node:25-bookworm-slim
 
 LABEL org.opencontainers.image.title="Locoris Server" \
       org.opencontainers.image.description="Self-hosted sync server for Locoris" \
