@@ -37,12 +37,77 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#039;");
 }
 
+const MARKDOWN_SPECIAL_CHARACTERS = new Set([
+  "\\",
+  "`",
+  "*",
+  "_",
+  "[",
+  "]",
+  "<",
+  ">",
+  "|"
+]);
+
+const MARKDOWN_LINK_CHARACTER_ESCAPES: Record<string, string> = {
+  " ": "%20",
+  "\n": "%0A",
+  "\r": "%0D",
+  "(": "%28",
+  ")": "%29",
+  "<": "%3C",
+  ">": "%3E",
+  "\\": "%5C"
+};
+
 function escapeMarkdown(value: string) {
-  return value.replace(/\*/g, "\\*").replace(/_/g, "\\_").replace(/`/g, "\\`");
+  return Array.from(value, (character) =>
+    MARKDOWN_SPECIAL_CHARACTERS.has(character) ? `\\${character}` : character
+  ).join("");
+}
+
+function escapeMarkdownLinkDestination(value: string) {
+  return Array.from(value, (character) => MARKDOWN_LINK_CHARACTER_ESCAPES[character] ?? character).join("");
 }
 
 function normalizeColor(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : "";
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const normalized = value.trim();
+  return /^(?:#[0-9a-f]{3,8}|[a-z]+)$/i.test(normalized) ? normalized : "";
+}
+
+function normalizeAlignment(value: unknown) {
+  return value === "center" || value === "right" || value === "justify" ? value : "";
+}
+
+function normalizeExportUrl(value: unknown, options: { allowImageData?: boolean } = {}) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const normalized = value.trim();
+  if (!normalized || /[\u0000-\u001f\u007f]/.test(normalized)) {
+    return "";
+  }
+
+  if (
+    options.allowImageData &&
+    /^data:image\/(?:avif|gif|jpe?g|png|webp);base64,[a-z0-9+/=\s]+$/i.test(normalized)
+  ) {
+    return normalized;
+  }
+
+  try {
+    const parsed = new URL(normalized, "https://locoris.invalid/");
+    return ["http:", "https:", "mailto:", "tel:", "asset:"].includes(parsed.protocol)
+      ? normalized
+      : "";
+  } catch {
+    return "";
+  }
 }
 
 function renderInlineNode(node: unknown): InlineRenderResult {
@@ -62,12 +127,17 @@ function renderInlineNode(node: unknown): InlineRenderResult {
 
   if (record.type === "link") {
     const rendered = renderInlineContent(record.content);
-    const href = typeof record.href === "string" ? record.href : "";
+    const href = normalizeExportUrl(record.href);
     const safeHref = escapeHtml(href);
+    const markdownHref = escapeMarkdownLinkDestination(href);
 
     return {
-      markdown: href ? `[${rendered.text || rendered.markdown}](${href})` : rendered.markdown,
-      html: href ? `<a href="${safeHref}">${rendered.html}</a>` : rendered.html,
+      markdown: href
+        ? `[${rendered.markdown || escapeMarkdown(rendered.text)}](${markdownHref})`
+        : rendered.markdown,
+      html: href
+        ? `<a href="${safeHref}" rel="noopener noreferrer">${rendered.html}</a>`
+        : rendered.html,
       text: rendered.text
     };
   }
@@ -155,7 +225,7 @@ function getBlockHtmlStyle(block: StoredBlock) {
   const rules: string[] = [];
   const textColor = normalizeColor(props.textColor);
   const backgroundColor = normalizeColor(props.backgroundColor);
-  const alignment = typeof props.textAlignment === "string" ? props.textAlignment : "";
+  const alignment = normalizeAlignment(props.textAlignment);
 
   if (textColor) {
     rules.push(`color:${escapeHtml(textColor)}`);
@@ -167,8 +237,8 @@ function getBlockHtmlStyle(block: StoredBlock) {
     rules.push("padding:0.32rem 0.5rem");
   }
 
-  if (alignment && alignment !== "left") {
-    rules.push(`text-align:${escapeHtml(alignment)}`);
+  if (alignment) {
+    rules.push(`text-align:${alignment}`);
   }
 
   return rules.length ? ` style="${rules.join(";")}"` : "";
@@ -203,8 +273,11 @@ function renderBlockMarkdown(block: StoredBlock, depth = 0): string[] {
   } else if (type === "image" || type === "file" || type === "audio" || type === "video") {
     const props = getBlockProps(block);
     const name = typeof props.name === "string" ? props.name : type;
-    const url = typeof props.url === "string" ? props.url : "";
-    lines = url ? [`[${name}](${url})`] : [`[${name}]`];
+    const url = normalizeExportUrl(props.url, { allowImageData: type === "image" });
+    const safeName = escapeMarkdown(name);
+    lines = url
+      ? [`[${safeName}](${escapeMarkdownLinkDestination(url)})`]
+      : [`[${safeName}]`];
   } else {
     lines = [rendered.markdown];
   }
@@ -252,14 +325,18 @@ function renderBlockHtml(block: StoredBlock): string {
   if (type === "image" || type === "file" || type === "audio" || type === "video") {
     const props = getBlockProps(block);
     const name = typeof props.name === "string" ? props.name : type;
-    const url = typeof props.url === "string" ? props.url : "";
+    const url = normalizeExportUrl(props.url, { allowImageData: type === "image" });
     const caption = typeof props.caption === "string" ? props.caption : "";
 
     if (type === "image" && url) {
       return `<figure${style}><img src="${escapeHtml(url)}" alt="${escapeHtml(name)}" /><figcaption>${escapeHtml(caption || name)}</figcaption></figure>${children}`;
     }
 
-    return `<p${style}><a href="${escapeHtml(url)}">${escapeHtml(name)}</a>${caption ? ` <span>${escapeHtml(caption)}</span>` : ""}</p>${children}`;
+    const label = escapeHtml(name);
+    const link = url
+      ? `<a href="${escapeHtml(url)}" rel="noopener noreferrer">${label}</a>`
+      : label;
+    return `<p${style}>${link}${caption ? ` <span>${escapeHtml(caption)}</span>` : ""}</p>${children}`;
   }
 
   return `<p${style}>${rendered.html || "&nbsp;"}</p>${children}`;
@@ -342,7 +419,7 @@ export function buildNoteHtmlDocument(input: {
       break-inside: avoid;
       page-break-inside: avoid;
     }
-    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid ${escapeHtml(input.note.color || "#d7a84f")}; color: #4b5563; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid ${escapeHtml(normalizeColor(input.note.color) || "#d7a84f")}; color: #4b5563; }
     pre { overflow: auto; padding: 1rem; border-radius: 14px; background: #111827; color: #f8fafc; }
     code { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     img { max-width: 100%; height: auto; border-radius: 14px; }
@@ -359,7 +436,7 @@ export function buildNoteHtmlDocument(input: {
 <body>
   <main>
     <h1 class="title">${escapeHtml(title)}</h1>
-    <p class="meta">${generatedLabel}</p>
+    <p class="meta">${escapeHtml(generatedLabel)}</p>
     ${body || "<p></p>"}
   </main>
 </body>

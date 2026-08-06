@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -39,7 +39,7 @@ const PORT = Number.parseInt(process.env.PORT ?? "26747", 10);
 const SERVER_FILE = fileURLToPath(import.meta.url);
 const SERVER_DIR = path.dirname(SERVER_FILE);
 const IS_DIRECT_RUN = process.argv[1] ? path.resolve(process.argv[1]) === SERVER_FILE : false;
-const PUBLIC_URL = String(process.env.SYNC_PUBLIC_URL ?? "").trim().replace(/\/+$/, "");
+const PUBLIC_URL = stripTrailingSlashes(String(process.env.SYNC_PUBLIC_URL ?? "").trim());
 const PRINT_PAIRING_QR = process.env.SYNC_PRINT_QR !== "0";
 const PRINT_PAIRING_DETAILS = process.env.SYNC_PRINT_PAIRING_DETAILS !== "0"
   && process.env.LOCORIS_DESKTOP_SERVER !== "1";
@@ -129,6 +129,16 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function stripTrailingSlashes(value) {
+  let end = value.length;
+
+  while (end > 0 && value.charCodeAt(end - 1) === 47) {
+    end -= 1;
+  }
+
+  return value.slice(0, end);
+}
+
 function buildEndpointUpdateDeepLink(serverUrl, serverId) {
   const params = new URLSearchParams({ serverUrl, serverId });
   return `locoris://self-hosted/update?${params.toString()}`;
@@ -198,11 +208,10 @@ function createPairingSecret(prefix) {
 }
 
 function createPairingCode() {
-  const bytes = randomBytes(8);
-  let code = "";
-  for (let index = 0; index < bytes.length; index += 1) {
-    code += PAIRING_CODE_ALPHABET[bytes[index] % PAIRING_CODE_ALPHABET.length];
-  }
+  const code = Array.from(
+    { length: 8 },
+    () => PAIRING_CODE_ALPHABET[randomInt(PAIRING_CODE_ALPHABET.length)]
+  ).join("");
   return `${code.slice(0, 4)}-${code.slice(4)}`;
 }
 
@@ -211,10 +220,9 @@ function normalizePairingCode(value) {
 }
 
 function createConfirmationCode() {
-  const bytes = randomBytes(3);
-  const first = CONFIRMATION_WORDS[bytes[0] % CONFIRMATION_WORDS.length];
-  const second = CONFIRMATION_WORDS[bytes[1] % CONFIRMATION_WORDS.length];
-  const number = String((bytes[2] % 90) + 10);
+  const first = CONFIRMATION_WORDS[randomInt(CONFIRMATION_WORDS.length)];
+  const second = CONFIRMATION_WORDS[randomInt(CONFIRMATION_WORDS.length)];
+  const number = String(randomInt(10, 100));
   return `${first} · ${second} · ${number}`;
 }
 
@@ -968,7 +976,7 @@ function getRequestOrigin(request) {
 
   const forwardedProto = String(request.headers["x-forwarded-proto"] ?? "").split(",")[0].trim();
   const protocol = forwardedProto === "https" ? "https" : "http";
-  return `${protocol}://${request.headers.host ?? `localhost:${PORT}`}`.replace(/\/+$/, "");
+  return stripTrailingSlashes(`${protocol}://${request.headers.host ?? `localhost:${PORT}`}`);
 }
 
 function normalizeAdvertisedUrl(value, fallbackUrl) {
@@ -985,7 +993,7 @@ function normalizeAdvertisedUrl(value, fallbackUrl) {
   }
   parsed.search = "";
   parsed.hash = "";
-  return parsed.toString().replace(/\/+$/, "");
+  return stripTrailingSlashes(parsed.toString());
 }
 
 function getManagementPrincipal(request) {
