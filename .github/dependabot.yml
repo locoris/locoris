@@ -11,6 +11,16 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+      - dependency-name: "@blocknote/*"
+        update-types:
+          - version-update:semver-minor
+      - dependency-name: "@excalidraw/*"
+        update-types:
+          - version-update:semver-minor
     groups:
       npm-minor-and-patch:
         patterns:
@@ -29,6 +39,10 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
     groups:
       cargo-minor-and-patch:
         patterns:
@@ -47,6 +61,10 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
     groups:
       github-actions:
         patterns:
@@ -62,3 +80,7 @@ updates:
     open-pull-requests-limit: 3
     labels:
       - dependencies
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
