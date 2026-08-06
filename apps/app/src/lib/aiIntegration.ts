@@ -864,34 +864,32 @@ export function writeStoredGeminiCanvasGenerationMode(mode: GeminiCanvasGenerati
   );
 }
 
-function canUseBrowserGeminiKeyFallback() {
-  return isWebRuntime();
-}
-
 export async function readGeminiApiKey() {
   const secureValue = await readSecureSecret(GEMINI_API_KEY_SECRET_KEY);
 
-  if (secureValue || !canUseBrowserGeminiKeyFallback()) {
+  if (secureValue || !isWebRuntime()) {
     return secureValue;
   }
 
-  return readPersistentString(GEMINI_API_KEY_BROWSER_STORAGE_KEY)?.trim() ?? "";
+  const legacyValue = readPersistentString(GEMINI_API_KEY_BROWSER_STORAGE_KEY)?.trim() ?? "";
+
+  if (!legacyValue) {
+    return "";
+  }
+
+  await writeSecureSecret(GEMINI_API_KEY_SECRET_KEY, legacyValue);
+  removePersistentString(GEMINI_API_KEY_BROWSER_STORAGE_KEY);
+  return legacyValue;
 }
 
 export async function writeGeminiApiKey(apiKey: string) {
   await writeSecureSecret(GEMINI_API_KEY_SECRET_KEY, apiKey);
-
-  if (canUseBrowserGeminiKeyFallback()) {
-    writePersistentString(GEMINI_API_KEY_BROWSER_STORAGE_KEY, apiKey.trim());
-  }
+  removePersistentString(GEMINI_API_KEY_BROWSER_STORAGE_KEY);
 }
 
 export async function deleteGeminiApiKey() {
   await deleteSecureSecret(GEMINI_API_KEY_SECRET_KEY);
-
-  if (canUseBrowserGeminiKeyFallback()) {
-    removePersistentString(GEMINI_API_KEY_BROWSER_STORAGE_KEY);
-  }
+  removePersistentString(GEMINI_API_KEY_BROWSER_STORAGE_KEY);
 }
 
 function cleanGeminiMarkdown(text: string) {
