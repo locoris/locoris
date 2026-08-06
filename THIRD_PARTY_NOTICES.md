@@ -9,7 +9,7 @@ Nothing in the Locoris AGPL license replaces those upstream terms.
 
 ## Scope
 
-- npm runtime graph: 560 unique packages;
+- npm runtime graph: 559 unique packages;
 - Rust/Tauri graph: 580 unique crates;
 - packages with collected upstream license or notice text: 1045;
 - copyright for Locoris-owned code: Copyright (c) 2026 angrein.
@@ -55,12 +55,12 @@ upstream license and notice files are reproduced in the appendix.
 | `@floating-ui/react` | `0.27.19` | MIT | [source](https://github.com/floating-ui/floating-ui) |
 | `@floating-ui/react-dom` | `2.1.8` | MIT | [source](https://github.com/floating-ui/floating-ui) |
 | `@floating-ui/utils` | `0.2.11` | MIT | [source](https://github.com/floating-ui/floating-ui) |
-| `@fontsource-variable/golos-text` | `5.2.8` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
-| `@fontsource-variable/onest` | `5.2.11` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
-| `@fontsource-variable/unbounded` | `5.2.8` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
-| `@fontsource/ibm-plex-mono` | `5.2.7` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
-| `@fontsource/ibm-plex-sans` | `5.2.8` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
-| `@fontsource/ibm-plex-serif` | `5.2.7` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
+| `@fontsource-variable/golos-text` | `5.3.0` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
+| `@fontsource-variable/onest` | `5.3.0` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
+| `@fontsource-variable/unbounded` | `5.3.0` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
+| `@fontsource/ibm-plex-mono` | `5.3.0` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
+| `@fontsource/ibm-plex-sans` | `5.3.0` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
+| `@fontsource/ibm-plex-serif` | `5.3.0` | OFL-1.1 | [source](https://github.com/fontsource/font-files) |
 | `@handlewithcare/prosemirror-inputrules` | `0.1.4` | MIT | [source](https://registry.npmjs.org/@handlewithcare/prosemirror-inputrules/-/prosemirror-inputrules-0.1.4.tgz) |
 | `@iconify/types` | `2.0.0` | MIT | [source](https://github.com/iconify/iconify) |
 | `@iconify/utils` | `3.1.3` | MIT | [source](https://github.com/iconify/iconify) |
@@ -111,13 +111,13 @@ upstream license and notice files are reproduced in the appendix.
 | `@tanstack/store` | `0.7.7` | MIT | [source](https://github.com/TanStack/store) |
 | `@tauri-apps/api` | `2.11.1` | Apache-2.0 OR MIT | [source](https://github.com/tauri-apps/tauri) |
 | `@tauri-apps/plugin-deep-link` | `2.4.9` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
-| `@tauri-apps/plugin-dialog` | `2.7.1` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
+| `@tauri-apps/plugin-dialog` | `2.7.2` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
 | `@tauri-apps/plugin-fs` | `2.5.1` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
-| `@tauri-apps/plugin-log` | `2.8.0` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
+| `@tauri-apps/plugin-log` | `2.9.0` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
 | `@tauri-apps/plugin-notification` | `2.3.3` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
 | `@tauri-apps/plugin-opener` | `2.5.4` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
 | `@tauri-apps/plugin-process` | `2.3.1` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
-| `@tauri-apps/plugin-store` | `2.4.3` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
+| `@tauri-apps/plugin-store` | `2.4.4` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
 | `@tauri-apps/plugin-updater` | `2.10.1` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
 | `@tauri-apps/plugin-window-state` | `2.4.1` | MIT OR Apache-2.0 | [source](https://github.com/tauri-apps/plugins-workspace) |
 | `@tiptap/core` | `3.27.1` | MIT | [source](https://github.com/ueberdosis/tiptap) |
@@ -326,11 +326,11 @@ upstream license and notice files are reproduced in the appendix.
 | `hast-util-to-text` | `4.0.2` | MIT | syntax-tree/hast-util-to-text |
 | `hast-util-whitespace` | `3.0.0` | MIT | syntax-tree/hast-util-whitespace |
 | `hastscript` | `9.0.1` | MIT | syntax-tree/hastscript |
-| `html-parse-stringify` | `3.0.1` | MIT | [source](https://github.com/henrikjoreteg/html-parse-stringify) |
+| `html-parse-stringify` | `4.0.1` | MIT | [source](https://github.com/i18next/html-parse-stringify) |
 | `html-void-elements` | `3.0.0` | MIT | wooorm/html-void-elements |
 | `html-whitespace-sensitive-tag-names` | `3.0.1` | MIT | [source](https://github.com/rehypejs/rehype-minify/tree/main/packages/html-whitespace-sensitive-tag-names) |
 | `html2canvas` | `1.4.1` | MIT | git@github.com:niklasvh/html2canvas |
-| `i18next` | `26.3.1` | MIT | [source](https://github.com/i18next/i18next) |
+| `i18next` | `26.3.6` | MIT | [source](https://github.com/i18next/i18next) |
 | `iconv-lite` | `0.6.3` | MIT | [source](https://github.com/ashtuchkin/iconv-lite) |
 | `ieee754` | `1.2.1` | BSD-3-Clause | [source](https://github.com/feross/ieee754) |
 | `image-blob-reduce` | `3.0.1` | MIT | nodeca/image-blob-reduce |
@@ -478,7 +478,7 @@ upstream license and notice files are reproduced in the appendix.
 | `rc` | `1.2.8` | (BSD-2-Clause OR MIT OR Apache-2.0) | [source](https://github.com/dominictarr/rc) |
 | `react` | `18.3.1` | MIT | [source](https://github.com/facebook/react) |
 | `react-dom` | `18.3.1` | MIT | [source](https://github.com/facebook/react) |
-| `react-i18next` | `17.0.8` | MIT | [source](https://github.com/i18next/react-i18next) |
+| `react-i18next` | `17.0.11` | MIT | [source](https://github.com/i18next/react-i18next) |
 | `react-icons` | `5.6.0` | MIT | ssh://git@github.com:react-icons/react-icons |
 | `react-number-format` | `5.4.5` | MIT | [source](https://github.com/s-yadav/react-number-format) |
 | `react-remove-scroll` | `2.7.2` | MIT | [source](https://github.com/theKashey/react-remove-scroll) |
@@ -567,7 +567,6 @@ upstream license and notice files are reproduced in the appendix.
 | `vfile` | `6.0.3` | MIT | vfile/vfile |
 | `vfile-location` | `5.0.3` | MIT | vfile/vfile-location |
 | `vfile-message` | `4.0.3` | MIT | vfile/vfile-message |
-| `void-elements` | `3.1.0` | MIT | pugjs/void-elements |
 | `vscode-jsonrpc` | `8.2.0` | MIT | [source](https://github.com/Microsoft/vscode-languageserver-node) |
 | `vscode-languageserver` | `9.0.1` | MIT | [source](https://github.com/Microsoft/vscode-languageserver-node) |
 | `vscode-languageserver-protocol` | `3.17.5` | MIT | [source](https://github.com/Microsoft/vscode-languageserver-node) |
@@ -2012,7 +2011,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 012 - @fontsource-variable/golos-text@5.2.8</summary>
+<summary>License text 012 - @fontsource-variable/golos-text@5.3.0</summary>
 
 <pre>Copyright 2019 The Golos Text Project Authors (https://github.com/googlefonts/golos-text)
 
@@ -2111,7 +2110,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 013 - @fontsource-variable/onest@5.2.11</summary>
+<summary>License text 013 - @fontsource-variable/onest@5.3.0</summary>
 
 <pre>Copyright 2021 The Onest Project Authors (https://github.com/simpals/onest)
 
@@ -2210,7 +2209,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 014 - @fontsource-variable/unbounded@5.2.8</summary>
+<summary>License text 014 - @fontsource-variable/unbounded@5.3.0</summary>
 
 <pre>Copyright 2022 The Unbounded Project Authors (https://github.com/googlefonts/unbounded)
 
@@ -2309,7 +2308,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 015 - @fontsource/ibm-plex-mono@5.2.7</summary>
+<summary>License text 015 - @fontsource/ibm-plex-mono@5.3.0</summary>
 
 <pre>Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-ThinItalic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-ExtraLight.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-ExtraLightItalic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-Light.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-LightItalic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-Regular.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-Italic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-Medium.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-MediumItalic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-SemiBold.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-SemiBoldItalic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-Bold.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-BoldItalic.ttf: Copyright 2017 IBM Corp. All rights reserved.
 
@@ -2408,7 +2407,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 016 - @fontsource/ibm-plex-sans@5.2.8</summary>
+<summary>License text 016 - @fontsource/ibm-plex-sans@5.3.0</summary>
 
 <pre>Copyright 2019 IBM Corp. All rights reserved. IBMPlexSans-Italic[wdth,wght].ttf: Copyright 2019 IBM Corp. All rights reserved.
 
@@ -2507,7 +2506,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 017 - @fontsource/ibm-plex-serif@5.2.7</summary>
+<summary>License text 017 - @fontsource/ibm-plex-serif@5.3.0</summary>
 
 <pre>Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-ThinItalic.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-ExtraLight.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-ExtraLightItalic.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-Light.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-LightItalic.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-Regular.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-Italic.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-Medium.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-MediumItalic.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-SemiBold.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-SemiBoldItalic.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-Bold.ttf: Copyright 2020 IBM Corp. All rights reserved. IBMPlexSerif-BoldItalic.ttf: Copyright 2020 IBM Corp. All rights reserved.
 
@@ -3059,7 +3058,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 029 - @tauri-apps/plugin-deep-link@2.4.9, @tauri-apps/plugin-dialog@2.7.1, @tauri-apps/plugin-fs@2.5.1, @tauri-apps/plugin-log@2.8.0, @tauri-apps/plugin-notification@2.3.3, @tauri-apps/plugin-opener@2.5.4, @tauri-apps/plugin-process@2.3.1, @tauri-apps/plugin-store@2.4.3, @tauri-apps/plugin-updater@2.10.1, @tauri-apps/plugin-window-state@2.4.1, tauri-plugin-deep-link@2.4.9, tauri-plugin-dialog@2.7.2, tauri-plugin-fs@2.5.1, tauri-plugin-log@2.9.0, tauri-plugin-notification@2.3.3, tauri-plugin-opener@2.5.4, tauri-plugin-process@2.3.1, tauri-plugin-single-instance@2.4.3, tauri-plugin-store@2.4.4, tauri-plugin-updater@2.10.1, tauri-plugin-window-state@2.4.1</summary>
+<summary>License text 029 - @tauri-apps/plugin-deep-link@2.4.9, @tauri-apps/plugin-dialog@2.7.2, @tauri-apps/plugin-fs@2.5.1, @tauri-apps/plugin-log@2.9.0, @tauri-apps/plugin-notification@2.3.3, @tauri-apps/plugin-opener@2.5.4, @tauri-apps/plugin-process@2.3.1, @tauri-apps/plugin-store@2.4.4, @tauri-apps/plugin-updater@2.10.1, @tauri-apps/plugin-window-state@2.4.1, tauri-plugin-deep-link@2.4.9, tauri-plugin-dialog@2.7.2, tauri-plugin-fs@2.5.1, tauri-plugin-log@2.9.0, tauri-plugin-notification@2.3.3, tauri-plugin-opener@2.5.4, tauri-plugin-process@2.3.1, tauri-plugin-single-instance@2.4.3, tauri-plugin-store@2.4.4, tauri-plugin-updater@2.10.1, tauri-plugin-window-state@2.4.1</summary>
 
 <pre>SPDXVersion: SPDX-2.1
 DataLicense: CC0-1.0
@@ -12965,7 +12964,35 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 227 - html5ever@0.38.0, markup5ever@0.38.0, web_atoms@0.2.4</summary>
+<summary>License text 227 - html-parse-stringify@4.0.1</summary>
+
+<pre>MIT License
+
+Copyright (c) 2025 Henrik Joreteg &lt;henrik@joreteg.com&gt;
+Copyright (c) 2026-present i18next (https://github.com/i18next)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre>
+
+</details>
+
+<details>
+<summary>License text 228 - html5ever@0.38.0, markup5ever@0.38.0, web_atoms@0.2.4</summary>
 
 <pre>Copyright (c) 2014 The html5ever Project Developers
 
@@ -12996,7 +13023,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 228 - http-body-util@0.1.3</summary>
+<summary>License text 229 - http-body-util@0.1.3</summary>
 
 <pre>Copyright (c) 2019-2025 Sean McArthur &amp; Hyper Contributors
 
@@ -13027,7 +13054,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 229 - http-body@1.0.1</summary>
+<summary>License text 230 - http-body@1.0.1</summary>
 
 <pre>Copyright (c) 2019-2024 Sean McArthur &amp; Hyper Contributors
 
@@ -13058,7 +13085,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 230 - http@1.4.0</summary>
+<summary>License text 231 - http@1.4.0</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -13265,7 +13292,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 231 - http@1.4.0</summary>
+<summary>License text 232 - http@1.4.0</summary>
 
 <pre>Copyright (c) 2017 http-rs authors
 
@@ -13296,7 +13323,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 232 - httparse@1.10.1</summary>
+<summary>License text 233 - httparse@1.10.1</summary>
 
 <pre>Copyright (c) 2015-2025 Sean McArthur
 
@@ -13321,7 +13348,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 233 - hyper-rustls@0.27.9, rustls-native-certs@0.8.3, rustls@0.23.40</summary>
+<summary>License text 234 - hyper-rustls@0.27.9, rustls-native-certs@0.8.3, rustls@0.23.40</summary>
 
 <pre>ISC License (ISC)
 Copyright (c) 2016, Joseph Birr-Pixton &lt;jpixton@gmail.com&gt;
@@ -13342,7 +13369,7 @@ THIS SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 234 - hyper-rustls@0.27.9, rustls-native-certs@0.8.3, rustls@0.23.40</summary>
+<summary>License text 235 - hyper-rustls@0.27.9, rustls-native-certs@0.8.3, rustls@0.23.40</summary>
 
 <pre>Copyright (c) 2016 Joseph Birr-Pixton &lt;jpixton@gmail.com&gt;
 
@@ -13373,7 +13400,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 235 - hyper-util@0.1.20</summary>
+<summary>License text 236 - hyper-util@0.1.20</summary>
 
 <pre>Copyright (c) 2023-2025 Sean McArthur
 
@@ -13398,7 +13425,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 236 - hyper@1.9.0</summary>
+<summary>License text 237 - hyper@1.9.0</summary>
 
 <pre>Copyright (c) 2014-2026 Sean McArthur
 
@@ -13423,7 +13450,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 237 - i18next@26.3.1</summary>
+<summary>License text 238 - i18next@26.3.6</summary>
 
 <pre>The MIT License (MIT)
 
@@ -13450,7 +13477,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 238 - iana-time-zone-haiku@0.1.2, iana-time-zone@0.1.65</summary>
+<summary>License text 239 - iana-time-zone-haiku@0.1.2, iana-time-zone@0.1.65</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -13657,7 +13684,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 239 - iana-time-zone-haiku@0.1.2, iana-time-zone@0.1.65</summary>
+<summary>License text 240 - iana-time-zone-haiku@0.1.2, iana-time-zone@0.1.65</summary>
 
 <pre>Copyright (c) 2020 Andrew D. Straw
 
@@ -13688,7 +13715,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 240 - ico@0.5.0</summary>
+<summary>License text 241 - ico@0.5.0</summary>
 
 <pre>MIT License
 
@@ -13715,7 +13742,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 241 - iconv-lite@0.6.3</summary>
+<summary>License text 242 - iconv-lite@0.6.3</summary>
 
 <pre>Copyright (c) 2011 Alexander Shtuchkin
 
@@ -13741,7 +13768,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 242 - icu_collections@2.2.0, icu_locale_core@2.2.0, icu_normalizer@2.2.0, icu_normalizer_data@2.2.0, icu_properties@2.2.0, icu_properties_data@2.2.0, icu_provider@2.2.0, litemap@0.8.2, potential_utf@0.1.5, tinystr@0.8.3, writeable@0.6.3, yoke-derive@0.8.2, yoke@0.8.2, zerofrom-derive@0.1.7, zerofrom@0.1.7, zerotrie@0.2.4, zerovec-derive@0.11.3, zerovec@0.11.6</summary>
+<summary>License text 243 - icu_collections@2.2.0, icu_locale_core@2.2.0, icu_normalizer@2.2.0, icu_normalizer_data@2.2.0, icu_properties@2.2.0, icu_properties_data@2.2.0, icu_provider@2.2.0, litemap@0.8.2, potential_utf@0.1.5, tinystr@0.8.3, writeable@0.6.3, yoke-derive@0.8.2, yoke@0.8.2, zerofrom-derive@0.1.7, zerofrom@0.1.7, zerotrie@0.2.4, zerovec-derive@0.11.3, zerovec@0.11.6</summary>
 
 <pre>UNICODE LICENSE V3
 
@@ -13793,7 +13820,7 @@ ICU 1.8.1 to ICU 57.1 © 1995-2016 International Business Machines Corporation a
 </details>
 
 <details>
-<summary>License text 243 - ident_case@1.0.1, simdutf8@0.1.5</summary>
+<summary>License text 244 - ident_case@1.0.1, simdutf8@0.1.5</summary>
 
 <pre>MIT License
 
@@ -13818,7 +13845,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 244 - idna_adapter@1.2.2</summary>
+<summary>License text 245 - idna_adapter@1.2.2</summary>
 
 <pre>Copyright (c) The rust-url developers
 
@@ -13849,7 +13876,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 245 - idna@1.1.0, percent-encoding@2.3.2, url@2.5.8</summary>
+<summary>License text 246 - idna@1.1.0, percent-encoding@2.3.2, url@2.5.8</summary>
 
 <pre>Copyright (c) 2013-2025 The rust-url developers
 
@@ -13880,27 +13907,9 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 246 - ieee754@1.2.1</summary>
+<summary>License text 247 - ieee754@1.2.1</summary>
 
 <pre>Copyright 2008 Fair Oaks Labs, Inc.
-
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
-
-</details>
-
-<details>
-<summary>License text 247 - if-addrs@0.15.0</summary>
-
-<pre>Copyright 2018 MaidSafe.net limited.
-Copyright 2020 messense
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
@@ -13920,6 +13929,24 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 <pre>Copyright 2018 MaidSafe.net limited.
 Copyright 2020 messense
 
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+
+</details>
+
+<details>
+<summary>License text 249 - if-addrs@0.15.0</summary>
+
+<pre>Copyright 2018 MaidSafe.net limited.
+Copyright 2020 messense
+
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
@@ -13929,7 +13956,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 249 - image-blob-reduce@3.0.1</summary>
+<summary>License text 250 - image-blob-reduce@3.0.1</summary>
 
 <pre>(The MIT License)
 
@@ -13956,7 +13983,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 250 - immediate@3.0.6</summary>
+<summary>License text 251 - immediate@3.0.6</summary>
 
 <pre>Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, Domenic Denicola, Brian Cavalier
 
@@ -13982,7 +14009,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 251 - immutable@4.3.9</summary>
+<summary>License text 252 - immutable@4.3.9</summary>
 
 <pre>MIT License
 
@@ -14009,7 +14036,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 252 - import-meta-resolve@4.2.0</summary>
+<summary>License text 253 - import-meta-resolve@4.2.0</summary>
 
 <pre>(The MIT License)
 
@@ -14089,7 +14116,7 @@ IN THE SOFTWARE.
 </details>
 
 <details>
-<summary>License text 253 - indexmap@1.9.3, indexmap@2.14.0</summary>
+<summary>License text 254 - indexmap@1.9.3, indexmap@2.14.0</summary>
 
 <pre>Copyright (c) 2016--2017
 
@@ -14120,7 +14147,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 254 - infer@0.19.0</summary>
+<summary>License text 255 - infer@0.19.0</summary>
 
 <pre>MIT License
 
@@ -14147,7 +14174,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 255 - inherits@2.0.4</summary>
+<summary>License text 256 - inherits@2.0.4</summary>
 
 <pre>The ISC License
 
@@ -14168,7 +14195,7 @@ PERFORMANCE OF THIS SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 256 - internmap@1.0.1, internmap@2.0.3</summary>
+<summary>License text 257 - internmap@1.0.1, internmap@2.0.3</summary>
 
 <pre>Copyright 2021 Mike Bostock
 
@@ -14187,7 +14214,7 @@ THIS SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 257 - iobuffer@5.4.0</summary>
+<summary>License text 258 - iobuffer@5.4.0</summary>
 
 <pre>The MIT License (MIT)
 
@@ -14214,7 +14241,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 258 - ipnet@2.12.0</summary>
+<summary>License text 259 - ipnet@2.12.0</summary>
 
 <pre>Apache License
                            Version 2.0, January 2004
@@ -14421,7 +14448,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 259 - ipnet@2.12.0</summary>
+<summary>License text 260 - ipnet@2.12.0</summary>
 
 <pre>Copyright 2017 Juniper Networks, Inc.
 
@@ -14434,7 +14461,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 260 - iri-string@0.7.12</summary>
+<summary>License text 261 - iri-string@0.7.12</summary>
 
 <pre>Copyright 2019-2024 YOSHIOKA Takuma
 
@@ -14465,7 +14492,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 261 - is-binary-path@2.1.0</summary>
+<summary>License text 262 - is-binary-path@2.1.0</summary>
 
 <pre>MIT License
 
@@ -14480,7 +14507,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 262 - is-docker@0.2.0, is-wsl@0.4.0</summary>
+<summary>License text 263 - is-docker@0.2.0, is-wsl@0.4.0</summary>
 
 <pre>MIT License
 
@@ -14507,7 +14534,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 263 - is-extglob@2.1.1</summary>
+<summary>License text 264 - is-extglob@2.1.1</summary>
 
 <pre>The MIT License (MIT)
 
@@ -14534,7 +14561,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 264 - is-glob@4.0.3</summary>
+<summary>License text 265 - is-glob@4.0.3</summary>
 
 <pre>The MIT License (MIT)
 
@@ -14561,7 +14588,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 265 - isomorphic.js@0.2.5</summary>
+<summary>License text 266 - isomorphic.js@0.2.5</summary>
 
 <pre>The MIT License (MIT)
 
@@ -14588,7 +14615,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 266 - javascriptcore-rs-sys@1.1.1, soup3-sys@0.5.0, soup3@0.5.0</summary>
+<summary>License text 267 - javascriptcore-rs-sys@1.1.1, soup3-sys@0.5.0, soup3@0.5.0</summary>
 
 <pre>The MIT License (MIT)
 
@@ -14615,7 +14642,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 267 - javascriptcore-rs@1.1.2</summary>
+<summary>License text 268 - javascriptcore-rs@1.1.2</summary>
 
 <pre>The MIT License (MIT)
 
@@ -14643,7 +14670,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 268 - jni-sys@0.3.1, jni-sys@0.4.1</summary>
+<summary>License text 269 - jni-sys@0.3.1, jni-sys@0.4.1</summary>
 
 <pre>Copyright (c) 2015 The rust-jni-sys Developers
 
@@ -14668,7 +14695,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 269 - jni@0.21.1</summary>
+<summary>License text 270 - jni@0.21.1</summary>
 
 <pre>The MIT License (MIT)
 
@@ -14695,7 +14722,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 270 - jotai-scope@0.7.2</summary>
+<summary>License text 271 - jotai-scope@0.7.2</summary>
 
 <pre>The MIT License (MIT)
 
@@ -14722,7 +14749,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 271 - jotai@2.11.0</summary>
+<summary>License text 272 - jotai@2.11.0</summary>
 
 <pre>MIT License
 
@@ -14749,7 +14776,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 272 - js-tokens@4.0.0</summary>
+<summary>License text 273 - js-tokens@4.0.0</summary>
 
 <pre>The MIT License (MIT)
 
@@ -14776,7 +14803,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 273 - json-patch@3.0.1</summary>
+<summary>License text 274 - json-patch@3.0.1</summary>
 
 <pre>MIT License
 
@@ -14803,7 +14830,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 274 - jsonptr@0.6.3</summary>
+<summary>License text 275 - jsonptr@0.6.3</summary>
 
 <pre>Apache License
                            Version 2.0, January 2004
@@ -15010,7 +15037,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 275 - jsonptr@0.6.3</summary>
+<summary>License text 276 - jsonptr@0.6.3</summary>
 
 <pre>MIT License
 
@@ -15037,7 +15064,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 276 - jspdf@4.2.1</summary>
+<summary>License text 277 - jspdf@4.2.1</summary>
 
 <pre>Copyright
 (c) 2010-2025 James Hall, https://github.com/MrRio/jsPDF
@@ -15065,7 +15092,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 277 - jszip@3.10.1</summary>
+<summary>License text 278 - jszip@3.10.1</summary>
 
 <pre>JSZip is dual licensed. At your choice you may use it under the MIT license *or* the GPLv3
 license.
@@ -15722,7 +15749,7 @@ copy of the Program in return for a fee.
 </details>
 
 <details>
-<summary>License text 278 - katex@0.16.47</summary>
+<summary>License text 279 - katex@0.16.47</summary>
 
 <pre>The MIT License (MIT)
 
@@ -15749,7 +15776,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 279 - keyboard-types@0.7.0</summary>
+<summary>License text 280 - keyboard-types@0.7.0</summary>
 
 <pre>Copyright (c) 2017 Pyfisch
 
@@ -15774,7 +15801,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 280 - keyring@3.6.3</summary>
+<summary>License text 281 - keyring@3.6.3</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -15981,7 +16008,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 281 - keyring@3.6.3</summary>
+<summary>License text 282 - keyring@3.6.3</summary>
 
 <pre>Copyright (c) 2016 keyring Developers
 
@@ -16012,7 +16039,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 282 - khroma@2.1.0</summary>
+<summary>License text 283 - khroma@2.1.0</summary>
 
 <pre>The MIT License (MIT)
 
@@ -16039,7 +16066,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 283 - khroma@2.1.0</summary>
+<summary>License text 284 - khroma@2.1.0</summary>
 
 <pre>MIT License
 
@@ -16066,7 +16093,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 284 - langium@3.3.1</summary>
+<summary>License text 285 - langium@3.3.1</summary>
 
 <pre>Copyright 2021 TypeFox GmbH
 
@@ -16088,7 +16115,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 </details>
 
 <details>
-<summary>License text 285 - layout-base@1.0.2, layout-base@2.0.1</summary>
+<summary>License text 286 - layout-base@1.0.2, layout-base@2.0.1</summary>
 
 <pre>MIT License
 
@@ -16115,7 +16142,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 286 - lib0@0.2.117, y-prosemirror@1.3.7, y-protocols@1.0.7</summary>
+<summary>License text 287 - lib0@0.2.117, y-prosemirror@1.3.7, y-protocols@1.0.7</summary>
 
 <pre>The MIT License (MIT)
 
@@ -16142,7 +16169,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 287 - libappindicator@0.9.0</summary>
+<summary>License text 288 - libappindicator@0.9.0</summary>
 
 <pre>MIT License
 
@@ -16170,7 +16197,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 288 - libc@0.2.189</summary>
+<summary>License text 289 - libc@0.2.189</summary>
 
 <pre>Copyright (c) The Rust Project Developers
 
@@ -16201,7 +16228,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 289 - libloading@0.7.4</summary>
+<summary>License text 290 - libloading@0.7.4</summary>
 
 <pre>Copyright © 2015, Simonas Kazlauskas
 
@@ -16219,7 +16246,7 @@ THIS SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 290 - libredox@0.1.16</summary>
+<summary>License text 291 - libredox@0.1.16</summary>
 
 <pre>MIT License
 
@@ -16246,7 +16273,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 291 - libsqlite3-sys@0.30.1, rusqlite@0.32.1</summary>
+<summary>License text 292 - libsqlite3-sys@0.30.1, rusqlite@0.32.1</summary>
 
 <pre>Copyright (c) 2014-2021 The rusqlite developers
 
@@ -16271,7 +16298,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 292 - lie@3.3.0</summary>
+<summary>License text 293 - lie@3.3.0</summary>
 
 <pre>#Copyright (c) 2014-2018 Calvin Metcalf, Jordan Harband
 
@@ -16284,7 +16311,7 @@ The above copyright notice and this permission notice shall be included in all c
 </details>
 
 <details>
-<summary>License text 293 - linkifyjs@4.3.3</summary>
+<summary>License text 294 - linkifyjs@4.3.3</summary>
 
 <pre>Copyright (c) 2024 Nick Frasser
 
@@ -16309,7 +16336,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 294 - linux-raw-sys@0.12.1, rustix@1.1.4, target-lexicon@0.12.16, wasi@0.11.1+wasi-snapshot-preview1, wasip2@1.0.3+wasi-0.2.9, wit-bindgen-core@0.51.0, wit-bindgen-rust-macro@0.51.0, wit-bindgen-rust@0.51.0, wit-bindgen@0.51.0, wit-bindgen@0.57.1</summary>
+<summary>License text 295 - linux-raw-sys@0.12.1, rustix@1.1.4, target-lexicon@0.12.16, wasi@0.11.1+wasi-snapshot-preview1, wasip2@1.0.3+wasi-0.2.9, wit-bindgen-core@0.51.0, wit-bindgen-rust-macro@0.51.0, wit-bindgen-rust@0.51.0, wit-bindgen@0.51.0, wit-bindgen@0.57.1</summary>
 
 <pre>Apache License
                            Version 2.0, January 2004
@@ -16533,7 +16560,7 @@ Software.</pre>
 </details>
 
 <details>
-<summary>License text 295 - lock_api@0.4.14, parking_lot@0.12.5, parking_lot_core@0.9.12, rustc_version@0.4.1</summary>
+<summary>License text 296 - lock_api@0.4.14, parking_lot@0.12.5, parking_lot_core@0.9.12, rustc_version@0.4.1</summary>
 
 <pre>Copyright (c) 2016 The Rust Project Developers
 
@@ -16564,7 +16591,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 296 - lodash-es@4.17.21, lodash.merge@4.6.2</summary>
+<summary>License text 297 - lodash-es@4.17.21, lodash.merge@4.6.2</summary>
 
 <pre>Copyright OpenJS Foundation and other contributors &lt;https://openjsf.org/&gt;
 
@@ -16617,7 +16644,7 @@ terms above.</pre>
 </details>
 
 <details>
-<summary>License text 297 - lodash.debounce@4.0.8, lodash.throttle@4.1.1</summary>
+<summary>License text 298 - lodash.debounce@4.0.8, lodash.throttle@4.1.1</summary>
 
 <pre>Copyright jQuery Foundation and other contributors &lt;https://jquery.org/&gt;
 
@@ -16670,7 +16697,7 @@ terms above.</pre>
 </details>
 
 <details>
-<summary>License text 298 - longest-streak@3.1.0, stringify-entities@4.0.4, trim-lines@3.0.1, trim-trailing-lines@2.1.0</summary>
+<summary>License text 299 - longest-streak@3.1.0, stringify-entities@4.0.4, trim-lines@3.0.1, trim-trailing-lines@2.1.0</summary>
 
 <pre>(The MIT License)
 
@@ -16698,7 +16725,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 299 - loose-envify@1.4.0</summary>
+<summary>License text 300 - loose-envify@1.4.0</summary>
 
 <pre>The MIT License (MIT)
 
@@ -16725,7 +16752,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 300 - lru-slab@0.1.2</summary>
+<summary>License text 301 - lru-slab@0.1.2</summary>
 
 <pre>Copyright (c) 2024 The lru-slab Developers
 
@@ -16738,7 +16765,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 301 - lru-slab@0.1.2</summary>
+<summary>License text 302 - lru-slab@0.1.2</summary>
 
 <pre>Copyright (c) 2024 The lru-slab Developers
 
@@ -16763,7 +16790,7 @@ the following restrictions:
 </details>
 
 <details>
-<summary>License text 302 - marked@16.4.2</summary>
+<summary>License text 303 - marked@16.4.2</summary>
 
 <pre># License information
 
@@ -16813,7 +16840,7 @@ This software is provided by the copyright holders and contributors “as is” 
 </details>
 
 <details>
-<summary>License text 303 - mdast-util-gfm-autolink-literal@2.0.1, mdast-util-gfm-strikethrough@2.0.0, mdast-util-gfm-table@2.0.0, mdast-util-gfm-task-list-item@2.0.0, micromark-extension-gfm-autolink-literal@2.1.0, micromark-extension-gfm-strikethrough@2.1.0, micromark-extension-gfm-tagfilter@2.0.0, micromark-extension-gfm-task-list-item@2.1.0, micromark-extension-gfm@3.0.0</summary>
+<summary>License text 304 - mdast-util-gfm-autolink-literal@2.0.1, mdast-util-gfm-strikethrough@2.0.0, mdast-util-gfm-table@2.0.0, mdast-util-gfm-task-list-item@2.0.0, micromark-extension-gfm-autolink-literal@2.1.0, micromark-extension-gfm-strikethrough@2.1.0, micromark-extension-gfm-tagfilter@2.0.0, micromark-extension-gfm-task-list-item@2.1.0, micromark-extension-gfm@3.0.0</summary>
 
 <pre>(The MIT License)
 
@@ -16841,7 +16868,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 304 - mdast-util-phrasing@4.1.0</summary>
+<summary>License text 305 - mdast-util-phrasing@4.1.0</summary>
 
 <pre>(The MIT License)
 
@@ -16870,7 +16897,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 305 - mdns-sd@0.20.3</summary>
+<summary>License text 306 - mdns-sd@0.20.3</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -17077,7 +17104,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 306 - mdns-sd@0.20.3</summary>
+<summary>License text 307 - mdns-sd@0.20.3</summary>
 
 <pre>MIT License
 
@@ -17104,7 +17131,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 307 - memoffset@0.9.1</summary>
+<summary>License text 308 - memoffset@0.9.1</summary>
 
 <pre>Copyright (c) 2017 Gilad Naaman
 
@@ -17129,7 +17156,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 308 - mermaid@11.15.0</summary>
+<summary>License text 309 - mermaid@11.15.0</summary>
 
 <pre>The MIT License (MIT)
 
@@ -17156,7 +17183,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 309 - micromark-extension-gfm-footnote@2.1.0</summary>
+<summary>License text 310 - micromark-extension-gfm-footnote@2.1.0</summary>
 
 <pre>(The MIT License)
 
@@ -17184,7 +17211,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 310 - mime@0.3.17</summary>
+<summary>License text 311 - mime@0.3.17</summary>
 
 <pre>Copyright (c) 2014 Sean McArthur
 
@@ -17209,7 +17236,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 311 - minimalistic-assert@1.0.1</summary>
+<summary>License text 312 - minimalistic-assert@1.0.1</summary>
 
 <pre>Copyright 2015 Calvin Metcalf
 
@@ -17228,7 +17255,7 @@ PERFORMANCE OF THIS SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 312 - minisign-verify@0.2.5</summary>
+<summary>License text 313 - minisign-verify@0.2.5</summary>
 
 <pre>Copyright (c) 2019-2025 Frank Denis
 
@@ -17293,37 +17320,6 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 313 - miniz_oxide@0.8.9</summary>
-
-<pre>MIT License
-
-Copyright 2013-2014 RAD Game Tools and Valve Software
-Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
-Copyright (c) 2017 Frommi
-Copyright (c) 2017-2024 oyvindln
-
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.</pre>
-
-</details>
-
-<details>
 <summary>License text 314 - miniz_oxide@0.8.9</summary>
 
 <pre>MIT License
@@ -17332,6 +17328,7 @@ Copyright 2013-2014 RAD Game Tools and Valve Software
 Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
 Copyright (c) 2017 Frommi
 Copyright (c) 2017-2024 oyvindln
+
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -17356,6 +17353,36 @@ SOFTWARE.</pre>
 <details>
 <summary>License text 315 - miniz_oxide@0.8.9</summary>
 
+<pre>MIT License
+
+Copyright 2013-2014 RAD Game Tools and Valve Software
+Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
+Copyright (c) 2017 Frommi
+Copyright (c) 2017-2024 oyvindln
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre>
+
+</details>
+
+<details>
+<summary>License text 316 - miniz_oxide@0.8.9</summary>
+
 <pre>Copyright 2013-2014 RAD Game Tools and Valve Software
 Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
 Copyright (c) 2020 Frommi
@@ -17374,7 +17401,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 </details>
 
 <details>
-<summary>License text 316 - mio@1.2.0</summary>
+<summary>License text 317 - mio@1.2.0</summary>
 
 <pre>Copyright (c) 2014 Carl Lerche and other MIO contributors
 
@@ -17399,7 +17426,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 317 - mkdirp-classic@0.5.3</summary>
+<summary>License text 318 - mkdirp-classic@0.5.3</summary>
 
 <pre>The MIT License (MIT)
 
@@ -17426,7 +17453,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 318 - ms@2.1.3</summary>
+<summary>License text 319 - ms@2.1.3</summary>
 
 <pre>The MIT License (MIT)
 
@@ -17453,7 +17480,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 319 - muda@0.19.1, tray-icon@0.24.2</summary>
+<summary>License text 320 - muda@0.19.1, tray-icon@0.24.2</summary>
 
 <pre>MIT License
 
@@ -17480,7 +17507,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 320 - muda@0.19.1</summary>
+<summary>License text 321 - muda@0.19.1</summary>
 
 <pre>SPDXVersion: SPDX-2.1
 DataLicense: CC0-1.0
@@ -17505,7 +17532,7 @@ Creator: Person: Daniel Thompson-Yvetot</pre>
 </details>
 
 <details>
-<summary>License text 321 - multicast-dns@7.2.5, prebuild-install@7.1.3</summary>
+<summary>License text 322 - multicast-dns@7.2.5, prebuild-install@7.1.3</summary>
 
 <pre>The MIT License (MIT)
 
@@ -17532,7 +17559,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 322 - multimath@2.0.0</summary>
+<summary>License text 323 - multimath@2.0.0</summary>
 
 <pre>(The MIT License)
 
@@ -17559,7 +17586,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 323 - nanoid@3.3.3, nanoid@4.0.2</summary>
+<summary>License text 324 - nanoid@3.3.3, nanoid@4.0.2</summary>
 
 <pre>The MIT License (MIT)
 
@@ -17585,7 +17612,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 324 - nanoid@5.1.16</summary>
+<summary>License text 325 - nanoid@5.1.16</summary>
 
 <pre>The MIT License (MIT)
 
@@ -17611,7 +17638,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 325 - napi-build-utils@2.0.0</summary>
+<summary>License text 326 - napi-build-utils@2.0.0</summary>
 
 <pre>MIT License
 
@@ -17638,7 +17665,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 326 - new_debug_unreachable@1.0.6</summary>
+<summary>License text 327 - new_debug_unreachable@1.0.6</summary>
 
 <pre>Copyright (c) 2015 Jonathan Reem
 
@@ -17669,7 +17696,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 327 - node-abi@3.94.0</summary>
+<summary>License text 328 - node-abi@3.94.0</summary>
 
 <pre>MIT License
 
@@ -17696,7 +17723,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 328 - normalize-path@3.0.0</summary>
+<summary>License text 329 - normalize-path@3.0.0</summary>
 
 <pre>The MIT License (MIT)
 
@@ -17723,7 +17750,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 329 - notify-rust@4.17.0</summary>
+<summary>License text 330 - notify-rust@4.17.0</summary>
 
 <pre>MIT License
 
@@ -17750,7 +17777,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 330 - num_enum@0.7.6, num_enum_derive@0.7.6</summary>
+<summary>License text 331 - num_enum@0.7.6, num_enum_derive@0.7.6</summary>
 
 <pre>Copyright (c) 2018, Daniel Wagner-Hall
 All rights reserved.
@@ -17783,7 +17810,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </details>
 
 <details>
-<summary>License text 331 - num_threads@0.1.7</summary>
+<summary>License text 332 - num_threads@0.1.7</summary>
 
 <pre>Apache License
                            Version 2.0, January 2004
@@ -17990,7 +18017,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </details>
 
 <details>
-<summary>License text 332 - num_threads@0.1.7</summary>
+<summary>License text 333 - num_threads@0.1.7</summary>
 
 <pre>Copyright (c) 2021 Jacob Pratt
 
@@ -18015,7 +18042,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 333 - num-conv@0.2.1</summary>
+<summary>License text 334 - num-conv@0.2.1</summary>
 
 <pre>Copyright (c) Jacob Pratt
 
@@ -18040,7 +18067,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 334 - open-color@1.9.1</summary>
+<summary>License text 335 - open-color@1.9.1</summary>
 
 <pre>MIT License
 
@@ -18067,7 +18094,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 335 - open@5.3.4</summary>
+<summary>License text 336 - open@5.3.4</summary>
 
 <pre>The MIT License (MIT)
 =====================
@@ -18098,7 +18125,7 @@ OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 336 - option-ext@0.2.0</summary>
+<summary>License text 337 - option-ext@0.2.0</summary>
 
 <pre>Mozilla Public License Version 2.0
 ==================================
@@ -18477,7 +18504,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 </details>
 
 <details>
-<summary>License text 337 - ordered-multimap@0.7.3</summary>
+<summary>License text 338 - ordered-multimap@0.7.3</summary>
 
 <pre>MIT License
 
@@ -18504,7 +18531,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 338 - orderedmap@2.1.1, w3c-keyname@2.2.8</summary>
+<summary>License text 339 - orderedmap@2.1.1, w3c-keyname@2.2.8</summary>
 
 <pre>Copyright (C) 2016 by Marijn Haverbeke &lt;marijn@haverbeke.berlin&gt; and others
 
@@ -18529,7 +18556,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 339 - osakit@0.3.1</summary>
+<summary>License text 340 - osakit@0.3.1</summary>
 
 <pre>Copyright (c) 2024 Marat Dulin
 
@@ -18560,7 +18587,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 340 - package-manager-detector@1.6.0</summary>
+<summary>License text 341 - package-manager-detector@1.6.0</summary>
 
 <pre>MIT License
 
@@ -18587,7 +18614,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 341 - pako@1.0.11, pako@2.0.3, pako@2.2.0</summary>
+<summary>License text 342 - pako@1.0.11, pako@2.0.3, pako@2.2.0</summary>
 
 <pre>(The MIT License)
 
@@ -18614,7 +18641,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 342 - parking@2.2.1</summary>
+<summary>License text 343 - parking@2.2.1</summary>
 
 <pre>===============================================================================
 
@@ -18629,7 +18656,7 @@ copied, modified, or distributed except according to those terms.</pre>
 </details>
 
 <details>
-<summary>License text 343 - parse5@7.3.0</summary>
+<summary>License text 344 - parse5@7.3.0</summary>
 
 <pre>Copyright (c) 2013-2019 Ivan Nikulin (ifaaan@gmail.com, https://github.com/inikulin)
 
@@ -18654,7 +18681,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 344 - path-data-parser@0.1.0, points-on-curve@0.2.0, points-on-curve@1.0.1</summary>
+<summary>License text 345 - path-data-parser@0.1.0, points-on-curve@0.2.0, points-on-curve@1.0.1</summary>
 
 <pre>MIT License
 
@@ -18681,7 +18708,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 345 - pathdiff@0.2.3</summary>
+<summary>License text 346 - pathdiff@0.2.3</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -18888,7 +18915,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 346 - perfect-freehand@1.2.0</summary>
+<summary>License text 347 - perfect-freehand@1.2.0</summary>
 
 <pre>MIT License
 
@@ -18915,7 +18942,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 347 - performance-now@2.1.0</summary>
+<summary>License text 348 - performance-now@2.1.0</summary>
 
 <pre>Copyright (c) 2013 Braveg1rl
 
@@ -18928,7 +18955,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 348 - phf@0.13.1, phf_codegen@0.13.1, phf_generator@0.13.1, phf_macros@0.13.1, phf_shared@0.13.1</summary>
+<summary>License text 349 - phf@0.13.1, phf_codegen@0.13.1, phf_generator@0.13.1, phf_macros@0.13.1, phf_shared@0.13.1</summary>
 
 <pre>The MIT License (MIT)
 
@@ -18954,7 +18981,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 349 - pica@7.1.1</summary>
+<summary>License text 350 - pica@7.1.1</summary>
 
 <pre>(The MIT License)
 
@@ -18981,7 +19008,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 350 - picomatch@2.3.2</summary>
+<summary>License text 351 - picomatch@2.3.2</summary>
 
 <pre>The MIT License (MIT)
 
@@ -19008,7 +19035,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 351 - plain@0.2.3</summary>
+<summary>License text 352 - plain@0.2.3</summary>
 
 <pre>Copyright (c) 2017 Plain contributors
 
@@ -19039,7 +19066,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 352 - plist@1.9.0</summary>
+<summary>License text 353 - plist@1.9.0</summary>
 
 <pre>Copyright (c) 2015 Edward Barnard
 
@@ -19064,7 +19091,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 353 - png-chunk-text@1.0.0, png-chunks-encode@1.0.0, png-chunks-extract@1.0.0</summary>
+<summary>License text 354 - png-chunk-text@1.0.0, png-chunks-encode@1.0.0, png-chunks-extract@1.0.0</summary>
 
 <pre>The MIT License (MIT)
 Copyright (c) 2015 Hugh Kennedy
@@ -19090,7 +19117,7 @@ OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 354 - png@0.17.16, png@0.18.1</summary>
+<summary>License text 355 - png@0.17.16, png@0.18.1</summary>
 
 <pre>Copyright (c) 2015 nwin
 
@@ -19121,7 +19148,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 355 - pngjs@5.0.0</summary>
+<summary>License text 356 - pngjs@5.0.0</summary>
 
 <pre>pngjs2 original work Copyright (c) 2015 Luke Page &amp; Original Contributors
 pngjs derived work Copyright (c) 2012 Kuba Niegowski
@@ -19147,7 +19174,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 356 - points-on-path@0.2.1</summary>
+<summary>License text 357 - points-on-path@0.2.1</summary>
 
 <pre>MIT License
 
@@ -19174,7 +19201,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 357 - powerfmt@0.2.0</summary>
+<summary>License text 358 - powerfmt@0.2.0</summary>
 
 <pre>Apache License
                            Version 2.0, January 2004
@@ -19381,7 +19408,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 358 - powerfmt@0.2.0</summary>
+<summary>License text 359 - powerfmt@0.2.0</summary>
 
 <pre>Copyright (c) 2023 Jacob Pratt et al.
 
@@ -19406,7 +19433,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 359 - ppv-lite86@0.2.21</summary>
+<summary>License text 360 - ppv-lite86@0.2.21</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -19613,7 +19640,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 360 - ppv-lite86@0.2.21</summary>
+<summary>License text 361 - ppv-lite86@0.2.21</summary>
 
 <pre>Copyright (c) 2019 The CryptoCorrosion Contributors
 
@@ -19644,7 +19671,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 361 - precomputed-hash@0.1.1</summary>
+<summary>License text 362 - precomputed-hash@0.1.1</summary>
 
 <pre>MIT License
 
@@ -19671,7 +19698,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 362 - proc-macro-error-attr@1.0.4, proc-macro-error@1.0.4</summary>
+<summary>License text 363 - proc-macro-error-attr@1.0.4, proc-macro-error@1.0.4</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -19878,7 +19905,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 363 - proc-macro-error-attr@1.0.4, proc-macro-error@1.0.4</summary>
+<summary>License text 364 - proc-macro-error-attr@1.0.4, proc-macro-error@1.0.4</summary>
 
 <pre>MIT License
 
@@ -19905,7 +19932,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 364 - process-nextick-args@2.0.1</summary>
+<summary>License text 365 - process-nextick-args@2.0.1</summary>
 
 <pre># Copyright (c) 2015 Calvin Metcalf
 
@@ -19930,7 +19957,7 @@ SOFTWARE.**</pre>
 </details>
 
 <details>
-<summary>License text 365 - property-information@7.2.0</summary>
+<summary>License text 366 - property-information@7.2.0</summary>
 
 <pre>(The MIT License)
 
@@ -19958,7 +19985,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 366 - prosemirror-changeset@2.4.1</summary>
+<summary>License text 367 - prosemirror-changeset@2.4.1</summary>
 
 <pre>Copyright (C) 2017 by Marijn Haverbeke &lt;marijn@haverbeke.berlin&gt; and others
 
@@ -19983,7 +20010,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 367 - prosemirror-commands@1.7.1, prosemirror-dropcursor@1.8.2, prosemirror-gapcursor@1.4.1, prosemirror-history@1.5.0, prosemirror-inputrules@1.5.1, prosemirror-keymap@1.2.3, prosemirror-model@1.25.9, prosemirror-schema-list@1.5.1, prosemirror-state@1.4.4, prosemirror-transform@1.12.0, prosemirror-view@1.41.9</summary>
+<summary>License text 368 - prosemirror-commands@1.7.1, prosemirror-dropcursor@1.8.2, prosemirror-gapcursor@1.4.1, prosemirror-history@1.5.0, prosemirror-inputrules@1.5.1, prosemirror-keymap@1.2.3, prosemirror-model@1.25.9, prosemirror-schema-list@1.5.1, prosemirror-state@1.4.4, prosemirror-transform@1.12.0, prosemirror-view@1.41.9</summary>
 
 <pre>Copyright (C) 2015-2017 by Marijn Haverbeke &lt;marijn@haverbeke.berlin&gt; and others
 
@@ -20008,7 +20035,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 368 - prosemirror-highlight@0.13.1</summary>
+<summary>License text 369 - prosemirror-highlight@0.13.1</summary>
 
 <pre>MIT License
 
@@ -20035,7 +20062,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 369 - prosemirror-tables@1.8.5</summary>
+<summary>License text 370 - prosemirror-tables@1.8.5</summary>
 
 <pre>Copyright (C) 2015-2016 by Marijn Haverbeke &lt;marijnh@gmail.com&gt; and others
 
@@ -20060,7 +20087,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 370 - qrcode-terminal@0.12.0</summary>
+<summary>License text 371 - qrcode-terminal@0.12.0</summary>
 
 <pre>Apache License
                            Version 2.0, January 2004
@@ -20287,7 +20314,7 @@ Located in ./vendor/QRCode
 </details>
 
 <details>
-<summary>License text 371 - qrcode-terminal@0.12.0</summary>
+<summary>License text 372 - qrcode-terminal@0.12.0</summary>
 
 <pre>This product also includes QRCode for JavaScript.
 
@@ -20300,7 +20327,7 @@ are registered trademarks of DENSO WAVE INCORPORATED.</pre>
 </details>
 
 <details>
-<summary>License text 372 - qrcode@1.5.4</summary>
+<summary>License text 373 - qrcode@1.5.4</summary>
 
 <pre>The MIT License (MIT)
 
@@ -20315,7 +20342,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 373 - quick-xml@0.37.5, quick-xml@0.39.2</summary>
+<summary>License text 374 - quick-xml@0.37.5, quick-xml@0.39.2</summary>
 
 <pre>The MIT License (MIT)
 
@@ -20344,7 +20371,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 374 - quinn-proto@0.11.15, quinn-udp@0.5.14, quinn@0.11.9</summary>
+<summary>License text 375 - quinn-proto@0.11.15, quinn-udp@0.5.14, quinn@0.11.9</summary>
 
 <pre>Copyright (c) 2018 The quinn Developers
 
@@ -20357,7 +20384,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 375 - raf@3.4.1</summary>
+<summary>License text 376 - raf@3.4.1</summary>
 
 <pre>Copyright 2013 Chris Dickinson &lt;chris@neversaw.us&gt;
 
@@ -20370,7 +20397,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 376 - rand_core@0.9.5</summary>
+<summary>License text 377 - rand_core@0.9.5</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -20563,7 +20590,7 @@ APPENDIX: How to apply the Apache License to your work.
 </details>
 
 <details>
-<summary>License text 377 - rand@0.9.4, rand_chacha@0.9.0</summary>
+<summary>License text 378 - rand@0.9.4, rand_chacha@0.9.0</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -20745,7 +20772,7 @@ END OF TERMS AND CONDITIONS</pre>
 </details>
 
 <details>
-<summary>License text 378 - rand@0.9.4, rand_chacha@0.9.0, rand_core@0.9.5</summary>
+<summary>License text 379 - rand@0.9.4, rand_chacha@0.9.0, rand_core@0.9.5</summary>
 
 <pre>Copyright 2018 Developers of the Rand project
 Copyright (c) 2014 The Rust Project Developers
@@ -20777,7 +20804,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 379 - raw-window-handle@0.6.2</summary>
+<summary>License text 380 - raw-window-handle@0.6.2</summary>
 
 <pre>MIT License
 
@@ -20804,7 +20831,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 380 - raw-window-handle@0.6.2</summary>
+<summary>License text 381 - raw-window-handle@0.6.2</summary>
 
 <pre>Copyright (c) 2020 Osspial
 
@@ -20821,7 +20848,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 </details>
 
 <details>
-<summary>License text 381 - rc@1.2.8</summary>
+<summary>License text 382 - rc@1.2.8</summary>
 
 <pre>Apache License, Version 2.0
 
@@ -20842,7 +20869,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 382 - rc@1.2.8</summary>
+<summary>License text 383 - rc@1.2.8</summary>
 
 <pre>Copyright (c) 2013, Dominic Tarr
 All rights reserved.
@@ -20874,7 +20901,7 @@ either expressed or implied, of the FreeBSD Project.</pre>
 </details>
 
 <details>
-<summary>License text 383 - rc@1.2.8</summary>
+<summary>License text 384 - rc@1.2.8</summary>
 
 <pre>The MIT License
 
@@ -20904,7 +20931,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 384 - react-dom@18.3.1, react@18.3.1, scheduler@0.23.2</summary>
+<summary>License text 385 - react-dom@18.3.1, react@18.3.1, scheduler@0.23.2</summary>
 
 <pre>MIT License
 
@@ -20931,7 +20958,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 385 - react-i18next@17.0.8</summary>
+<summary>License text 386 - react-i18next@17.0.11</summary>
 
 <pre>The MIT License (MIT)
 
@@ -20958,7 +20985,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 386 - react-icons@5.6.0</summary>
+<summary>License text 387 - react-icons@5.6.0</summary>
 
 <pre>Copyright 2018 kamijin_fanta &lt;kamijin@live.jp&gt;
 
@@ -21068,7 +21095,7 @@ License: MIT https://github.com/icons8/line-awesome/blob/master/LICENSE.md</pre>
 </details>
 
 <details>
-<summary>License text 387 - react-number-format@5.4.5</summary>
+<summary>License text 388 - react-number-format@5.4.5</summary>
 
 <pre>MIT License
 
@@ -21095,7 +21122,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 388 - react-textarea-autosize@8.5.9</summary>
+<summary>License text 389 - react-textarea-autosize@8.5.9</summary>
 
 <pre>The MIT License (MIT)
 
@@ -21121,7 +21148,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 389 - readable-stream@2.3.8, readable-stream@3.6.2, string_decoder@1.1.1</summary>
+<summary>License text 390 - readable-stream@2.3.8, readable-stream@3.6.2, string_decoder@1.1.1</summary>
 
 <pre>Node.js is licensed for use as follows:
 
@@ -21174,7 +21201,7 @@ IN THE SOFTWARE.
 </details>
 
 <details>
-<summary>License text 390 - readdirp@3.6.0</summary>
+<summary>License text 391 - readdirp@3.6.0</summary>
 
 <pre>MIT License
 
@@ -21201,7 +21228,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 391 - redox_syscall@0.5.18, redox_syscall@0.7.5</summary>
+<summary>License text 392 - redox_syscall@0.5.18, redox_syscall@0.7.5</summary>
 
 <pre>Copyright (c) 2017 Redox OS Developers
 
@@ -21229,7 +21256,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 392 - redox_users@0.5.2</summary>
+<summary>License text 393 - redox_users@0.5.2</summary>
 
 <pre>The MIT License (MIT)
 
@@ -21256,7 +21283,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 393 - regenerator-runtime@0.13.11</summary>
+<summary>License text 394 - regenerator-runtime@0.13.11</summary>
 
 <pre>MIT License
 
@@ -21283,7 +21310,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 394 - remark-parse@11.0.0, remark-stringify@11.0.0</summary>
+<summary>License text 395 - remark-parse@11.0.0, remark-stringify@11.0.0</summary>
 
 <pre>(The MIT License)
 
@@ -21310,7 +21337,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 395 - require-directory@2.1.1</summary>
+<summary>License text 396 - require-directory@2.1.1</summary>
 
 <pre>The MIT License (MIT)
 
@@ -21338,7 +21365,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 396 - require-main-filename@2.0.0, set-blocking@2.0.0, yargs-parser@18.1.3</summary>
+<summary>License text 397 - require-main-filename@2.0.0, set-blocking@2.0.0, yargs-parser@18.1.3</summary>
 
 <pre>Copyright (c) 2016, Contributors
 
@@ -21358,7 +21385,7 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</p
 </details>
 
 <details>
-<summary>License text 397 - reqwest@0.13.4</summary>
+<summary>License text 398 - reqwest@0.13.4</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -21565,7 +21592,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 398 - reqwest@0.13.4</summary>
+<summary>License text 399 - reqwest@0.13.4</summary>
 
 <pre>Copyright (c) 2016-2026 Sean McArthur
 
@@ -21590,7 +21617,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 399 - rfd@0.16.0</summary>
+<summary>License text 400 - rfd@0.16.0</summary>
 
 <pre>MIT License
 
@@ -21617,7 +21644,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 400 - rgbcolor@1.0.1</summary>
+<summary>License text 401 - rgbcolor@1.0.1</summary>
 
 <pre>Copyright (c) 2016 Stoyan Stefanov, http://phpied.com/
 
@@ -21649,7 +21676,7 @@ Please either apply this, the MIT license, or the license in './FEEL-FREE.md'</p
 </details>
 
 <details>
-<summary>License text 401 - ring@0.17.14</summary>
+<summary>License text 402 - ring@0.17.14</summary>
 
 <pre>*ring* uses an "ISC" license, like BoringSSL used to use, for new code
 files. See LICENSE-other-bits for the text of that license.
@@ -21664,7 +21691,7 @@ for the license to code that was sourced from the once_cell project.</pre>
 </details>
 
 <details>
-<summary>License text 402 - ring@0.17.14</summary>
+<summary>License text 403 - ring@0.17.14</summary>
 
 <pre>Apache License
                            Version 2.0, January 2004
@@ -21941,7 +21968,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </details>
 
 <details>
-<summary>License text 403 - ring@0.17.14</summary>
+<summary>License text 404 - ring@0.17.14</summary>
 
 <pre>Copyright 2015-2025 Brian Smith.
 
@@ -21960,7 +21987,7 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 404 - robust-predicates@3.0.3</summary>
+<summary>License text 405 - robust-predicates@3.0.3</summary>
 
 <pre>This is free and unencumbered software released into the public domain.
 
@@ -21990,7 +22017,7 @@ For more information, please refer to &lt;http://unlicense.org&gt;</pre>
 </details>
 
 <details>
-<summary>License text 405 - rope-sequence@1.3.4</summary>
+<summary>License text 406 - rope-sequence@1.3.4</summary>
 
 <pre>Copyright (C) 2016 by Marijn Haverbeke &lt;marijn@haverbeke.berlin&gt;
 
@@ -22015,7 +22042,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 406 - roughjs@4.6.4, roughjs@4.6.6</summary>
+<summary>License text 407 - roughjs@4.6.4, roughjs@4.6.6</summary>
 
 <pre>MIT License
 
@@ -22042,7 +22069,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 407 - rrule@2.8.1</summary>
+<summary>License text 408 - rrule@2.8.1</summary>
 
 <pre>rrule.js: Library for working with recurrence rules for calendar dates.
 =======================================================================
@@ -22113,7 +22140,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </details>
 
 <details>
-<summary>License text 408 - rust-ini@0.21.3</summary>
+<summary>License text 409 - rust-ini@0.21.3</summary>
 
 <pre>The MIT License (MIT)
 
@@ -22128,7 +22155,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 409 - rustls-native-certs@0.8.3</summary>
+<summary>License text 410 - rustls-native-certs@0.8.3</summary>
 
 <pre>Rustls is distributed under the following three licenses:
 
@@ -22143,7 +22170,7 @@ of these licenses, at your option.</pre>
 </details>
 
 <details>
-<summary>License text 410 - rustls-pki-types@1.14.1</summary>
+<summary>License text 411 - rustls-pki-types@1.14.1</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -22350,7 +22377,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 411 - rustls-pki-types@1.14.1</summary>
+<summary>License text 412 - rustls-pki-types@1.14.1</summary>
 
 <pre>Copyright (c) 2023 Dirkjan Ochtman &lt;dirkjan@ochtman.nl&gt;
 
@@ -22381,7 +22408,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 412 - rustls-platform-verifier@0.7.0</summary>
+<summary>License text 413 - rustls-platform-verifier@0.7.0</summary>
 
 <pre>MIT License
 
@@ -22408,7 +22435,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 413 - rustls-webpki@0.103.13</summary>
+<summary>License text 414 - rustls-webpki@0.103.13</summary>
 
 <pre>Except as otherwise noted, this project is licensed under the following
 (ISC-style) terms:
@@ -22433,7 +22460,7 @@ third-party/chromium/LICENSE.</pre>
 </details>
 
 <details>
-<summary>License text 414 - rw@1.3.3</summary>
+<summary>License text 415 - rw@1.3.3</summary>
 
 <pre>Copyright (c) 2014-2016, Michael Bostock
 All rights reserved.
@@ -22465,7 +22492,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </details>
 
 <details>
-<summary>License text 415 - safe-buffer@5.1.2</summary>
+<summary>License text 416 - safe-buffer@5.1.2</summary>
 
 <pre>The MIT License (MIT)
 
@@ -22492,7 +22519,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 416 - safer-buffer@2.1.2</summary>
+<summary>License text 417 - safer-buffer@2.1.2</summary>
 
 <pre>MIT License
 
@@ -22519,7 +22546,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 417 - same-file@1.0.6, winapi-util@0.1.11</summary>
+<summary>License text 418 - same-file@1.0.6, winapi-util@0.1.11</summary>
 
 <pre>The MIT License (MIT)
 
@@ -22546,7 +22573,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 418 - sass@1.51.0</summary>
+<summary>License text 419 - sass@1.51.0</summary>
 
 <pre>Dart Sass license:
 
@@ -24084,7 +24111,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </details>
 
 <details>
-<summary>License text 419 - sax@1.6.0</summary>
+<summary>License text 420 - sax@1.6.0</summary>
 
 <pre># Blue Oak Model License
 
@@ -24145,7 +24172,7 @@ software or this license, under any kind of legal claim.***</pre>
 </details>
 
 <details>
-<summary>License text 420 - schannel@0.1.29</summary>
+<summary>License text 421 - schannel@0.1.29</summary>
 
 <pre>Copyright (c) 2015 steffengy
 
@@ -24158,7 +24185,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 421 - schemars@0.8.22, schemars@0.9.0, schemars@1.2.1, schemars_derive@0.8.22</summary>
+<summary>License text 422 - schemars@0.8.22, schemars@0.9.0, schemars@1.2.1, schemars_derive@0.8.22</summary>
 
 <pre>MIT License
 
@@ -24185,7 +24212,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 422 - scopeguard@1.2.0</summary>
+<summary>License text 423 - scopeguard@1.2.0</summary>
 
 <pre>Copyright (c) 2016-2019 Ulrik Sverdrup "bluss" and scopeguard developers
 
@@ -24216,7 +24243,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 423 - security-framework-sys@2.17.0, security-framework@2.11.1, security-framework@3.7.0</summary>
+<summary>License text 424 - security-framework-sys@2.17.0, security-framework@2.11.1, security-framework@3.7.0</summary>
 
 <pre>The MIT License (MIT)
 
@@ -24242,7 +24269,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 424 - serde_with@3.21.0, serde_with_macros@3.21.0</summary>
+<summary>License text 425 - serde_with@3.21.0, serde_with_macros@3.21.0</summary>
 
 <pre>Copyright (c) 2015
 
@@ -24273,7 +24300,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 425 - serialize-to-javascript-impl@0.1.2, serialize-to-javascript@0.1.2</summary>
+<summary>License text 426 - serialize-to-javascript-impl@0.1.2, serialize-to-javascript@0.1.2</summary>
 
 <pre>MIT License
 
@@ -24300,7 +24327,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 426 - setimmediate@1.0.5</summary>
+<summary>License text 427 - setimmediate@1.0.5</summary>
 
 <pre>Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, and Domenic Denicola
 
@@ -24326,7 +24353,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 427 - sha2@0.10.9</summary>
+<summary>License text 428 - sha2@0.10.9</summary>
 
 <pre>Copyright (c) 2006-2009 Graydon Hoare
 Copyright (c) 2009-2013 Mozilla Foundation
@@ -24359,7 +24386,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 428 - shebang-command@2.0.0</summary>
+<summary>License text 429 - shebang-command@2.0.0</summary>
 
 <pre>MIT License
 
@@ -24374,7 +24401,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 429 - shlex@1.3.0</summary>
+<summary>License text 430 - shlex@1.3.0</summary>
 
 <pre>Copyright 2015 Nicholas Allegra (comex).
 
@@ -24393,7 +24420,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 430 - shlex@1.3.0</summary>
+<summary>License text 431 - shlex@1.3.0</summary>
 
 <pre>The MIT License (MIT)
 
@@ -24420,7 +24447,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 431 - signal-hook-registry@1.4.8</summary>
+<summary>License text 432 - signal-hook-registry@1.4.8</summary>
 
 <pre>Copyright (c) 2017 tokio-jsonrpc developers
 
@@ -24451,7 +24478,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 432 - simd-adler32@0.3.9</summary>
+<summary>License text 433 - simd-adler32@0.3.9</summary>
 
 <pre>MIT License
 
@@ -24478,7 +24505,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 433 - simple-concat@1.0.1, simple-get@4.0.1</summary>
+<summary>License text 434 - simple-concat@1.0.1, simple-get@4.0.1</summary>
 
 <pre>The MIT License (MIT)
 
@@ -24504,7 +24531,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 434 - siphasher@1.0.2</summary>
+<summary>License text 435 - siphasher@1.0.2</summary>
 
 <pre>Copyright 2012-2016 The Rust Project Developers.
 Copyright 2016-2026 Frank Denis.
@@ -24517,7 +24544,7 @@ option.</pre>
 </details>
 
 <details>
-<summary>License text 435 - slab@0.4.12</summary>
+<summary>License text 436 - slab@0.4.12</summary>
 
 <pre>Copyright (c) 2019 Carl Lerche
 
@@ -24548,7 +24575,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 436 - sliced@1.0.1</summary>
+<summary>License text 437 - sliced@1.0.1</summary>
 
 <pre>(The MIT License)
 
@@ -24576,7 +24603,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 437 - smallvec@1.15.1</summary>
+<summary>License text 438 - smallvec@1.15.1</summary>
 
 <pre>Copyright (c) 2018 The Servo Project Developers
 
@@ -24607,7 +24634,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 438 - socket-pktinfo@0.4.1</summary>
+<summary>License text 439 - socket-pktinfo@0.4.1</summary>
 
 <pre>MIT License
 
@@ -24634,7 +24661,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 439 - softbuffer@0.4.8</summary>
+<summary>License text 440 - softbuffer@0.4.8</summary>
 
 <pre>Apache License
                            Version 2.0, January 2004
@@ -24841,7 +24868,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 440 - softbuffer@0.4.8</summary>
+<summary>License text 441 - softbuffer@0.4.8</summary>
 
 <pre>Copyright 2022 Kirill Chibisov
 
@@ -24866,7 +24893,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 441 - source-map-js@1.2.1</summary>
+<summary>License text 442 - source-map-js@1.2.1</summary>
 
 <pre>Copyright (c) 2009-2011, Mozilla Foundation and contributors
 All rights reserved.
@@ -24899,7 +24926,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </details>
 
 <details>
-<summary>License text 442 - spin@0.9.9</summary>
+<summary>License text 443 - spin@0.9.9</summary>
 
 <pre>The MIT License (MIT)
 
@@ -24926,7 +24953,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 443 - stable_deref_trait@1.2.1</summary>
+<summary>License text 444 - stable_deref_trait@1.2.1</summary>
 
 <pre>Copyright (c) 2017 Robert Grosse
 
@@ -24957,7 +24984,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 444 - stackblur-canvas@2.7.0</summary>
+<summary>License text 445 - stackblur-canvas@2.7.0</summary>
 
 <pre>Copyright (c) 2010 Mario Klingemann
 
@@ -24985,7 +25012,7 @@ OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 445 - strsim@0.11.1</summary>
+<summary>License text 446 - strsim@0.11.1</summary>
 
 <pre>The MIT License (MIT)
 
@@ -25014,7 +25041,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 446 - stylis@4.4.0</summary>
+<summary>License text 447 - stylis@4.4.0</summary>
 
 <pre>MIT License
 
@@ -25041,7 +25068,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 447 - subtle@2.6.1</summary>
+<summary>License text 448 - subtle@2.6.1</summary>
 
 <pre>Copyright (c) 2016-2017 Isis Agora Lovecruft, Henry de Valence. All rights reserved.
 Copyright (c) 2016-2024 Isis Agora Lovecruft. All rights reserved.
@@ -25076,7 +25103,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </details>
 
 <details>
-<summary>License text 448 - svg-pathdata@6.0.3</summary>
+<summary>License text 449 - svg-pathdata@6.0.3</summary>
 
 <pre>The MIT License (MIT)
 Copyright © 2017 Nicolas Froidure
@@ -25102,7 +25129,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 449 - swift-rs@1.0.7</summary>
+<summary>License text 450 - swift-rs@1.0.7</summary>
 
 <pre>Apache License
                            Version 2.0, January 2004
@@ -25309,7 +25336,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 450 - swift-rs@1.0.7</summary>
+<summary>License text 451 - swift-rs@1.0.7</summary>
 
 <pre>Copyright (c) 2023 The swift-rs Developers
 
@@ -25334,7 +25361,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 451 - synstructure@0.13.2</summary>
+<summary>License text 452 - synstructure@0.13.2</summary>
 
 <pre>Copyright 2016 Nika Layzell
 
@@ -25347,7 +25374,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 452 - tabbable@6.5.0</summary>
+<summary>License text 453 - tabbable@6.5.0</summary>
 
 <pre>The MIT License (MIT)
 
@@ -25374,7 +25401,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 453 - tao@0.35.0</summary>
+<summary>License text 454 - tao@0.35.0</summary>
 
 <pre>SPDXVersion: SPDX-2.1
 DataLicense: CC0-1.0
@@ -25398,7 +25425,7 @@ Creator: Person: Daniel Thompson-Yvetot</pre>
 </details>
 
 <details>
-<summary>License text 454 - tar@0.4.46</summary>
+<summary>License text 455 - tar@0.4.46</summary>
 
 <pre>Copyright (c) The tar-rs Project Contributors
 
@@ -25429,7 +25456,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 455 - tauri-plugin-single-instance@2.4.3</summary>
+<summary>License text 456 - tauri-plugin-single-instance@2.4.3</summary>
 
 <pre>MIT License
 
@@ -25456,7 +25483,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 456 - tauri-winres@0.3.6</summary>
+<summary>License text 457 - tauri-winres@0.3.6</summary>
 
 <pre>The MIT License (MIT)
 
@@ -25490,7 +25517,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 457 - tauri-winrt-notification@0.7.2</summary>
+<summary>License text 458 - tauri-winrt-notification@0.7.2</summary>
 
 <pre>SPDXVersion: SPDX-2.1
 DataLicense: CC0-1.0
@@ -25515,7 +25542,7 @@ Creator: Person: Daniel Thompson-Yvetot</pre>
 </details>
 
 <details>
-<summary>License text 458 - tempfile@3.27.0, xattr@1.6.1</summary>
+<summary>License text 459 - tempfile@3.27.0, xattr@1.6.1</summary>
 
 <pre>Copyright (c) 2015 Steven Allen
 
@@ -25546,7 +25573,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 459 - tendril@0.5.0</summary>
+<summary>License text 460 - tendril@0.5.0</summary>
 
 <pre>Copyright (c) 2015 Keegan McAllister
 
@@ -25577,7 +25604,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 460 - text-segmentation@1.0.3, utrie@1.0.2</summary>
+<summary>License text 461 - text-segmentation@1.0.3, utrie@1.0.2</summary>
 
 <pre>Copyright (c) 2021 Niklas von Hertzen
 
@@ -25605,7 +25632,7 @@ OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 461 - time-core@0.1.8, time-macros@0.2.27, time@0.3.47</summary>
+<summary>License text 462 - time-core@0.1.8, time-macros@0.2.27, time@0.3.47</summary>
 
 <pre>Copyright (c) Jacob Pratt et al.
 
@@ -25630,7 +25657,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 462 - tinyexec@1.2.4</summary>
+<summary>License text 463 - tinyexec@1.2.4</summary>
 
 <pre>MIT License
 
@@ -25657,7 +25684,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 463 - tinyvec_macros@0.1.1</summary>
+<summary>License text 464 - tinyvec_macros@0.1.1</summary>
 
 <pre>Apache License
                            Version 2.0, January 2004
@@ -25864,7 +25891,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 464 - tinyvec_macros@0.1.1</summary>
+<summary>License text 465 - tinyvec_macros@0.1.1</summary>
 
 <pre>MIT License
 
@@ -25891,7 +25918,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 465 - tinyvec_macros@0.1.1</summary>
+<summary>License text 466 - tinyvec_macros@0.1.1</summary>
 
 <pre>zlib License
 
@@ -25916,7 +25943,7 @@ freely, subject to the following restrictions:
 </details>
 
 <details>
-<summary>License text 466 - to-regex-range@5.0.1</summary>
+<summary>License text 467 - to-regex-range@5.0.1</summary>
 
 <pre>The MIT License (MIT)
 
@@ -25943,7 +25970,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 467 - tokio-macros@2.7.0</summary>
+<summary>License text 468 - tokio-macros@2.7.0</summary>
 
 <pre>MIT License
 
@@ -25971,7 +25998,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 468 - tokio-rustls@0.26.4</summary>
+<summary>License text 469 - tokio-rustls@0.26.4</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -26178,7 +26205,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 469 - tokio-rustls@0.26.4</summary>
+<summary>License text 470 - tokio-rustls@0.26.4</summary>
 
 <pre>Copyright (c) 2017 quininer kel
 
@@ -26209,7 +26236,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 470 - tokio-util@0.7.18, tokio@1.52.1</summary>
+<summary>License text 471 - tokio-util@0.7.18, tokio@1.52.1</summary>
 
 <pre>MIT License
 
@@ -26236,7 +26263,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 471 - tower-http@0.6.8</summary>
+<summary>License text 472 - tower-http@0.6.8</summary>
 
 <pre>Copyright (c) 2019-2021 Tower Contributors
 
@@ -26267,7 +26294,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 472 - tower-layer@0.3.3, tower-service@0.3.3, tower@0.5.3</summary>
+<summary>License text 473 - tower-layer@0.3.3, tower-service@0.3.3, tower@0.5.3</summary>
 
 <pre>Copyright (c) 2019 Tower Contributors
 
@@ -26298,7 +26325,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 473 - tracing-attributes@0.1.31, tracing-core@0.1.36, tracing@0.1.44</summary>
+<summary>License text 474 - tracing-attributes@0.1.31, tracing-core@0.1.36, tracing@0.1.44</summary>
 
 <pre>Copyright (c) 2019 Tokio Contributors
 
@@ -26329,7 +26356,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 474 - tray-icon@0.24.2</summary>
+<summary>License text 475 - tray-icon@0.24.2</summary>
 
 <pre>SPDXVersion: SPDX-2.1
 DataLicense: CC0-1.0
@@ -26354,7 +26381,7 @@ Creator: Person: Daniel Thompson-Yvetot</pre>
 </details>
 
 <details>
-<summary>License text 475 - trough@2.2.0</summary>
+<summary>License text 476 - trough@2.2.0</summary>
 
 <pre>(The MIT License)
 
@@ -26381,7 +26408,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 476 - try-lock@0.2.5</summary>
+<summary>License text 477 - try-lock@0.2.5</summary>
 
 <pre>Copyright (c) 2018-2023 Sean McArthur
 Copyright (c) 2016 Alex Crichton
@@ -26407,7 +26434,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 477 - ts-dedent@2.3.0</summary>
+<summary>License text 478 - ts-dedent@2.3.0</summary>
 
 <pre>MIT License
 
@@ -26434,7 +26461,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 478 - tslib@2.8.1</summary>
+<summary>License text 479 - tslib@2.8.1</summary>
 
 <pre>Copyright (c) Microsoft Corporation.
 
@@ -26452,7 +26479,7 @@ PERFORMANCE OF THIS SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 479 - tunnel-agent@0.6.0</summary>
+<summary>License text 480 - tunnel-agent@0.6.0</summary>
 
 <pre>Apache License
 
@@ -26513,7 +26540,7 @@ END OF TERMS AND CONDITIONS</pre>
 </details>
 
 <details>
-<summary>License text 480 - tunnel-rat@0.1.2</summary>
+<summary>License text 481 - tunnel-rat@0.1.2</summary>
 
 <pre>MIT License
 
@@ -26540,14 +26567,14 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 481 - typenum@1.20.0</summary>
+<summary>License text 482 - typenum@1.20.0</summary>
 
 <pre>MIT OR Apache-2.0</pre>
 
 </details>
 
 <details>
-<summary>License text 482 - typenum@1.20.0</summary>
+<summary>License text 483 - typenum@1.20.0</summary>
 
 <pre>Apache License
                         Version 2.0, January 2004
@@ -26754,7 +26781,7 @@ limitations under the License.</pre>
 </details>
 
 <details>
-<summary>License text 483 - typenum@1.20.0</summary>
+<summary>License text 484 - typenum@1.20.0</summary>
 
 <pre>The MIT License (MIT)
 
@@ -26781,7 +26808,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 484 - typescript@6.0.3</summary>
+<summary>License text 485 - typescript@6.0.3</summary>
 
 <pre>Apache License
 
@@ -26842,7 +26869,7 @@ END OF TERMS AND CONDITIONS</pre>
 </details>
 
 <details>
-<summary>License text 485 - uds_windows@1.2.1</summary>
+<summary>License text 486 - uds_windows@1.2.1</summary>
 
 <pre>MIT License
 
@@ -26869,7 +26896,7 @@ END OF TERMS AND CONDITIONS</pre>
 </details>
 
 <details>
-<summary>License text 486 - undici-types@7.24.6</summary>
+<summary>License text 487 - undici-types@7.24.6</summary>
 
 <pre>MIT License
 
@@ -26896,7 +26923,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 487 - unicode-ident@1.0.24</summary>
+<summary>License text 488 - unicode-ident@1.0.24</summary>
 
 <pre>UNICODE LICENSE V3
 
@@ -26941,7 +26968,7 @@ authorization of the copyright holder.</pre>
 </details>
 
 <details>
-<summary>License text 488 - unified@11.0.5, vfile@6.0.3</summary>
+<summary>License text 489 - unified@11.0.5, vfile@6.0.3</summary>
 
 <pre>(The MIT License)
 
@@ -26968,7 +26995,7 @@ THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 489 - unist-util-is@6.0.1</summary>
+<summary>License text 490 - unist-util-is@6.0.1</summary>
 
 <pre>(The MIT license)
 
@@ -26996,7 +27023,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 490 - untrusted@0.9.0</summary>
+<summary>License text 491 - untrusted@0.9.0</summary>
 
 <pre>// Copyright 2015-2016 Brian Smith.
 //
@@ -27015,7 +27042,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 491 - urlpattern@0.3.0</summary>
+<summary>License text 492 - urlpattern@0.3.0</summary>
 
 <pre>MIT License
 
@@ -27042,7 +27069,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 492 - use-isomorphic-layout-effect@1.2.1</summary>
+<summary>License text 493 - use-isomorphic-layout-effect@1.2.1</summary>
 
 <pre>MIT License
 
@@ -27069,7 +27096,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 493 - use-latest@1.3.0</summary>
+<summary>License text 494 - use-latest@1.3.0</summary>
 
 <pre>MIT License
 
@@ -27096,7 +27123,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 494 - use-sync-external-store@1.6.0</summary>
+<summary>License text 495 - use-sync-external-store@1.6.0</summary>
 
 <pre>MIT License
 
@@ -27123,7 +27150,7 @@ SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 495 - utf8_iter@1.0.4</summary>
+<summary>License text 496 - utf8_iter@1.0.4</summary>
 
 <pre>Copyright Mozilla Foundation
 
@@ -27154,7 +27181,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 496 - util-deprecate@1.0.2</summary>
+<summary>License text 497 - util-deprecate@1.0.2</summary>
 
 <pre>(The MIT License)
 
@@ -27184,7 +27211,7 @@ OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 497 - uuid@1.23.1</summary>
+<summary>License text 498 - uuid@1.23.1</summary>
 
 <pre>Copyright (c) 2014 The Rust Project Developers
 Copyright (c) 2018 Ashley Mannix, Christopher Armstrong, Dylan DPC, Hunar Roop Kahlon
@@ -27216,7 +27243,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 498 - uuid@14.0.1, uuid@8.3.2</summary>
+<summary>License text 499 - uuid@14.0.1, uuid@8.3.2</summary>
 
 <pre>The MIT License (MIT)
 
@@ -27231,7 +27258,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </details>
 
 <details>
-<summary>License text 499 - vcpkg@0.2.15</summary>
+<summary>License text 500 - vcpkg@0.2.15</summary>
 
 <pre>Copyright (c) 2017 Jim McGrath
 
@@ -27262,7 +27289,7 @@ DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 500 - version_check@0.9.5</summary>
+<summary>License text 501 - version_check@0.9.5</summary>
 
 <pre>The MIT License (MIT)
 Copyright (c) 2017-2018 Sergio Benitez
@@ -27287,7 +27314,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 </details>
 
 <details>
-<summary>License text 501 - version-compare@0.2.1</summary>
+<summary>License text 502 - version-compare@0.2.1</summary>
 
 <pre>Copyright (c) 2017 Tim Visée
 
@@ -27308,34 +27335,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.</pre>
-
-</details>
-
-<details>
-<summary>License text 502 - void-elements@3.1.0</summary>
-
-<pre>(The MIT License)
-
-Copyright (c) 2014 hemanth
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-'Software'), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
 
 </details>
 
