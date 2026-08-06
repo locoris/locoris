@@ -93,15 +93,9 @@ function base64UrlEncode(bytes: Uint8Array) {
 }
 
 function createRandomString(length: number) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
-  const randomBytes = crypto.getRandomValues(new Uint8Array(length));
-  let value = "";
-
-  for (let index = 0; index < randomBytes.length; index += 1) {
-    value += alphabet[randomBytes[index] % alphabet.length];
-  }
-
-  return value;
+  const byteLength = Math.max(1, Math.ceil((length * 3) / 4));
+  const randomBytes = crypto.getRandomValues(new Uint8Array(byteLength));
+  return base64UrlEncode(randomBytes).slice(0, length);
 }
 
 async function createPkceCodeChallenge(codeVerifier: string) {
