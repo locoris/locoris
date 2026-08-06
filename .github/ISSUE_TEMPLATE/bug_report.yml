@@ -1,0 +1,99 @@
+name: Bug report
+description: Report a reproducible problem in Locoris or Locoris Server.
+title: "[Bug]: "
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Locoris. Do not attach real vaults, backups, credentials, recovery material, encryption keys, or access tokens. Use synthetic data and redact logs.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      options:
+        - Vault and hierarchy
+        - Notes and editor
+        - Canvas
+        - Orbital map
+        - Planner and calendar
+        - Sync and accounts
+        - Backup, import, or export
+        - Locoris Server
+        - Installation or updates
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - Web desktop
+        - Mobile web
+        - macOS
+        - Windows
+        - Android
+        - Linux or NAS server
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Use the version shown in Locoris or the server release name.
+      placeholder: "For example: Locoris 1.0.47"
+    validations:
+      required: true
+  - type: dropdown
+    id: sync
+    attributes:
+      label: Synchronization method
+      options:
+        - Not related to synchronization
+        - Locoris Cloud
+        - Locoris Server (self-hosted)
+        - Google Drive
+        - Local only
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the result and why it is unexpected.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Add relevant console output, screenshots, or logs only after removing personal data and secrets.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and discussions.
+          required: true
+        - label: I removed personal content, credentials, tokens, and encryption material.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

@@ -1,0 +1,14 @@
+# The project is currently maintained by one accountable owner.
+* @angrein
+
+# Changes to release, security, legal, and synchronization boundaries require
+# explicit maintainer review even as the maintainer team grows.
+/.github/ @angrein
+/SECURITY.md @angrein
+/LICENSE @angrein
+/TRADEMARKS.md @angrein
+/scripts/third-party-notices.config.mjs @angrein
+/apps/app/src/lib/ @angrein
+/apps/app/src-tauri/ @angrein
+/apps/personal-server/ @angrein
+/packages/sync-core/ @angrein
