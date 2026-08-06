@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/locoris/locoris/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/locoris/locoris/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="LICENSE"><img alt="AGPL-3.0-or-later" src="https://img.shields.io/badge/license-AGPL--3.0--or--later-8cebd8?style=flat-square"></a>
   <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/locoris/locoris?display_name=tag&style=flat-square&color=f2c879"></a>
   <img alt="Local-first" src="https://img.shields.io/badge/data-local--first-a8b5ca?style=flat-square">
@@ -147,6 +148,9 @@ Locoris is currently maintained by a solo project lead with a lightweight,
 public decision process.
 
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+- Follow the community expectations in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+- Use [SUPPORT.md](SUPPORT.md) to choose between Discussions, issues, and
+  private reporting.
 - Contributions use the [Developer Certificate of Origin](DCO), not a CLA.
 - Read [GOVERNANCE.md](GOVERNANCE.md) for the decision model.
 - Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).

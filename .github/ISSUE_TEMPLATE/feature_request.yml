@@ -1,0 +1,55 @@
+name: Feature request
+description: Propose a focused improvement to the public Locoris product.
+title: "[Feature]: "
+labels:
+  - enhancement
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Start with the user problem rather than a specific implementation. Larger product changes may be moved to a Discussion before development begins.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      options:
+        - Vault and hierarchy
+        - Notes and editor
+        - Canvas
+        - Orbital map
+        - Planner and calendar
+        - Sync and accounts
+        - Backup, import, or export
+        - Locoris Server
+        - Accessibility
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What is difficult or impossible today, and who encounters it?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the successful user experience without prescribing internal architecture.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and discussions.
+          required: true
+        - label: This request belongs to the public app or self-hosted server, not private Locoris Cloud operations.
+          required: true

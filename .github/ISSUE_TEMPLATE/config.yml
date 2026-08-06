@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and community support
+    url: https://github.com/locoris/locoris/discussions
+    about: Ask for help, discuss self-hosting, or explore an idea before filing an issue.
+  - name: Report a vulnerability privately
+    url: https://github.com/locoris/locoris/security/advisories/new
+    about: Do not disclose suspected security vulnerabilities in a public issue.
