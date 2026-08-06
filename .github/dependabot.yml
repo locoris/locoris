@@ -21,6 +21,10 @@ updates:
       - dependency-name: "@excalidraw/*"
         update-types:
           - version-update:semver-minor
+      # Pre-1.0 minor releases can contain breaking API and bundling changes.
+      - dependency-name: "esbuild"
+        update-types:
+          - version-update:semver-minor
     groups:
       npm-minor-and-patch:
         patterns:
