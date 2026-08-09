@@ -173,6 +173,7 @@ body::before {
 }
 
 .network-card-head,
+.update-card-head,
 .desktop-port-row,
 .network-update-grid {
   display: flex;
@@ -183,6 +184,46 @@ body::before {
 
 .network-card-head h2 {
   margin-top: 8px;
+}
+
+.update-card {
+  border-color: color-mix(in srgb, var(--accent-warm) 28%, var(--panel-border));
+  background:
+    linear-gradient(145deg, rgba(245, 197, 109, 0.055), rgba(104, 232, 255, 0.035)),
+    var(--panel);
+}
+
+.update-card-head h2 {
+  margin: 8px 0 0;
+}
+
+.update-card > p {
+  max-width: 760px;
+  margin: 16px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.update-status {
+  flex: 0 0 auto;
+  max-width: min(44%, 300px);
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(4, 12, 25, 0.46);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.update-actions {
+  justify-content: flex-start;
+  margin-top: 18px;
+}
+
+.update-actions > * {
+  width: auto;
 }
 
 .network-port-chip {
@@ -500,6 +541,19 @@ code {
 
   .connection-actions {
     display: grid;
+  }
+
+  .update-card-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .update-status {
+    max-width: 100%;
+  }
+
+  .update-actions > * {
+    width: 100%;
   }
 
   .network-details {

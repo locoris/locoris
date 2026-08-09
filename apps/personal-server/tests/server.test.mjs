@@ -52,7 +52,8 @@ async function startServer(dataDir, managementToken) {
       ...process.env,
       PORT: String(port),
       SYNC_DATA_DIR: dataDir,
-      SYNC_MANAGEMENT_TOKEN: managementToken
+      SYNC_MANAGEMENT_TOKEN: managementToken,
+      SYNC_UPDATE_CHECK: "0"
     },
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -136,6 +137,12 @@ test("server keeps vault tokens and state across an abrupt restart", async (cont
   const health = await requestJson(`${running.baseUrl}/health`);
   assert.equal(health.body.storage.backend, "sqlite-files");
   assert.equal(health.body.storage.journalMode, "wal");
+  assert.equal(health.body.contract.syncProtocolVersion, 1);
+  assert.equal(health.body.contract.storageSchemaVersion, health.body.storage.schemaVersion);
+
+  const update = await requestJson(`${running.baseUrl}/v1/server/update`);
+  assert.equal(update.response.status, 200);
+  assert.equal(update.body.status, "disabled");
 
   const created = await requestJson(`${running.baseUrl}/v1/personal/vaults`, {
     method: "POST",

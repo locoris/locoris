@@ -1,0 +1,14 @@
+{
+  "serverVersion": "0.1.5",
+  "apiVersion": 1,
+  "syncProtocolVersion": 1,
+  "pairingProtocolVersion": 1,
+  "storageSchemaVersion": 2,
+  "minimumClientVersion": "1.0.0",
+  "desktop": {
+    "macOS": ["arm64"],
+    "windows": ["x86_64"],
+    "linux": ["x86_64"]
+  },
+  "docker": ["linux/amd64", "linux/arm64"]
+}

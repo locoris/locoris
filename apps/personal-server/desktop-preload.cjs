@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("locorisServerDesktop", {
   getNetworkSettings: () => ipcRenderer.invoke("locoris-server:network:get"),

@@ -54,7 +54,15 @@ powered by [Excalidraw](https://github.com/excalidraw/excalidraw).
 
 Official desktop and Android builds are published on the
 [GitHub Releases](../../releases/latest) page. Release assets include platform
-labels and checksums where the workflow supports them.
+labels, unified SHA-256 checksums, SBOM files, and GitHub artifact attestations.
+
+Current direct-distribution status is intentionally explicit:
+
+- macOS builds support Apple Silicon only and use an ad-hoc application signature until Apple Developer ID notarization is available;
+- Windows installers are not yet Authenticode-signed;
+- Android APKs are signed with the stable Locoris release certificate and the certificate fingerprint is published beside every APK.
+
+Read [direct-build installation](docs/setup/installing-direct-builds.md) before bypassing an operating-system warning and [release verification](docs/setup/verifying-releases.md) to verify checksums, attestations, and container signatures. Locoris never asks users to disable Gatekeeper or SmartScreen globally.
 
 The web application uses the same Locoris client, connected to the official
 hosted service. Store distribution will be added when the relevant developer
@@ -88,6 +96,8 @@ Additional documentation:
 - [Storage compatibility](docs/product/storage-compatibility.md)
 - [Security terminology](docs/product/security-terminology.md)
 - [Google Drive setup](docs/setup/google-drive.md)
+- [Locoris Server compatibility](docs/self-hosting/compatibility.md)
+- [Server upgrade and rollback](docs/self-hosting/upgrade-and-rollback.md)
 
 ## Development
 
@@ -114,6 +124,8 @@ Useful setup documentation:
 - [Desktop development](docs/setup/desktop-development.md)
 - [Desktop data lifecycle](docs/setup/desktop-data-lifecycle.md)
 - [Release flow](docs/setup/desktop-release.md)
+- [Locoris Server release flow](docs/setup/server-release.md)
+- [Android release signing operations](docs/setup/android-release-signing.md)
 
 ## Repository
 

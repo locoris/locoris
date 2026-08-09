@@ -33,7 +33,7 @@ At first start the terminal shows all three representations of one single-use in
 
 In Locoris open **Settings → Sync → Self-hosted**, paste the link/package or enter the reachable server URL and setup code. The first device becomes the owner. The permanent recovery token is generated into the data volume and is not part of normal onboarding.
 
-The image is published as `ghcr.io/locoris/locoris-server:latest`. For a controlled production upgrade, replace `latest` in the Compose file with a numbered server release.
+The image is published for both `linux/amd64` and `linux/arm64`. Docker selects the correct architecture from one manifest. For a controlled production upgrade, replace `latest` in the Compose file with a numbered server release. Release manifests are keyless-signed with Cosign and include BuildKit SBOM/provenance attestations.
 
 For development from this repository, the same runtime can be started directly with a permanent data directory:
 
@@ -65,7 +65,9 @@ Open the GitHub release whose tag starts with `server-v` and download the Locori
 - Windows: `.exe` installer;
 - Linux: `.AppImage` or `.deb`.
 
-Each platform also publishes a `SHA256SUMS-*.txt` file so the downloaded installer can be verified before launch.
+Each release publishes unified checksums, an SPDX SBOM, GitHub artifact attestations, and the [compatibility contract](../../docs/self-hosting/compatibility.md). Verify the installer before following the [direct-build installation instructions](../../docs/setup/installing-direct-builds.md).
+
+New macOS builds support Apple Silicon only. macOS and Windows packages are not yet backed by paid platform certificates; the release page and installation guide explain the expected operating-system warning without asking users to disable system protection.
 
 On first launch, Locoris Server creates a permanent data directory, starts the same SQLite + files runtime as Docker, and opens a one-time owner invitation. Use **Open in Locoris**, copy the invitation, or enter the shown server address and short code. Closing the window keeps the server running in the system tray; the tray menu can reopen it, enable start-at-login, or stop it completely.
 
@@ -152,6 +154,8 @@ The `/health` response reports `storage.backend: "sqlite-files"`, the schema ver
 4. Check `/health` and confirm the expected vault count in the app.
 5. Sync one existing plain or private vault from two devices.
 6. Keep `legacy-json/` through at least one verified backup cycle.
+
+The server dashboard checks the official GitHub release feed at most once per day and reports a new version without installing it. Set `SYNC_UPDATE_CHECK=0` to disable the check or `SYNC_UPDATE_CHECK_INTERVAL_MS` to change the interval. Docker and desktop installations receive separate update guidance. See the complete [upgrade and rollback guide](../../docs/self-hosting/upgrade-and-rollback.md) before changing a production installation.
 
 ## License
 

@@ -201,7 +201,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      preload: path.join(root, "desktop-preload.mjs")
+      preload: path.join(root, "desktop-preload.cjs")
     }
   });
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
