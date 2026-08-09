@@ -7,6 +7,7 @@ import {
   STORAGE_SCHEMA_VERSION
 } from "../server-contract.mjs";
 import { compareVersions, createServerUpdateService, selectLatestServerRelease } from "../server-update.mjs";
+import { matchesServerReleaseAsset } from "../release-asset-selection.mjs";
 import compatibility from "../../../docs/self-hosting/compatibility.json" with { type: "json" };
 
 test("server contract exposes stable positive protocol versions", () => {
@@ -25,6 +26,14 @@ test("published compatibility matrix matches the runtime contract", () => {
   assert.equal(compatibility.pairingProtocolVersion, SERVER_CONTRACT.pairingProtocolVersion);
   assert.equal(compatibility.storageSchemaVersion, SERVER_CONTRACT.storageSchemaVersion);
   assert.equal(compatibility.minimumClientVersion, SERVER_CONTRACT.minimumClientVersion);
+});
+
+test("release asset selection accepts platform-specific electron-builder names", () => {
+  const current = { version: "0.1.6", artifactLabel: "linux-x64" };
+  assert.equal(matchesServerReleaseAsset("Locoris-Server-0.1.6-linux-x86_64.AppImage", current), true);
+  assert.equal(matchesServerReleaseAsset("Locoris-Server-0.1.6-linux-amd64.deb", current), true);
+  assert.equal(matchesServerReleaseAsset("Locoris-Server-0.1.5-linux-amd64.deb", current), false);
+  assert.equal(matchesServerReleaseAsset("Locoris-Server-0.1.6-win-x64.exe", current), false);
 });
 
 test("server release selection ignores drafts, prereleases and untrusted URLs", () => {
