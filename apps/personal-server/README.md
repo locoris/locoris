@@ -17,7 +17,7 @@ The invitation secret is placed in the URL fragment, so it is not sent to the se
 
 ## Docker / NAS Quick Start
 
-Download `compose.example.yml` and `.env.example` from this directory into an empty folder, rename `.env.example` to `.env`, then set `LOCORIS_PUBLIC_URL` to an address your Locoris devices can reach.
+Download `compose.example.yml` and `.env.example` from this directory into an empty folder, rename `.env.example` to `.env`, then set `LOCORIS_PUBLIC_URL` to an address your Locoris devices can reach. For production, set `LOCORIS_SERVER_VERSION` to the numbered release shown on the Locoris website instead of leaving it at `latest`.
 
 ```bash
 docker compose -f compose.example.yml pull

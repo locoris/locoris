@@ -13,6 +13,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && node ../../scripts/copy-legal-notices.mjs apps/app/dist",
+    "web:build": "tsc -b && vite build --mode web && node ../../scripts/copy-legal-notices.mjs apps/app/dist && node ./scripts/validate-web-build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "npm run test:node && npm run test:localization",
