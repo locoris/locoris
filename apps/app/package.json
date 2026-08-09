@@ -1,7 +1,7 @@
 {
   "name": "@locoris/app",
   "private": true,
-  "version": "1.0.48",
+  "version": "1.0.49",
   "license": "AGPL-3.0-or-later",
   "author": "angrein",
   "repository": {
@@ -16,7 +16,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "npm run test:node && npm run test:localization",
-    "test:node": "node --test tests/googleDriveSyncV2.test.ts tests/cloudBindingRecovery.test.ts",
+    "test:node": "node --test tests/googleDriveSyncV2.test.ts tests/cloudBindingRecovery.test.ts tests/androidSigningOutput.test.ts",
     "test:localization": "vitest run --config vitest.config.ts",
     "tauri": "tauri",
     "desktop:dev": "node ./scripts/run-tauri.mjs dev",

@@ -29,11 +29,11 @@ test("published compatibility matrix matches the runtime contract", () => {
 });
 
 test("release asset selection accepts platform-specific electron-builder names", () => {
-  const current = { version: "0.1.6", artifactLabel: "linux-x64" };
-  assert.equal(matchesServerReleaseAsset("Locoris-Server-0.1.6-linux-x86_64.AppImage", current), true);
-  assert.equal(matchesServerReleaseAsset("Locoris-Server-0.1.6-linux-amd64.deb", current), true);
-  assert.equal(matchesServerReleaseAsset("Locoris-Server-0.1.5-linux-amd64.deb", current), false);
-  assert.equal(matchesServerReleaseAsset("Locoris-Server-0.1.6-win-x64.exe", current), false);
+  const current = { version: SERVER_VERSION, artifactLabel: "linux-x64" };
+  assert.equal(matchesServerReleaseAsset(`Locoris-Server-${SERVER_VERSION}-linux-x86_64.AppImage`, current), true);
+  assert.equal(matchesServerReleaseAsset(`Locoris-Server-${SERVER_VERSION}-linux-amd64.deb`, current), true);
+  assert.equal(matchesServerReleaseAsset("Locoris-Server-0.1.6-linux-amd64.deb", current), false);
+  assert.equal(matchesServerReleaseAsset(`Locoris-Server-${SERVER_VERSION}-win-x64.exe`, current), false);
 });
 
 test("server release selection ignores drafts, prereleases and untrusted URLs", () => {

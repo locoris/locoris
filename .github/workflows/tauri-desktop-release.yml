@@ -237,7 +237,7 @@ jobs:
           test -x "${APKSIGNER}"
           VERIFY_OUTPUT="$(${APKSIGNER} verify --verbose --print-certs "${APK_SOURCE}")"
           printf '%s\n' "${VERIFY_OUTPUT}"
-          FINGERPRINT="$(printf '%s\n' "${VERIFY_OUTPUT}" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n 1)"
+          FINGERPRINT="$(printf '%s\n' "${VERIFY_OUTPUT}" | node apps/app/scripts/android-signing-output.mjs)"
           test -n "${FINGERPRINT}"
           if [ "${FINGERPRINT}" != "${ANDROID_RELEASE_CERTIFICATE_SHA256}" ]; then
             echo "Android release certificate does not match the pinned Locoris fingerprint." >&2
@@ -286,13 +286,14 @@ jobs:
           gh release download "${TAG}" --dir dist/release --clobber --repo "${GITHUB_REPOSITORY}"
           cp dist/android-release/* dist/release/
       - name: Generate SPDX SBOM
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
-        with:
-          path: .
-          format: spdx-json
-          output-file: dist/release/Locoris-${{ needs.prepare-release.outputs.version }}.spdx.json
-          upload-artifact: false
-          upload-release-assets: false
+        shell: bash
+        run: npm sbom --workspace @locoris/app --omit=dev --package-lock-only --sbom-format=spdx > "dist/release/Locoris-${{ needs.prepare-release.outputs.version }}.spdx.json"
+      - name: Validate application SPDX SBOM
+        shell: bash
+        env:
+          SBOM_PATH: dist/release/Locoris-${{ needs.prepare-release.outputs.version }}.spdx.json
+        run: |
+          node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(process.env.SBOM_PATH,'utf8')); if (!Array.isArray(data.packages) || data.packages.length < 100) throw new Error('Application SBOM is missing production dependency metadata'); console.log('Verified '+data.packages.length+' SPDX packages.');"
       - name: Generate unified checksums
         shell: bash
         run: |
