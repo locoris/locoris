@@ -21,6 +21,7 @@ permissions:
   packages: write
   id-token: write
   attestations: write
+  artifact-metadata: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -167,8 +168,8 @@ jobs:
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
           persist-credentials: false
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -218,8 +219,8 @@ jobs:
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
           persist-credentials: false
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -272,6 +273,9 @@ jobs:
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
           persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: locoris-server-*
@@ -280,13 +284,14 @@ jobs:
       - name: Add compatibility contract
         run: cp docs/self-hosting/compatibility.json dist/release/Locoris-Server-compatibility.json
       - name: Generate SPDX SBOM
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
-        with:
-          path: apps/personal-server
-          format: spdx-json
-          output-file: dist/release/Locoris-Server-${{ needs.prepare-release.outputs.version }}.spdx.json
-          upload-artifact: false
-          upload-release-assets: false
+        shell: bash
+        run: npm sbom --workspace @locoris/personal-server --omit=dev --package-lock-only --sbom-format=spdx > "dist/release/Locoris-Server-${{ needs.prepare-release.outputs.version }}.spdx.json"
+      - name: Validate server SPDX SBOM
+        shell: bash
+        env:
+          SBOM_PATH: dist/release/Locoris-Server-${{ needs.prepare-release.outputs.version }}.spdx.json
+        run: |
+          node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(process.env.SBOM_PATH,'utf8')); if (!Array.isArray(data.packages) || data.packages.length < 20) throw new Error('Server SBOM is missing production dependency metadata'); console.log('Verified '+data.packages.length+' SPDX packages.');"
       - name: Generate unified checksums
         shell: bash
         run: |

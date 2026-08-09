@@ -4,7 +4,7 @@ The machine-readable source is [`compatibility.json`](compatibility.json). The r
 
 | Surface | Current contract |
 | --- | --- |
-| Server | 0.1.6 |
+| Server | 0.1.7 |
 | API | 1 |
 | Sync protocol | 1 |
 | Pairing protocol | 1 |
