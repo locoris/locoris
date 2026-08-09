@@ -306,6 +306,14 @@ jobs:
           SBOM_PATH: dist/release/Locoris-${{ needs.prepare-release.outputs.version }}.spdx.json
         run: |
           node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(process.env.SBOM_PATH,'utf8')); if (!Array.isArray(data.packages) || data.packages.length < 100) throw new Error('Application SBOM is missing production dependency metadata'); console.log('Verified '+data.packages.length+' SPDX packages.');"
+      - name: Generate application release manifest
+        run: >
+          node ./scripts/generate-release-manifest.mjs
+          --kind app
+          --version "${{ needs.prepare-release.outputs.version }}"
+          --tag "${{ needs.prepare-release.outputs.tag }}"
+          --directory dist/release
+          --output dist/release/locoris-app-release.json
       - name: Generate unified checksums
         shell: bash
         run: |
@@ -346,3 +354,14 @@ jobs:
         run: |
           set -euo pipefail
           gh release edit "${TAG}" --draft=false --prerelease=false --latest --notes-file "docs/releases/app/${VERSION}.md" --repo "${GITHUB_REPOSITORY}"
+      - name: Refresh the product website
+        shell: bash
+        env:
+          SITE_DEPLOY_HOOK: ${{ secrets.LOCORIS_SITE_DEPLOY_HOOK }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SITE_DEPLOY_HOOK}" ]; then
+            echo "::notice::LOCORIS_SITE_DEPLOY_HOOK is not configured; the website release snapshot was not refreshed."
+            exit 0
+          fi
+          curl --fail --silent --show-error --retry 3 --retry-all-errors --request POST "${SITE_DEPLOY_HOOK}"

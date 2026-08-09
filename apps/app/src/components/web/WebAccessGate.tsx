@@ -13,6 +13,12 @@ import {
 import WebAuthAtmosphere from "./WebAuthAtmosphere";
 import "./WebAccessGate.css";
 
+const MARKETING_SITE_URL = (import.meta.env.VITE_LOCORIS_SITE_URL?.trim() || "https://locoris.app").replace(/\/+$/, "");
+
+function marketingUrl(path = "") {
+  return `${MARKETING_SITE_URL}${path}`;
+}
+
 export type WebAccessMode =
   | "local"
   | "cloud"
@@ -295,11 +301,11 @@ export default function WebAccessGate({
     <main className="web-auth-page" aria-labelledby="web-auth-title">
       <WebAuthAtmosphere />
       <header className="web-auth-brandbar">
-        <a className="web-auth-brand" href="https://locoris.app" aria-label={t("webAccess.authHomeLabel")}>
+        <a className="web-auth-brand" href={marketingUrl()} aria-label={t("webAccess.authHomeLabel")}>
           <img src="/pwa-icon.svg" alt="" />
           <strong>Locoris</strong>
         </a>
-        <a className="web-auth-download-link" href="https://locoris.app/download" target="_blank" rel="noreferrer">
+        <a className="web-auth-download-link" href={marketingUrl("/download")} target="_blank" rel="noreferrer">
           <DownloadGlyph />
           <span>{t("webAccess.downloadApp")}</span>
         </a>
@@ -362,7 +368,7 @@ export default function WebAccessGate({
           <div className="web-auth-app-note">
             <strong>{t("webAccess.authNoAccountTitle")}</strong>
             <p>{t("webAccess.authNoAccountDescription")}</p>
-            <a href="https://locoris.app/download" target="_blank" rel="noreferrer">
+            <a href={marketingUrl("/download")} target="_blank" rel="noreferrer">
               {t("webAccess.authDownloadApps")}
             </a>
           </div>
@@ -583,7 +589,7 @@ export default function WebAccessGate({
                     <label className="web-auth-legal">
                       <input type="checkbox" checked={acceptedLegal} disabled={disabled} onChange={(event) => setAcceptedLegal(event.target.checked)} />
                       <span>
-                        {t("webAccess.authLegalPrefix")} <a href="https://locoris.app/legal/terms" target="_blank" rel="noreferrer">{t("webAccess.authTerms")}</a> {t("webAccess.authLegalJoin")} <a href="https://locoris.app/legal/privacy" target="_blank" rel="noreferrer">{t("webAccess.authPrivacy")}</a>.
+                        {t("webAccess.authLegalPrefix")} <a href={marketingUrl("/legal/terms")} target="_blank" rel="noreferrer">{t("webAccess.authTerms")}</a> {t("webAccess.authLegalJoin")} <a href={marketingUrl("/legal/privacy")} target="_blank" rel="noreferrer">{t("webAccess.authPrivacy")}</a>.
                       </span>
                     </label>
                   </>
@@ -615,8 +621,8 @@ export default function WebAccessGate({
       <footer className="web-auth-footer">
         <span>{t("webAccess.authFooterSecurity")}</span>
         <nav aria-label={t("webAccess.authLegalNavigation")}>
-          <a href="https://locoris.app/legal/privacy" target="_blank" rel="noreferrer">{t("webAccess.authPrivacy")}</a>
-          <a href="https://locoris.app/legal/terms" target="_blank" rel="noreferrer">{t("webAccess.authTerms")}</a>
+          <a href={marketingUrl("/legal/privacy")} target="_blank" rel="noreferrer">{t("webAccess.authPrivacy")}</a>
+          <a href={marketingUrl("/legal/terms")} target="_blank" rel="noreferrer">{t("webAccess.authTerms")}</a>
         </nav>
       </footer>
     </main>

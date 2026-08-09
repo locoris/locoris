@@ -1,6 +1,6 @@
 services:
   locoris-personal-server:
-    image: ghcr.io/locoris/locoris-server:latest
+    image: "${LOCORIS_SERVER_IMAGE:-ghcr.io/locoris/locoris-server}:${LOCORIS_SERVER_VERSION:-latest}"
     environment:
       PORT: "${LOCORIS_PORT:-26747}"
       SYNC_PUBLIC_URL: "${LOCORIS_PUBLIC_URL:-http://localhost:26747}"

@@ -51,10 +51,16 @@ jobs:
         run: npm run typecheck
       - name: Test application contracts
         run: npm test --workspace @locoris/app
+      - name: Test release manifest contracts
+        run: npm run release:manifest:test
       - name: Validate localization catalogs
         run: npm run i18n:check
       - name: Build web application
-        run: npm run build
+        env:
+          VITE_LOCORIS_CLOUD_URL: https://api.locoris.app
+          VITE_LOCORIS_ACCOUNT_URL: https://account.locoris.app
+          VITE_LOCORIS_SITE_URL: https://locoris.app
+        run: npm run web:build
       - name: Check patch whitespace
         run: git diff --check
 

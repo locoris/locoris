@@ -1008,7 +1008,11 @@ export default function AccountCloudPanel({
     sortedVaults.find((vault) => vault.id === activeLocalVaultId) ??
     sortedVaults[0] ??
     null;
-  const defaultServerUrl = cloudConnection?.serverUrl || settings.hostedUrl || "http://localhost:8787";
+  const defaultServerUrl =
+    cloudConnection?.serverUrl ||
+    settings.hostedUrl ||
+    import.meta.env.VITE_LOCORIS_CLOUD_URL?.trim() ||
+    (import.meta.env.DEV ? "http://localhost:8787" : "");
   const remoteVaults = overview?.vaults ?? [];
   const cloudImportAccountLabel = cloudConnection
     ? overview?.user.email ?? (cloudConnection.userEmail || cloudConnection.label || t("settings.accountCloudReady"))

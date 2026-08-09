@@ -284,12 +284,16 @@ function resolveLocorisCloudServerUrl(settings: AppSettings, connection?: SyncCo
 }
 
 function buildLocorisCloudAccountUrl(serverUrl: string, view?: "overview" | "vaults" | "devices" | "billing") {
-  if (!serverUrl) {
+  const configuredAccountUrl = import.meta.env.VITE_LOCORIS_ACCOUNT_URL?.trim();
+
+  if (!serverUrl && !configuredAccountUrl) {
     return null;
   }
 
   try {
-    const accountUrl = new URL("/account", `${serverUrl.replace(/\/+$/, "")}/`);
+    const accountUrl = configuredAccountUrl
+      ? new URL(configuredAccountUrl)
+      : new URL("/account", `${serverUrl.replace(/\/+$/, "")}/`);
 
     if (view) {
       accountUrl.searchParams.set("view", view);
