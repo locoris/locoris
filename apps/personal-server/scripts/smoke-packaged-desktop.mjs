@@ -53,6 +53,7 @@ const args = process.platform === "linux"
 
 try {
   await new Promise((resolve, reject) => {
+    const output = [];
     const child = spawn(command, args, {
       env: {
         ...process.env,
@@ -62,8 +63,18 @@ try {
         SYNC_PRINT_PAIRING_DETAILS: "0",
         ELECTRON_ENABLE_LOGGING: "1"
       },
-      stdio: "inherit",
+      stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true
+    });
+    child.stdout.on("data", (chunk) => {
+      const text = chunk.toString();
+      output.push(text);
+      process.stdout.write(text);
+    });
+    child.stderr.on("data", (chunk) => {
+      const text = chunk.toString();
+      output.push(text);
+      process.stderr.write(text);
     });
     const timeout = setTimeout(() => {
       child.kill("SIGKILL");
@@ -75,8 +86,12 @@ try {
     });
     child.once("exit", (code, signal) => {
       clearTimeout(timeout);
-      if (code === 0) {
+      const combinedOutput = output.join("");
+      const preloadFailed = /Unable to load preload script|SyntaxError:[^\n]*preload/i.test(combinedOutput);
+      if (code === 0 && !preloadFailed) {
         resolve();
+      } else if (preloadFailed) {
+        reject(new Error("PACKAGED_DESKTOP_PRELOAD_FAILED"));
       } else {
         reject(new Error(`PACKAGED_DESKTOP_SMOKE_FAILED: code=${code}; signal=${signal ?? "none"}`));
       }

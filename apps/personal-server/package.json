@@ -1,6 +1,6 @@
 {
   "name": "@locoris/personal-server",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "private": false,
@@ -43,7 +43,7 @@
     "npmRebuild": false,
     "files": [
       "desktop-main.mjs",
-      "desktop-preload.mjs",
+      "desktop-preload.cjs",
       "desktop-port.mjs",
       "locales/**/*",
       "dist-server/**/*",
@@ -70,6 +70,9 @@
       "output": "release-server"
     },
     "mac": {
+      "identity": "-",
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "category": "public.app-category.productivity",
       "icon": "../app/src-tauri/icons/icon.icns",
       "target": [

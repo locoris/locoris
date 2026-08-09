@@ -2,6 +2,10 @@ FROM node:24-bookworm-slim AS dependencies
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends g++ make python3 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json ./
 COPY apps/app/package.json /app/apps/app/package.json
 COPY apps/personal-server/package.json /app/apps/personal-server/package.json
@@ -26,6 +30,7 @@ COPY LICENSE THIRD_PARTY_NOTICES.md TRADEMARKS.md /app/legal/
 ENV PORT=26747
 ENV SYNC_DATA_DIR=/data
 ENV SYNC_JOURNAL_MAX_BYTES=2097152
+ENV LOCORIS_SERVER_DISTRIBUTION=docker
 
 RUN mkdir -p /data && chown -R node:node /data
 

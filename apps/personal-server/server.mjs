@@ -34,6 +34,13 @@ import {
   sanitizeVaultId
 } from "./personal-server-storage.mjs";
 import { stripTrailingSlashes } from "./server-utils.mjs";
+import {
+  PAIRING_PROTOCOL_VERSION,
+  SERVER_CONTRACT,
+  SERVER_VERSION,
+  SYNC_PROTOCOL_VERSION
+} from "./server-contract.mjs";
+import { createServerUpdateService } from "./server-update.mjs";
 import { VaultFileStore } from "./vault-file-store.mjs";
 
 const PORT = Number.parseInt(process.env.PORT ?? "26747", 10);
@@ -117,6 +124,12 @@ const ENV_MANAGEMENT_TOKEN = String(process.env.SYNC_MANAGEMENT_TOKEN ?? "").tri
 const JOURNAL_MAX_BYTES = process.env.SYNC_JOURNAL_MAX_BYTES;
 const MDNS_ENABLED = process.env.SYNC_MDNS !== "0";
 const MDNS_SERVICE_TYPE = "locoris-sync";
+const UPDATE_CHECK_ENABLED = process.env.SYNC_UPDATE_CHECK !== "0";
+const SERVER_DISTRIBUTION = String(process.env.LOCORIS_SERVER_DISTRIBUTION ?? "desktop").trim() || "desktop";
+const UPDATE_CHECK_INTERVAL_MS = Math.max(
+  60_000,
+  Number.parseInt(process.env.SYNC_UPDATE_CHECK_INTERVAL_MS ?? "86400000", 10) || 86_400_000
+);
 
 let mdnsBonjour = null;
 let mdnsService = null;
@@ -155,7 +168,7 @@ function startMdnsAdvertisement(port) {
       txt: {
         serverId,
         product: "locoris-personal-server",
-        protocolVersion: "1",
+        protocolVersion: String(SYNC_PROTOCOL_VERSION),
         tls: "0"
       }
     });
@@ -295,6 +308,13 @@ function renderSetupPage(storage, language = "en", networkUrls = [], qrDataUrl =
   const requestServerUrl = stripTrailingSlashes(String(options.requestServerUrl ?? ""));
   const publicAddress = stripTrailingSlashes(String(options.publicUrl ?? ""));
   const listeningPort = Number(options.listeningPort) || PORT;
+  const updateState = options.updateState ?? {
+    status: "unchecked",
+    currentVersion: SERVER_VERSION,
+    latestVersion: null,
+    releaseUrl: null,
+    distribution: SERVER_DISTRIBUTION
+  };
   const serverId = storage.getConfig().serverId;
   const updateDeepLink = requestServerUrl
     ? buildEndpointUpdateDeepLink(requestServerUrl, serverId)
@@ -310,7 +330,11 @@ function renderSetupPage(storage, language = "en", networkUrls = [], qrDataUrl =
     portInvalid: copy.portInvalid,
     portInUse: copy.portInUse,
     portSaveFailed: copy.portSaveFailed,
-    restarting: copy.restarting
+    restarting: copy.restarting,
+    checkingUpdates: copy.checkingUpdates,
+    updateCurrent: copy.updateCurrent,
+    updateAvailable: copy.updateAvailable,
+    updateUnavailable: copy.updateUnavailable
   });
   return `<!doctype html>
 <html lang="${locale}">
@@ -355,6 +379,31 @@ function renderSetupPage(storage, language = "en", networkUrls = [], qrDataUrl =
           <button type="button" class="text-action" id="copy-package">${copy.copyPackage}</button>
         </details>
         <p class="copy-status" id="copy-status" aria-live="polite"></p>
+      </section>
+
+      <section class="card update-card" data-update-status="${escapeHtml(updateState.status)}">
+        <div class="update-card-head">
+          <div>
+            <span class="eyebrow">${copy.softwareUpdate}</span>
+            <h2>${copy.serverVersion} ${escapeHtml(updateState.currentVersion)}</h2>
+          </div>
+          <span class="update-status" id="update-status">${
+            updateState.status === "available"
+              ? copy.updateAvailable.replace("{version}", escapeHtml(updateState.latestVersion))
+              : updateState.status === "current"
+                ? copy.updateCurrent
+                : updateState.status === "disabled"
+                  ? copy.updateDisabled
+                  : updateState.status === "unavailable"
+                    ? copy.updateUnavailable
+                    : copy.updateUnchecked
+          }</span>
+        </div>
+        <p>${updateState.distribution === "docker" ? copy.updateDockerHint : copy.updateDesktopHint}</p>
+        <div class="connection-actions update-actions">
+          <button type="button" class="secondary-action" id="check-updates">${copy.checkUpdates}</button>
+          <a class="primary-action" id="open-update" href="${escapeHtml(updateState.releaseUrl ?? "https://github.com/locoris/locoris/releases")}"${updateState.status === "available" ? "" : " hidden"}>${copy.openRelease}</a>
+        </div>
       </section>
 
       <section class="card">
@@ -543,6 +592,35 @@ function renderSetupPage(storage, language = "en", networkUrls = [], qrDataUrl =
             hint.textContent = copy.restarting;
           });
         }
+
+        const checkUpdates = document.getElementById("check-updates");
+        const updateStatus = document.getElementById("update-status");
+        const openUpdate = document.getElementById("open-update");
+        if (checkUpdates && updateStatus && openUpdate) {
+          checkUpdates.addEventListener("click", async () => {
+            checkUpdates.disabled = true;
+            updateStatus.textContent = copy.checkingUpdates;
+            try {
+              const response = await fetch("/v1/server/update?refresh=1", { headers: { Accept: "application/json" } });
+              if (!response.ok) throw new Error("Update check failed");
+              const result = await response.json();
+              if (result.status === "available") {
+                updateStatus.textContent = copy.updateAvailable.replace("{version}", result.latestVersion);
+                openUpdate.href = result.releaseUrl;
+                openUpdate.hidden = false;
+              } else if (result.status === "current") {
+                updateStatus.textContent = copy.updateCurrent;
+                openUpdate.hidden = true;
+              } else {
+                updateStatus.textContent = copy.updateUnavailable;
+              }
+            } catch {
+              updateStatus.textContent = copy.updateUnavailable;
+            } finally {
+              checkUpdates.disabled = false;
+            }
+          });
+        }
       })();
     </script>
   </body>
@@ -555,6 +633,12 @@ const storage = new PersonalServerStorage(DATA_DIR, {
 });
 const vaultFiles = new VaultFileStore(DATA_DIR, {
   journalMaxBytes: JOURNAL_MAX_BYTES
+});
+const updateService = createServerUpdateService({
+  currentVersion: SERVER_VERSION,
+  distribution: SERVER_DISTRIBUTION,
+  enabled: UPDATE_CHECK_ENABLED,
+  intervalMs: UPDATE_CHECK_INTERVAL_MS
 });
 
 await vaultFiles.initialize();
@@ -1089,7 +1173,8 @@ const server = createServer(async (request, response) => {
           requestServerUrl,
           publicUrl: automaticDesktopPublicUrl ? "" : PUBLIC_URL,
           listeningPort: activePort,
-          updateQrDataUrl
+          updateQrDataUrl,
+          updateState: updateService.getState()
         })
       );
       return;
@@ -1106,6 +1191,7 @@ const server = createServer(async (request, response) => {
         mode: "personal",
         defaultVaultId: config.defaultVaultId || null,
         vaultCount: registry.vaults.length,
+        contract: SERVER_CONTRACT,
         storage: storage.getHealth()
       });
       return;
@@ -1116,6 +1202,7 @@ const server = createServer(async (request, response) => {
         mode: "personal",
         product: "Locoris Personal Sync",
         serverId: config.serverId,
+        contract: SERVER_CONTRACT,
         features: {
           selfHosted: true,
           hostedAccounts: false,
@@ -1137,13 +1224,23 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (pathname === "/v1/server/update" && request.method === "GET") {
+      sendJson(
+        response,
+        200,
+        await updateService.check({ force: url.searchParams.get("refresh") === "1" })
+      );
+      return;
+    }
+
     if (pathname === "/v1/pairing/info" && request.method === "GET") {
       sendJson(response, 200, {
         serverId: config.serverId,
         product: "Locoris Personal Server",
         ownerConnected: storage.countActiveOwnerDevices() > 0,
         setupAvailable: storage.countActiveOwnerDevices() === 0,
-        pairingVersion: 1
+        pairingVersion: PAIRING_PROTOCOL_VERSION,
+        contract: SERVER_CONTRACT
       });
       return;
     }
@@ -1542,6 +1639,7 @@ server.listen(PORT, () => {
     : null;
 
   startMdnsAdvertisement(actualPort);
+  void updateService.check();
 
   resolvePersonalServerReady?.({
     baseUrl: `http://127.0.0.1:${actualPort}`,
