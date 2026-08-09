@@ -86,4 +86,36 @@ describe("desktop Google OAuth", () => {
       })
     });
   });
+
+  test("derives OAuth state and PKCE verifier from Web Crypto", async () => {
+    const webCryptoSpy = vi
+      .spyOn(globalThis.crypto, "getRandomValues")
+      .mockImplementation((array) => {
+        const bytes = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
+        bytes.forEach((_, index) => {
+          bytes[index] = (index * 29 + 17) % 256;
+        });
+        return array;
+      });
+    const mathRandomSpy = vi.spyOn(Math, "random").mockImplementation(() => {
+      throw new Error("OAuth entropy must not use Math.random");
+    });
+
+    await connectGoogleDriveDesktopAccount({
+      clientId: "desktop-client-id.apps.googleusercontent.com"
+    });
+
+    const state = new URL(mocks.authorizationUrl).searchParams.get("state");
+    const exchangeCall = mocks.invoke.mock.calls.find(
+      ([command]) => command === "desktop_google_oauth_exchange_code"
+    );
+    const exchangeInput = (exchangeCall?.[1] as {
+      input?: { codeVerifier?: string };
+    })?.input;
+
+    expect(webCryptoSpy).toHaveBeenCalledTimes(2);
+    expect(mathRandomSpy).not.toHaveBeenCalled();
+    expect(state).toMatch(/^[A-Za-z0-9_-]{48}$/);
+    expect(exchangeInput?.codeVerifier).toMatch(/^[A-Za-z0-9_-]{96}$/);
+  });
 });

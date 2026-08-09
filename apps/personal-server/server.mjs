@@ -33,6 +33,7 @@ import {
   sanitizeDisplayName,
   sanitizeVaultId
 } from "./personal-server-storage.mjs";
+import { stripTrailingSlashes } from "./server-utils.mjs";
 import { VaultFileStore } from "./vault-file-store.mjs";
 
 const PORT = Number.parseInt(process.env.PORT ?? "26747", 10);
@@ -127,16 +128,6 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-}
-
-function stripTrailingSlashes(value) {
-  let end = value.length;
-
-  while (end > 0 && value.charCodeAt(end - 1) === 47) {
-    end -= 1;
-  }
-
-  return value.slice(0, end);
 }
 
 function buildEndpointUpdateDeepLink(serverUrl, serverId) {
@@ -301,8 +292,8 @@ function renderSetupPage(storage, language = "en", networkUrls = [], qrDataUrl =
   const localePack = getServerLocalePack(language);
   const locale = localePack.meta.locale;
   const copy = localePack.setup;
-  const requestServerUrl = String(options.requestServerUrl ?? "").replace(/\/+$/, "");
-  const publicAddress = String(options.publicUrl ?? "").replace(/\/+$/, "");
+  const requestServerUrl = stripTrailingSlashes(String(options.requestServerUrl ?? ""));
+  const publicAddress = stripTrailingSlashes(String(options.publicUrl ?? ""));
   const listeningPort = Number(options.listeningPort) || PORT;
   const serverId = storage.getConfig().serverId;
   const updateDeepLink = requestServerUrl
