@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { selectReleaseByTag } from "./release-metadata-selection.mjs";
+
 const argMap = new Map();
 
 for (let index = 2; index < process.argv.length; index += 1) {
@@ -36,6 +38,7 @@ const expectedTargets = (argMap.get("targets") || process.env.LOCORIS_EXPECTED_T
   .map((value) => value.trim())
   .filter(Boolean);
 const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
+const allowDraft = argMap.get("allow-draft") === "true";
 
 if (!repository) {
   throw new Error("Missing --repo <owner/name>.");
@@ -75,9 +78,27 @@ async function fetchJson(url) {
   return response.json();
 }
 
-async function fetchText(url) {
+async function fetchTaggedRelease(url) {
   const response = await fetch(url, {
     headers: apiHeaders
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    fail(`Request failed for ${url}: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+async function fetchText(url, accept = "text/plain") {
+  const response = await fetch(url, {
+    headers: {
+      ...apiHeaders,
+      Accept: accept
+    }
   });
 
   if (!response.ok) {
@@ -126,11 +147,23 @@ function assertTruthy(value, message) {
   }
 }
 
-const release = await retry("fetch release", () =>
-  fetchJson(`https://api.github.com/repos/${repository}/releases/tags/${releaseTag}`)
-);
+const release = await retry("fetch release", async () => {
+  const directRelease = await fetchTaggedRelease(
+    `https://api.github.com/repos/${repository}/releases/tags/${releaseTag}`
+  );
+  const listedReleases = directRelease || !allowDraft
+    ? []
+    : await fetchJson(`https://api.github.com/repos/${repository}/releases?per_page=100`);
 
-assertTruthy(!release.draft, `Release ${releaseTag} is still a draft.`);
+  return selectReleaseByTag({
+    directRelease,
+    listedReleases,
+    releaseTag,
+    allowDraft
+  });
+});
+
+assertTruthy(allowDraft || !release.draft, `Release ${releaseTag} is still a draft.`);
 assertTruthy(!release.prerelease, `Release ${releaseTag} is marked as prerelease.`);
 assertTruthy(
   typeof release.name === "string" && release.name.includes(expectedVersion),
@@ -147,7 +180,12 @@ const latestJsonAsset = release.assets.find((asset) => asset.name === "latest.js
 assertTruthy(latestJsonAsset, `Release ${releaseTag} is missing latest.json.`);
 
 const latestRaw = await retry("download latest.json", () =>
-  fetchText(latestJsonAsset.browser_download_url)
+  fetchText(
+    allowDraft && latestJsonAsset.url
+      ? latestJsonAsset.url
+      : latestJsonAsset.browser_download_url,
+    allowDraft ? "application/octet-stream" : "application/json"
+  )
 );
 const latestJson = JSON.parse(latestRaw);
 

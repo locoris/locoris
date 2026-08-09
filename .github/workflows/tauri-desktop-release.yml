@@ -133,6 +133,17 @@ jobs:
           node -e "const required=['VITE_GOOGLE_DRIVE_CLIENT_ID','VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_ID','VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_SECRET'];
           const missing=required.filter((key)=>!process.env[key]||!process.env[key].trim());
           if(missing.length){console.error('Missing GitHub Actions variables: '+missing.join(', ')); process.exit(1);}"
+      - name: Load updater release notes
+        id: updater-notes
+        shell: bash
+        env:
+          NOTES_PATH: docs/releases/app/${{ needs.prepare-release.outputs.version }}.md
+        run: |
+          {
+            echo 'body<<LOCORIS_RELEASE_NOTES'
+            cat "${NOTES_PATH}"
+            echo 'LOCORIS_RELEASE_NOTES'
+          } >> "${GITHUB_OUTPUT}"
       - name: Build and upload desktop assets to draft
         uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
@@ -143,6 +154,7 @@ jobs:
           projectPath: apps/app
           tagName: ${{ needs.prepare-release.outputs.tag }}
           releaseName: Locoris ${{ needs.prepare-release.outputs.version }}
+          releaseBody: ${{ steps.updater-notes.outputs.body }}
           releaseDraft: true
           prerelease: false
       - name: Verify ad-hoc macOS application signature
@@ -315,6 +327,7 @@ jobs:
           --tag "${{ needs.prepare-release.outputs.tag }}"
           --expected-version "${{ needs.prepare-release.outputs.version }}"
           --targets "darwin-aarch64,windows-x86_64"
+          --allow-draft
       - name: Attest release artifacts
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
