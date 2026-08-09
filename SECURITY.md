@@ -49,6 +49,14 @@ and reports based only on automated version matching may be filed as ordinary
 issues. A dependency report is actionable when it explains reachability or the
 specific impact on Locoris.
 
+## Dependency exceptions
+
+Advisories without a compatible patch are tracked in the
+[dependency risk register](docs/product/dependency-risk-register.md). The
+register documents reachability, compensating controls, review cadence, and the
+tests required to remove each temporary exception. Major editor and desktop
+runtime migrations are reviewed separately from routine security patches.
+
 ## Disclosure
 
 Please allow reasonable time for investigation, coordinated fixes, release

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createSelfHostedClaimSecret,
@@ -58,10 +58,29 @@ describe("self-hosted connection packages", () => {
   });
 
   it("creates independent device and claim credentials", () => {
+    let entropyOffset = 0;
+    const webCryptoSpy = vi
+      .spyOn(globalThis.crypto, "getRandomValues")
+      .mockImplementation((array) => {
+        const bytes = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
+        bytes.forEach((_, index) => {
+          bytes[index] = (entropyOffset + index * 31 + 11) % 256;
+        });
+        entropyOffset += 37;
+        return array;
+      });
+    const mathRandomSpy = vi.spyOn(Math, "random").mockImplementation(() => {
+      throw new Error("Pairing entropy must not use Math.random");
+    });
+
     const deviceSecret = createSelfHostedDeviceSecret();
     const claimSecret = createSelfHostedClaimSecret();
+    const secondDeviceSecret = createSelfHostedDeviceSecret();
+
+    expect(webCryptoSpy).toHaveBeenCalledTimes(3);
+    expect(mathRandomSpy).not.toHaveBeenCalled();
     expect(deviceSecret).toMatch(/^zpd_[A-Za-z0-9_-]{40,}$/);
     expect(claimSecret).toMatch(/^zpc_[A-Za-z0-9_-]{40,}$/);
-    expect(deviceSecret).not.toBe(createSelfHostedDeviceSecret());
+    expect(deviceSecret).not.toBe(secondDeviceSecret);
   });
 });
