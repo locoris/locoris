@@ -35,6 +35,8 @@ VITE_LOCORIS_SITE_URL=https://locoris-site.pages.dev
 
 The Google OAuth Web client must allow the exact active Web App origin. Add `https://locoris-app.pages.dev` to the test OAuth client, then add the final custom origin later. Do not allow branch-preview wildcards.
 
+Do not add a catch-all `_redirects` rule or a top-level `404.html`. Cloudflare Pages treats a deployment without `404.html` as a single-page application and serves `index.html` for direct navigation to application routes.
+
 ## Launch gate
 
 1. Build succeeds with `npm run web:build`.

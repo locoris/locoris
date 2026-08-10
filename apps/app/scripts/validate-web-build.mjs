@@ -46,7 +46,7 @@ async function listFiles(directory) {
 }
 
 async function validateOutput() {
-  const required = ["index.html", "_headers", "_redirects", "legal/THIRD_PARTY_NOTICES.md"];
+  const required = ["index.html", "_headers", "legal/THIRD_PARTY_NOTICES.md"];
   for (const name of required) {
     await stat(path.join(distDirectory, name)).catch(() => {
       throw new Error(`Production web output is missing ${name}.`);
@@ -54,6 +54,9 @@ async function validateOutput() {
   }
 
   const files = await listFiles(distDirectory);
+  if (files.some((file) => path.basename(file) === "404.html")) {
+    throw new Error("Production web output must not contain 404.html; Cloudflare Pages uses its absence to enable SPA fallback.");
+  }
   if (files.length > 20_000) throw new Error(`Web output contains ${files.length} files; Cloudflare Pages Free supports 20,000.`);
   for (const file of files) {
     const metadata = await stat(file);
