@@ -109,8 +109,8 @@ const messages = {
     authTitle: "Продолжи работу в браузере",
     authDescription:
       "Войди или создай аккаунт, чтобы открыть свои cloud-хранилища и использовать web-версию как защищённое устройство Locoris.",
-    authCheckingTitle: "Проверяем защищённый доступ",
-    authCheckingDescription: "Locoris безопасно обновляет сессию браузера. Локальное состояние останется на месте.",
+    authCheckingTitle: "Возвращаем тебя в Locoris",
+    authCheckingDescription: "Проверяем защищённый вход и доступ к Locoris Cloud.",
     authReauthTitle: "Подтверди, что это всё ещё ты",
     authReauthDescription:
       "Доступ Cloud был отозван или больше не обновляется автоматически. Войди снова без повторной привязки хранилищ.",
