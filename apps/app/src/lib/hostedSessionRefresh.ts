@@ -1,5 +1,11 @@
-import type { HostedAccountSession, HostedAccountUser, SyncConnection } from "../types";
+import type {
+  HostedAccountSession,
+  HostedAccountUser,
+  HostedCloudEntitlement,
+  SyncConnection
+} from "../types";
 import { adoptHostedDeviceId } from "./hostedDeviceIdentity";
+import { isWebRuntime } from "./runtime";
 import { refreshHostedAccountSession } from "./sync";
 
 export const HOSTED_SESSION_REFRESH_SKEW_MS = 1000 * 60 * 2;
@@ -7,6 +13,7 @@ export const HOSTED_SESSION_REFRESH_SKEW_MS = 1000 * 60 * 2;
 type HostedSessionRefreshResult = {
   user: HostedAccountUser;
   session: HostedAccountSession;
+  entitlement?: HostedCloudEntitlement;
 };
 
 type HostedDeviceIdentity = {
@@ -17,10 +24,17 @@ type HostedDeviceIdentity = {
 
 const refreshesInFlight = new Map<string, Promise<HostedSessionRefreshResult>>();
 
-export function shouldRefreshHostedSession(connection: SyncConnection, timestamp = Date.now()) {
+export function canRefreshHostedSession(connection: SyncConnection) {
   return (
     connection.provider === "hosted" &&
-    Boolean(connection.refreshToken?.trim()) &&
+    (Boolean(connection.refreshToken?.trim()) ||
+      (connection.role === "locorisCloud" && isWebRuntime()))
+  );
+}
+
+export function shouldRefreshHostedSession(connection: SyncConnection, timestamp = Date.now()) {
+  return (
+    canRefreshHostedSession(connection) &&
     Boolean(connection.tokenExpiresAt) &&
     Number(connection.tokenExpiresAt) <= timestamp + HOSTED_SESSION_REFRESH_SKEW_MS
   );
@@ -32,7 +46,7 @@ export function refreshHostedSessionSingleFlight(
 ) {
   const refreshToken = connection.refreshToken?.trim() ?? "";
 
-  if (connection.provider !== "hosted" || !refreshToken) {
+  if (!canRefreshHostedSession(connection)) {
     return Promise.reject(new Error("CLOUD_REAUTH_REQUIRED"));
   }
 

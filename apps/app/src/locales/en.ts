@@ -104,8 +104,8 @@ const messages = {
     authTitle: "Continue working in your browser",
     authDescription:
       "Sign in or create an account to open your cloud vaults and use the web app as a protected Locoris device.",
-    authCheckingTitle: "Checking protected access",
-    authCheckingDescription: "Locoris is securely renewing this browser session. Your local state stays in place.",
+    authCheckingTitle: "Taking you back to Locoris",
+    authCheckingDescription: "Checking your protected sign-in and Locoris Cloud access.",
     authReauthTitle: "Confirm it is still you",
     authReauthDescription:
       "Cloud access was revoked or can no longer be renewed. Sign in again without reconnecting your vaults.",

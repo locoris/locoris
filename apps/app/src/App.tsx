@@ -138,6 +138,7 @@ import {
   issueGoogleDriveVaultToken,
   issuePersonalServerVaultToken,
   loginHostedAccount,
+  refreshHostedAccountSession,
   registerHostedVaultDevice,
   registerHostedAccount,
   renameGoogleDriveVault,
@@ -176,6 +177,7 @@ import { useAdaptiveLayout } from "./lib/useAdaptiveLayout";
 import useAutoDismissNotice from "./lib/useAutoDismissNotice";
 import { planExactHostedVaultBindingRecovery } from "./lib/cloudBindingRecovery";
 import {
+  canRefreshHostedSession,
   refreshHostedSessionSingleFlight,
   shouldRefreshHostedSession
 } from "./lib/hostedSessionRefresh";
@@ -1002,10 +1004,38 @@ export default function App() {
         userName: nextConnection.userName,
         userEmail: nextConnection.userEmail
       });
+
+      if (
+        adaptiveLayout.runtimeKind === "web" &&
+        connection.role === "locorisCloud" &&
+        result.entitlement
+      ) {
+        const { token: _accessToken, ...session } = result.session;
+        const entitlement = result.entitlement;
+
+        setWebCloudOverview((current) => ({
+          user: result.user,
+          session,
+          vaults: current?.user.id === result.user.id ? current.vaults : [],
+          devices: current?.user.id === result.user.id ? current.devices : [],
+          usage: current?.user.id === result.user.id
+            ? current.usage
+            : {
+                storageBytes: 0,
+                vaultCount: 0,
+                syncTokenCount: 0,
+                deviceCount: 0
+              },
+          entitlement
+        }));
+        setWebCloudAuthState("authenticated");
+        setWebCloudInitialCheckComplete(true);
+      }
+
       refreshSyncRegistryState();
       return nextConnection;
     },
-    [settings]
+    [adaptiveLayout.runtimeKind, settings]
   );
 
   useEffect(() => {
@@ -1014,7 +1044,7 @@ export default function App() {
     }
 
     const hostedConnections = syncConnections.filter(
-      (connection) => connection.provider === "hosted" && Boolean(connection.refreshToken?.trim())
+      (connection) => canRefreshHostedSession(connection)
     );
 
     if (hostedConnections.length === 0) {
@@ -1233,17 +1263,125 @@ export default function App() {
       return;
     }
 
-    if (!locorisCloudConnection) {
-      setWebCloudAuthState("signedOut");
-      setWebCloudOverview(null);
+    if (!online) {
+      setWebCloudAuthState(locorisCloudConnection ? "offline" : "signedOut");
       setWebCloudInitialCheckComplete(true);
       return;
     }
 
-    if (!online) {
-      setWebCloudAuthState("offline");
-      setWebCloudInitialCheckComplete(true);
-      return;
+    if (!locorisCloudConnection) {
+      const serverUrl = resolveLocorisCloudServerUrl(settings);
+
+      if (!serverUrl) {
+        setWebCloudAuthState("signedOut");
+        setWebCloudOverview(null);
+        setWebCloudInitialCheckComplete(true);
+        return;
+      }
+
+      setWebCloudAuthState("checking");
+
+      void refreshHostedAccountSession(serverUrl, {
+        refreshToken: "",
+        ...getHostedDeviceIdentity(settings.localDeviceId)
+      })
+        .then(async (result) => {
+          if (cancelled) {
+            return;
+          }
+
+          const existingConnection = listSyncConnections().find(
+            (connection) =>
+              connection.provider === "hosted" && connection.role === "locorisCloud"
+          );
+
+          if (existingConnection) {
+            await updateSyncConnection(existingConnection.id, {
+              serverUrl,
+              sessionToken: result.session.token,
+              refreshToken: result.session.refreshToken ?? null,
+              tokenExpiresAt: result.session.expiresAt,
+              userId: result.user.id,
+              userName: result.user.name,
+              userEmail: result.user.email ?? "",
+              label: result.user.email ?? result.user.name
+            });
+          } else {
+            await createSyncConnection({
+              provider: "hosted",
+              role: "locorisCloud",
+              serverUrl,
+              sessionToken: result.session.token,
+              refreshToken: result.session.refreshToken ?? null,
+              tokenExpiresAt: result.session.expiresAt,
+              userId: result.user.id,
+              userName: result.user.name,
+              userEmail: result.user.email ?? "",
+              label: result.user.email ?? result.user.name
+            });
+          }
+
+          refreshSyncRegistryState();
+
+          if (cancelled) {
+            return;
+          }
+
+          if (result.entitlement) {
+            const { token: _accessToken, ...session } = result.session;
+
+            setWebCloudOverview({
+              user: result.user,
+              session,
+              vaults: [],
+              devices: [],
+              usage: {
+                storageBytes: 0,
+                vaultCount: 0,
+                syncTokenCount: 0,
+                deviceCount: 0
+              },
+              entitlement: result.entitlement
+            });
+          }
+
+          setWebCloudAuthState("authenticated");
+          setWebCloudInitialCheckComplete(true);
+          setWebAccessFeedback(null);
+        })
+        .catch((error) => {
+          if (cancelled) {
+            return;
+          }
+
+          const message = getErrorMessage(error);
+          const noBrowserSession = [
+            "UNAUTHORIZED",
+            "CLOUD_REAUTH_REQUIRED",
+            "REFRESH_TOKEN_REQUIRED",
+            "REFRESH_TOKEN_INVALID",
+            "REFRESH_TOKEN_REVOKED",
+            "REFRESH_TOKEN_EXPIRED",
+            "REFRESH_TOKEN_REUSED",
+            "REFRESH_TOKEN_DEVICE_MISMATCH"
+          ].includes(message);
+
+          setWebCloudAuthState("signedOut");
+          setWebCloudOverview(null);
+          setWebCloudInitialCheckComplete(true);
+          setWebAccessFeedback(
+            noBrowserSession
+              ? null
+              : {
+                  tone: "error",
+                  text: translateSyncError(error, "hosted")
+                }
+          );
+        });
+
+      return () => {
+        cancelled = true;
+      };
     }
 
     // Only the first Cloud Web check is blocking. Background retries must keep
@@ -1255,7 +1393,10 @@ export default function App() {
     const loadOverview = async () => {
       let connection = locorisCloudConnection;
 
-      if (shouldRefreshHostedSession(connection)) {
+      if (
+        shouldRefreshHostedSession(connection) ||
+        (!connection.sessionToken.trim() && canRefreshHostedSession(connection))
+      ) {
         connection = await refreshHostedConnectionSession(connection, { force: true });
       }
 
@@ -1329,6 +1470,7 @@ export default function App() {
     locorisCloudConnection?.tokenExpiresAt,
     online,
     refreshHostedConnectionSession,
+    settings,
     t,
     translateSyncError,
     webCloudRetryTick
@@ -1545,15 +1687,13 @@ export default function App() {
       return "reauthRequired";
     }
 
-    const entitlement = webCloudOverview?.entitlement ?? null;
-    const deviceLimit = entitlement?.limits.maxSyncTokens ?? null;
-    const deviceCount = webCloudOverview?.usage.deviceCount ?? webCloudOverview?.usage.syncTokenCount ?? 0;
-
-    if (entitlement && entitlement.capabilities.webAppEnabled === false) {
-      return "unavailable";
+    if (webCloudAuthState === "serverUnavailable") {
+      return webCloudOverview ? (activeLocorisCloudBinding ? "cloud" : "cloudPending") : "checking";
     }
 
-    if (deviceLimit !== null && deviceCount > deviceLimit) {
+    const entitlement = webCloudOverview?.entitlement ?? null;
+
+    if (entitlement && entitlement.capabilities.webAppEnabled === false) {
       return "unavailable";
     }
 
@@ -4331,7 +4471,6 @@ export default function App() {
     }
 
     setWebCloudBusy(true);
-    setWebCloudAuthState("checking");
     setWebAccessFeedback(null);
 
     try {
@@ -4378,7 +4517,6 @@ export default function App() {
           userName: connection.userName,
           userEmail: connection.userEmail
         });
-        await handleRefreshHostedConnectionCredentials(connection);
       } else {
         connection = await handleCreateSyncConnection({
           provider: "hosted",
@@ -4394,50 +4532,63 @@ export default function App() {
         });
       }
 
-      try {
-        let overview = await loadHostedAccountOverview(
+      if (result.entitlement) {
+        const { token: _accessToken, ...session } = result.session;
+        const existingOverview =
+          webCloudOverview?.user.id === result.user.id ? webCloudOverview : null;
+
+        setWebCloudOverview({
+          user: result.user,
+          session,
+          vaults: existingOverview?.vaults ?? [],
+          devices: existingOverview?.devices ?? [],
+          usage: existingOverview?.usage ?? {
+            storageBytes: 0,
+            vaultCount: 0,
+            syncTokenCount: 0,
+            deviceCount: 0
+          },
+          entitlement: result.entitlement
+        });
+        setWebCloudAuthState("authenticated");
+      }
+
+      void (async () => {
+        const overview = await loadHostedAccountOverview(
           connection.serverUrl,
           connection.sessionToken
         );
-        const restoration = await handleRestoreHostedVaultBindings(connection, overview.vaults);
-
-        if (restoration.restored > 0) {
-          overview = await loadHostedAccountOverview(
-            connection.serverUrl,
-            connection.sessionToken
-          );
-        }
-
         setWebCloudOverview(overview);
         setWebCloudAuthState("authenticated");
+        setWebAccessFeedback(null);
 
-        const maxDevices = overview.entitlement.limits.maxSyncTokens;
-        const deviceCount = overview.usage.deviceCount ?? overview.usage.syncTokenCount ?? 0;
+        void (async () => {
+          await handleRefreshHostedConnectionCredentials(connection);
+          const restoration = await handleRestoreHostedVaultBindings(connection, overview.vaults);
 
-        setWebAccessFeedback(
-          maxDevices !== null && deviceCount > maxDevices
-            ? {
-                tone: "error",
-                text: t("webAccess.authDeviceLimit")
-              }
-            : restoration.failed > 0
-              ? {
-                  tone: "error",
-                  text: t("settings.accountCloudBindingsRestorePartial", {
-                    restored: restoration.restored,
-                    failed: restoration.failed
-                  })
-                }
-              : restoration.restored > 0
-                ? {
-                    tone: "success",
-                    text: t("settings.accountCloudBindingsRestored", {
-                      count: restoration.restored
-                    })
-                  }
-                : null
-        );
-      } catch (error) {
+          if (restoration.failed > 0) {
+            setWebAccessFeedback({
+              tone: "error",
+              text: t("settings.accountCloudBindingsRestorePartial", {
+                restored: restoration.restored,
+                failed: restoration.failed
+              })
+            });
+          } else if (restoration.restored > 0) {
+            setWebAccessFeedback({
+              tone: "success",
+              text: t("settings.accountCloudBindingsRestored", {
+                count: restoration.restored
+              })
+            });
+          }
+        })().catch((error) => {
+          setWebAccessFeedback({
+            tone: "error",
+            text: translateSyncError(error, "hosted")
+          });
+        });
+      })().catch((error) => {
         const message = getErrorMessage(error);
         const reauthRequired = [
           "UNAUTHORIZED",
@@ -4455,7 +4606,7 @@ export default function App() {
             ? t("sync.hostedSessionExpired")
             : translateSyncError(error, "hosted")
         });
-      }
+      });
     } catch (error) {
       setWebCloudAuthState(locorisCloudConnection ? "reauthRequired" : "signedOut");
       throw error;
@@ -4966,23 +5117,36 @@ export default function App() {
     };
   }, []);
 
-  if (
-    vaultBooting ||
-    !settings ||
-    (adaptiveLayout.runtimeKind === "web" && !webCloudInitialCheckComplete)
-  ) {
+  if (adaptiveLayout.runtimeKind === "web" && !webCloudInitialCheckComplete) {
     return (
-      <div className="boot-screen">
-        <div className="boot-card">
-          <span className="panel-kicker">{t("app.name")}</span>
-          <strong>{t("app.booting")}</strong>
-        </div>
+      <div
+        className="locoris-adaptive-shell"
+        data-runtime-kind={adaptiveLayout.runtimeKind}
+        data-layout-device={adaptiveLayout.device}
+        data-layout-orientation={adaptiveLayout.orientation}
+        data-pointer-mode={adaptiveLayout.pointer}
+        data-mobile-shell={adaptiveLayout.isMobileShell ? "true" : "false"}
+      >
+        <WebAccessGate
+          enabled
+          mode="checking"
+          online={online}
+          busy
+          feedback={null}
+          initialEmail={locorisCloudConnection?.userEmail ?? ""}
+          entitlement={null}
+          accountPortalUrl={null}
+          onAuthenticate={handleWebCloudAuthenticate}
+          onOpenCloud={openAccountCloudSettings}
+          onExportVault={() => void handleExportCurrentVaultForWeb()}
+        />
       </div>
     );
   }
 
   if (
     adaptiveLayout.runtimeKind === "web" &&
+    settings &&
     (["local", "unavailable", "checking", "reauthRequired"] as WebAccessMode[]).includes(
       webAccessMode
     )
@@ -5012,6 +5176,17 @@ export default function App() {
           onOpenCloud={openAccountCloudSettings}
           onExportVault={() => void handleExportCurrentVaultForWeb()}
         />
+      </div>
+    );
+  }
+
+  if (vaultBooting || !settings) {
+    return (
+      <div className="boot-screen">
+        <div className="boot-card">
+          <span className="panel-kicker">{t("app.name")}</span>
+          <strong>{t("app.booting")}</strong>
+        </div>
       </div>
     );
   }

@@ -45,6 +45,7 @@ import {
   saveGoogleDriveRemoteEnvelope
 } from "./googleDriveSync";
 import { getLocalVaultProfile, type LocalVaultProfile, updateLocalVaultProfile } from "./localVaults";
+import { isTauriRuntime } from "./runtime";
 import {
   db,
   persistLocalVaultStorage,
@@ -514,6 +515,16 @@ function buildVaultChangesUrl(serverUrl: string, vaultId: string, sinceRevision?
 }
 
 function buildAccountUrl(serverUrl: string, path: string) {
+  const configuredCloudUrl = import.meta.env.VITE_LOCORIS_CLOUD_URL?.trim() ?? "";
+
+  if (
+    !isTauriRuntime() &&
+    configuredCloudUrl &&
+    normalizeBaseUrl(serverUrl) === normalizeBaseUrl(configuredCloudUrl)
+  ) {
+    return `/api${path}`;
+  }
+
   return `${normalizeBaseUrl(serverUrl)}${path}`;
 }
 
@@ -1634,17 +1645,25 @@ async function requestJson<T>(url: string, init: RequestInit = {}) {
   let response: Response;
 
   try {
-    response = await fetch(url, init);
+    response = await fetch(url, {
+      ...init,
+      credentials: url.startsWith("/api/") ? "include" : init.credentials
+    });
   } catch (error) {
     throw new Error(normalizeRequestError(error));
   }
 
-  const payload = (await response.json().catch(() => null)) as T | { error?: string } | null;
+  const payload = (await response.json().catch(() => null)) as
+    | T
+    | { error?: string; code?: string }
+    | null;
 
   if (!response.ok) {
     const message =
       payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string"
         ? payload.error
+        : payload && typeof payload === "object" && "code" in payload && typeof payload.code === "string"
+          ? payload.code
         : `HTTP_${response.status}`;
     throw new Error(message);
   }
@@ -1802,6 +1821,7 @@ export async function registerHostedAccount(
   return requestJson<{
     user: HostedAccountUser;
     session: HostedAccountSession;
+    entitlement?: HostedCloudEntitlement;
   }>(buildAccountUrl(serverUrl, "/v1/auth/register"), {
     method: "POST",
     headers: JSON_HEADERS,
@@ -1822,6 +1842,7 @@ export async function loginHostedAccount(
   return requestJson<{
     user: HostedAccountUser;
     session: HostedAccountSession;
+    entitlement?: HostedCloudEntitlement;
   }>(buildAccountUrl(serverUrl, "/v1/auth/login"), {
     method: "POST",
     headers: JSON_HEADERS,
@@ -1856,6 +1877,7 @@ export async function pollHostedDeviceLogin(serverUrl: string, deviceCode: strin
   return requestJson<{
     user: HostedAccountUser;
     session: HostedAccountSession;
+    entitlement?: HostedCloudEntitlement;
   }>(buildAccountUrl(serverUrl, "/v1/auth/device/token"), {
     method: "POST",
     headers: JSON_HEADERS,
@@ -1877,6 +1899,7 @@ export async function refreshHostedAccountSession(
   return requestJson<{
     user: HostedAccountUser;
     session: HostedAccountSession;
+    entitlement?: HostedCloudEntitlement;
   }>(buildAccountUrl(serverUrl, "/v1/auth/refresh"), {
     method: "POST",
     headers: JSON_HEADERS,

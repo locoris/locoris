@@ -17,7 +17,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "npm run test:node && npm run test:localization",
-    "test:node": "node --test tests/googleDriveSyncV2.test.ts tests/cloudBindingRecovery.test.ts tests/androidSigningOutput.test.ts tests/releaseMetadataSelection.test.ts",
+    "test:node": "node --test tests/googleDriveSyncV2.test.ts tests/cloudBindingRecovery.test.ts tests/androidSigningOutput.test.ts tests/releaseMetadataSelection.test.ts ../../functions/api/web-app-proxy.test.mjs",
     "test:localization": "vitest run --config vitest.config.ts",
     "tauri": "tauri",
     "desktop:dev": "node ./scripts/run-tauri.mjs dev",

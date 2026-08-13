@@ -23,6 +23,16 @@ VITE_LOCORIS_SITE_URL=https://locoris.app
 VITE_GOOGLE_DRIVE_CLIENT_ID=<Google OAuth Web client ID>
 ```
 
+Pages Function runtime variable:
+
+```text
+APP_API_BASE_URL=https://api.locoris.app
+```
+
+During the domain-free test phase set it to the current HTTPS API origin. The Web App calls
+account routes through same-origin `/api`; the Pages Function keeps the rotating refresh token
+in a Secure HttpOnly cookie, while short-lived access tokens remain in the active browser session.
+
 Never add `VITE_GOOGLE_DRIVE_DESKTOP_CLIENT_SECRET`, cloud database credentials, Robokassa secrets, signing keys, or an administrative token to the Pages environment. Every `VITE_` value is public browser configuration.
 
 For the domain-free test phase use:
@@ -46,6 +56,7 @@ Do not add a catch-all `_redirects` rule or a top-level `404.html`. Cloudflare P
 5. Plain and encrypted vaults sync from two independent browsers.
 6. Google Drive login and background reauthorization pass with the production OAuth client.
 7. Refreshing the page preserves local vaults and does not flash an authenticated surface before the access gate resolves.
-8. Only after these checks set `PUBLIC_WEB_APP_AVAILABLE=true` on the marketing site.
+8. Closing and reopening a mobile browser restores the signed-in session without asking for the password.
+9. Only after these checks set `PUBLIC_WEB_APP_AVAILABLE=true` on the marketing site.
 
 Cloudflare Pages preview deployments are non-indexable by default. The permanent `locoris-app.pages.dev` fallback is also marked `noindex` in `_headers` to avoid competing with the custom domain.
