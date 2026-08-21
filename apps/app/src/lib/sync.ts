@@ -33,8 +33,8 @@ import {
   isGoogleDriveConfigured,
   listGoogleDriveRemoteVaults,
   loadGoogleDriveRemoteBootstrap,
-  loadGoogleDriveRemoteChangeFeed,
   loadGoogleDriveRemoteEnvelope,
+  loadGoogleDriveRemoteRevision,
   prepareGoogleDriveOAuth as prepareGoogleDriveOAuthViaApi,
   pollGoogleDriveRemoteChanges as pollGoogleDriveRemoteChangesViaApi,
   refreshGoogleDriveAccountSession as refreshGoogleDriveAccountSessionViaApi,
@@ -4157,8 +4157,12 @@ async function runGoogleDriveSyncCycle(
   );
   const resolvedVaultName =
     localVaultProfile?.name || remoteEnvelope.metadata?.vault?.name || vaultId;
-  const pushed =
-    nextEnvelope.metadata?.payloadMode === "encrypted"
+  const pushed = isChangeSetEmpty(snapshotJournalChanges)
+    ? {
+        conflict: false as const,
+        revision: bootstrap.revision
+      }
+    : nextEnvelope.metadata?.payloadMode === "encrypted"
       ? await (async () => {
           const { encryptedChanges } = await encryptChangeSetBatch(
             snapshotJournalChanges,
@@ -4237,10 +4241,10 @@ async function runGoogleDriveDeltaSyncCycle(
     localVaultName: options?.localVaultName ?? null
   } satisfies RemoteSyncConfig;
 
-  let remoteFeed: SyncChangeFeed;
+  let remoteRevision: Awaited<ReturnType<typeof loadGoogleDriveRemoteRevision>>;
 
   try {
-    remoteFeed = await loadGoogleDriveRemoteChangeFeed(token, vaultId, settings.syncCursor);
+    remoteRevision = await loadGoogleDriveRemoteRevision(token, vaultId);
   } catch (error) {
     if (shouldFallbackToSnapshotSync(error)) {
       return null;
@@ -4249,18 +4253,26 @@ async function runGoogleDriveDeltaSyncCycle(
     throw error;
   }
 
+  if (remoteRevision.revision !== settings.syncCursor) {
+    return null;
+  }
+
+  const remoteFeed = {
+    mode: "delta",
+    revision: remoteRevision.revision,
+    baseRevision: settings.syncCursor,
+    changes: createEmptyChangeSet("google-drive"),
+    encryptedChanges: remoteRevision.metadata?.payloadMode === "encrypted" ? [] : null,
+    snapshot: null,
+    metadata: remoteRevision.metadata ?? null
+  } satisfies SyncChangeFeed;
+
   if (remoteFeed.metadata?.payloadMode === "encrypted") {
     await hydrateVaultEncryptionFromMetadata(remoteFeed.metadata, database);
     settings = (await database.settings.get("app")) ?? settings;
   }
 
   reconcileLocalVaultProfileName(remoteConfig, remoteFeed.metadata?.vault?.name ?? null);
-
-  if (remoteFeed.mode === "snapshot") {
-    // V2 cursors include immutable concurrent commits. Rebuild from the
-    // checkpoint bootstrap instead of deriving a possibly incomplete delta.
-    return null;
-  }
 
   const isEncryptedDeltaFeed =
     remoteFeed.metadata?.payloadMode === "encrypted" ||

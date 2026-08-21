@@ -893,9 +893,7 @@ export default function SyncSettingsPanel({
           [connection.id]:
             isConnectionAuthErrorCode(message)
               ? "authError"
-              : message === "SERVER_UNAVAILABLE" || message === "HTTP_404"
-                ? "unavailable"
-                : current[connection.id] ?? "checking"
+              : "unavailable"
         }));
 
         throw error;
@@ -1209,6 +1207,11 @@ export default function SyncSettingsPanel({
     }
 
     let cancelled = false;
+
+    setRemoteVaultLoading((current) => ({
+      ...current,
+      ...Object.fromEntries(syncConnections.map((connection) => [connection.id, true]))
+    }));
 
     void Promise.all(
       syncConnections.map(async (connection) => {
