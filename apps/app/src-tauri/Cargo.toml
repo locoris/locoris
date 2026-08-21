@@ -1,6 +1,6 @@
 [package]
 name = "locoris-app"
-version = "1.0.50"
+version = "1.0.51"
 description = "Locoris desktop shell"
 authors = ["angrein"]
 license = "AGPL-3.0-or-later"
