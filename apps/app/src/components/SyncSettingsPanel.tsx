@@ -493,6 +493,7 @@ function translateSyncManagerError(message: string, t: ReturnType<typeof useTran
     case "VAULT_READ_ONLY":
       return t("sync.selfHostedVaultReadOnly");
     case "CLOUD_REAUTH_REQUIRED":
+    case "REFRESH_TOKEN_REQUIRED":
     case "REFRESH_TOKEN_INVALID":
     case "REFRESH_TOKEN_REVOKED":
     case "REFRESH_TOKEN_EXPIRED":
@@ -569,6 +570,7 @@ function isConnectionAuthErrorCode(message: string | null | undefined) {
     "UNAUTHORIZED",
     "INVALID_CREDENTIALS",
     "CLOUD_REAUTH_REQUIRED",
+    "REFRESH_TOKEN_REQUIRED",
     "REFRESH_TOKEN_INVALID",
     "REFRESH_TOKEN_REVOKED",
     "REFRESH_TOKEN_EXPIRED",

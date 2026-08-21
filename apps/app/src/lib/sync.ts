@@ -122,6 +122,7 @@ const CONFLICT_SUFFIX = " (Conflict)";
 const JSON_HEADERS = {
   "Content-Type": "application/json"
 };
+const HOSTED_ACCOUNT_REQUEST_TIMEOUT_MS = 15_000;
 
 export type HostedAccountOverview = {
   user: HostedAccountUser;
@@ -1641,16 +1642,40 @@ function pruneUnreferencedAssets(
   );
 }
 
-async function requestJson<T>(url: string, init: RequestInit = {}) {
+async function requestJson<T>(
+  url: string,
+  init: RequestInit = {},
+  options: { timeoutMs?: number } = {}
+) {
   let response: Response;
+  const timeoutMs = options.timeoutMs ?? 0;
+  const controller = timeoutMs > 0 ? new AbortController() : null;
+  const forwardAbort = () => controller?.abort();
+  const timeoutId = controller
+    ? globalThis.setTimeout(() => controller.abort(), timeoutMs)
+    : null;
+
+  if (controller && init.signal) {
+    if (init.signal.aborted) {
+      controller.abort();
+    } else {
+      init.signal.addEventListener("abort", forwardAbort, { once: true });
+    }
+  }
 
   try {
     response = await fetch(url, {
       ...init,
+      signal: controller?.signal ?? init.signal,
       credentials: url.startsWith("/api/") ? "include" : init.credentials
     });
   } catch (error) {
     throw new Error(normalizeRequestError(error));
+  } finally {
+    if (timeoutId !== null) {
+      globalThis.clearTimeout(timeoutId);
+    }
+    init.signal?.removeEventListener("abort", forwardAbort);
   }
 
   const payload = (await response.json().catch(() => null)) as
@@ -1826,7 +1851,7 @@ export async function registerHostedAccount(
     method: "POST",
     headers: JSON_HEADERS,
     body: JSON.stringify({ ...payload, authProtocol: 2 })
-  });
+  }, { timeoutMs: HOSTED_ACCOUNT_REQUEST_TIMEOUT_MS });
 }
 
 export async function loginHostedAccount(
@@ -1847,7 +1872,7 @@ export async function loginHostedAccount(
     method: "POST",
     headers: JSON_HEADERS,
     body: JSON.stringify({ ...payload, authProtocol: 2 })
-  });
+  }, { timeoutMs: HOSTED_ACCOUNT_REQUEST_TIMEOUT_MS });
 }
 
 export type HostedDeviceLoginStart = {
@@ -1870,7 +1895,7 @@ export async function startHostedDeviceLogin(
     method: "POST",
     headers: JSON_HEADERS,
     body: JSON.stringify({ ...payload, authProtocol: 2 })
-  });
+  }, { timeoutMs: HOSTED_ACCOUNT_REQUEST_TIMEOUT_MS });
 }
 
 export async function pollHostedDeviceLogin(serverUrl: string, deviceCode: string) {
@@ -1884,7 +1909,7 @@ export async function pollHostedDeviceLogin(serverUrl: string, deviceCode: strin
     body: JSON.stringify({
       deviceCode
     })
-  });
+  }, { timeoutMs: HOSTED_ACCOUNT_REQUEST_TIMEOUT_MS });
 }
 
 export async function refreshHostedAccountSession(
@@ -1904,7 +1929,7 @@ export async function refreshHostedAccountSession(
     method: "POST",
     headers: JSON_HEADERS,
     body: JSON.stringify(payload)
-  });
+  }, { timeoutMs: HOSTED_ACCOUNT_REQUEST_TIMEOUT_MS });
 }
 
 export async function logoutHostedAccount(serverUrl: string, sessionToken: string) {
@@ -1941,20 +1966,20 @@ export async function loadHostedAccountOverview(serverUrl: string, sessionToken:
     }>(buildAccountUrl(serverUrl, "/v1/auth/me"), {
       method: "GET",
       headers: createBearerHeaders(sessionToken, false)
-    }),
+    }, { timeoutMs: HOSTED_ACCOUNT_REQUEST_TIMEOUT_MS }),
     requestJson<{
       user: HostedAccountUser;
       vaults: HostedAccountVault[];
     }>(buildAccountUrl(serverUrl, "/v1/account/vaults"), {
       method: "GET",
       headers: createBearerHeaders(sessionToken, false)
-    }),
+    }, { timeoutMs: HOSTED_ACCOUNT_REQUEST_TIMEOUT_MS }),
     requestJson<{
       devices: HostedAccountDevice[];
     }>(buildAccountUrl(serverUrl, "/v1/account/devices"), {
       method: "GET",
       headers: createBearerHeaders(sessionToken, false)
-    }).catch(() => ({ devices: [] }))
+    }, { timeoutMs: HOSTED_ACCOUNT_REQUEST_TIMEOUT_MS }).catch(() => ({ devices: [] }))
   ]);
 
   return {
