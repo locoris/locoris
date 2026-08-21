@@ -1,5 +1,3 @@
-#[cfg(desktop)]
-use keyring::{Entry, Error as KeyringError};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -21,6 +19,7 @@ use tauri_plugin_window_state::{StateFlags, WindowExt};
 
 const DESKTOP_DATA_DIRECTORY: &str = "data";
 const DESKTOP_SETTINGS_DIRECTORY: &str = "settings";
+const DESKTOP_SECRET_DATABASE_FILE: &str = "locoris-secrets.sqlite3";
 const DESKTOP_WEBVIEW_DIRECTORY: &str = "webview";
 const DESKTOP_CACHE_DIRECTORY: &str = "cache";
 const GOOGLE_DESKTOP_LOOPBACK_PATH: &str = "/";
@@ -213,37 +212,6 @@ mod android_bridge {
   }
 }
 
-#[cfg(desktop)]
-fn secure_secret_service_name(identifier: &str) -> String {
-  let normalized_identifier = if identifier.trim().is_empty() {
-    "com.locoris.desktop"
-  } else {
-    identifier.trim()
-  };
-
-  format!("{normalized_identifier}.secure-secrets")
-}
-
-#[cfg(desktop)]
-fn sanitize_secure_secret_key(key: &str) -> Result<String, String> {
-  let normalized_key = key.trim();
-
-  if normalized_key.is_empty() {
-    return Err("secure secret key is required".into());
-  }
-
-  Ok(normalized_key.to_string())
-}
-
-#[cfg(desktop)]
-fn open_secure_secret_entry<R: Runtime>(app: &AppHandle<R>, key: &str) -> Result<Entry, String> {
-  Entry::new(
-    &secure_secret_service_name(&app.config().identifier),
-    &sanitize_secure_secret_key(key)?,
-  )
-  .map_err(|error| format!("failed to create secure secret entry: {error}"))
-}
-
 fn sanitize_vault_path_segment(local_vault_id: &str) -> String {
   let sanitized: String = local_vault_id
     .trim()
@@ -262,6 +230,116 @@ fn sanitize_vault_path_segment(local_vault_id: &str) -> String {
   } else {
     sanitized
   }
+}
+
+#[cfg(desktop)]
+fn sanitize_secure_secret_key(key: &str) -> Result<String, String> {
+  let normalized_key = key.trim();
+
+  if normalized_key.is_empty() {
+    return Err("secure secret key is required".into());
+  }
+
+  Ok(normalized_key.to_string())
+}
+
+#[cfg(desktop)]
+fn desktop_secret_database_path<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
+  let app_data_dir = app
+    .path()
+    .app_data_dir()
+    .map_err(|error| format!("failed to resolve app data directory: {error}"))?;
+
+  Ok(
+    app_data_dir
+      .join(DESKTOP_SETTINGS_DIRECTORY)
+      .join(DESKTOP_SECRET_DATABASE_FILE),
+  )
+}
+
+#[cfg(all(desktop, unix))]
+fn harden_desktop_secret_store_permissions(path: &Path) -> Result<(), String> {
+  use std::os::unix::fs::PermissionsExt;
+
+  if let Some(parent) = path.parent() {
+    fs::set_permissions(parent, fs::Permissions::from_mode(0o700))
+      .map_err(|error| format!("failed to protect secret store directory: {error}"))?;
+  }
+
+  fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+    .map_err(|error| format!("failed to protect secret store: {error}"))
+}
+
+#[cfg(all(desktop, not(unix)))]
+fn harden_desktop_secret_store_permissions(_path: &Path) -> Result<(), String> {
+  Ok(())
+}
+
+#[cfg(desktop)]
+fn open_desktop_secret_database_at_path(path: &Path) -> Result<Connection, String> {
+  ensure_parent_directory(path)?;
+  let connection = Connection::open(path)
+    .map_err(|error| format!("failed to open desktop secret store: {error}"))?;
+
+  connection
+    .busy_timeout(Duration::from_secs(3))
+    .map_err(|error| format!("failed to configure desktop secret store: {error}"))?;
+
+  connection
+    .execute_batch(
+      "
+      PRAGMA secure_delete = ON;
+      CREATE TABLE IF NOT EXISTS secure_secrets (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL
+      );
+      ",
+    )
+    .map_err(|error| format!("failed to prepare desktop secret store: {error}"))?;
+
+  harden_desktop_secret_store_permissions(path)?;
+  Ok(connection)
+}
+
+#[cfg(desktop)]
+fn open_desktop_secret_database<R: Runtime>(app: &AppHandle<R>) -> Result<Connection, String> {
+  let path = desktop_secret_database_path(app)?;
+  open_desktop_secret_database_at_path(&path)
+}
+
+#[cfg(desktop)]
+fn read_desktop_secret(connection: &Connection, key: &str) -> Result<Option<String>, String> {
+  connection
+    .query_row(
+      "SELECT value FROM secure_secrets WHERE key = ?1",
+      params![key],
+      |row| row.get(0),
+    )
+    .optional()
+    .map_err(|error| format!("failed to read desktop secret: {error}"))
+}
+
+#[cfg(desktop)]
+fn write_desktop_secret(connection: &Connection, key: &str, value: &str) -> Result<(), String> {
+  connection
+    .execute(
+      "INSERT INTO secure_secrets (key, value) VALUES (?1, ?2)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      params![key, value],
+    )
+    .map(|_| ())
+    .map_err(|error| format!("failed to write desktop secret: {error}"))
+}
+
+#[cfg(desktop)]
+fn delete_desktop_secret(connection: &Connection, key: &str) -> Result<(), String> {
+  connection
+    .execute(
+      "DELETE FROM secure_secrets WHERE key = ?1",
+      params![key],
+    )
+    .map(|_| ())
+    .map_err(|error| format!("failed to delete desktop secret: {error}"))
 }
 
 #[cfg(any(target_os = "windows", target_os = "macos"))]
@@ -1286,13 +1364,9 @@ fn android_get_package_name() -> Result<Value, String> {
 #[cfg(desktop)]
 #[tauri::command]
 fn secure_secret_get<R: Runtime>(app: AppHandle<R>, key: String) -> Result<Option<String>, String> {
-  let entry = open_secure_secret_entry(&app, &key)?;
-
-  match entry.get_password() {
-    Ok(value) => Ok(Some(value)),
-    Err(KeyringError::NoEntry) => Ok(None),
-    Err(error) => Err(format!("failed to read secure secret: {error}")),
-  }
+  let normalized_key = sanitize_secure_secret_key(&key)?;
+  let connection = open_desktop_secret_database(&app)?;
+  read_desktop_secret(&connection, &normalized_key)
 }
 
 #[cfg(desktop)]
@@ -1302,22 +1376,23 @@ fn secure_secret_set<R: Runtime>(
   key: String,
   value: String,
 ) -> Result<(), String> {
-  let entry = open_secure_secret_entry(&app, &key)?;
+  let normalized_key = sanitize_secure_secret_key(&key)?;
+  let normalized_value = value.trim();
+  let connection = open_desktop_secret_database(&app)?;
 
-  entry
-    .set_password(value.trim())
-    .map_err(|error| format!("failed to write secure secret: {error}"))
+  if normalized_value.is_empty() {
+    return delete_desktop_secret(&connection, &normalized_key);
+  }
+
+  write_desktop_secret(&connection, &normalized_key, normalized_value)
 }
 
 #[cfg(desktop)]
 #[tauri::command]
 fn secure_secret_delete<R: Runtime>(app: AppHandle<R>, key: String) -> Result<(), String> {
-  let entry = open_secure_secret_entry(&app, &key)?;
-
-  match entry.delete_credential() {
-    Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
-    Err(error) => Err(format!("failed to delete secure secret: {error}")),
-  }
+  let normalized_key = sanitize_secure_secret_key(&key)?;
+  let connection = open_desktop_secret_database(&app)?;
+  delete_desktop_secret(&connection, &normalized_key)
 }
 
 #[cfg(target_os = "android")]
@@ -1508,4 +1583,74 @@ pub fn run() {
     })
     .run(tauri::generate_context!())
     .expect("error while running Locoris application");
+}
+
+#[cfg(all(test, desktop))]
+mod tests {
+  use super::{
+    delete_desktop_secret, open_desktop_secret_database_at_path, read_desktop_secret,
+    write_desktop_secret,
+  };
+  use std::{
+    fs, process,
+    time::{SystemTime, UNIX_EPOCH},
+  };
+
+  #[test]
+  fn desktop_secret_store_round_trips_without_a_system_keychain() {
+    let unique = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("clock should be after unix epoch")
+      .as_nanos();
+    let directory = std::env::temp_dir().join(format!(
+      "locoris-secret-store-{}-{unique}",
+      process::id()
+    ));
+    let path = directory.join("secrets.sqlite3");
+    let connection = open_desktop_secret_database_at_path(&path)
+      .expect("desktop secret store should open");
+
+    assert_eq!(
+      read_desktop_secret(&connection, "google-refresh").expect("empty read should work"),
+      None
+    );
+
+    write_desktop_secret(&connection, "google-refresh", "refresh-token")
+      .expect("secret should be written");
+    assert_eq!(
+      read_desktop_secret(&connection, "google-refresh").expect("stored read should work"),
+      Some("refresh-token".into())
+    );
+
+    delete_desktop_secret(&connection, "google-refresh").expect("secret should be deleted");
+    assert_eq!(
+      read_desktop_secret(&connection, "google-refresh").expect("deleted read should work"),
+      None
+    );
+
+    #[cfg(unix)]
+    {
+      use std::os::unix::fs::PermissionsExt;
+
+      assert_eq!(
+        fs::metadata(&path)
+          .expect("secret database should exist")
+          .permissions()
+          .mode()
+          & 0o777,
+        0o600
+      );
+      assert_eq!(
+        fs::metadata(&directory)
+          .expect("secret directory should exist")
+          .permissions()
+          .mode()
+          & 0o777,
+        0o700
+      );
+    }
+
+    drop(connection);
+    fs::remove_dir_all(directory).expect("test secret store should be removed");
+  }
 }
