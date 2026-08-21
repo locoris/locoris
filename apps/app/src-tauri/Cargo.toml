@@ -1,6 +1,6 @@
 [package]
 name = "locoris-app"
-version = "1.0.52"
+version = "1.0.53"
 description = "Locoris desktop shell"
 authors = ["angrein"]
 license = "AGPL-3.0-or-later"
@@ -34,7 +34,6 @@ tauri-plugin-store = "2"
 tauri-plugin-notification = "2"
 
 [target.'cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))'.dependencies]
-keyring = { version = "3.6.3", features = ["apple-native", "windows-native"] }
 tauri-plugin-process = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-updater = "2"
