@@ -26,6 +26,7 @@ export type WebAccessMode =
   | "readOnly"
   | "unavailable"
   | "checking"
+  | "serverUnavailable"
   | "reauthRequired";
 export type WebAuthMode = "login" | "register";
 
@@ -48,6 +49,7 @@ type WebAccessGateProps = {
   entitlement?: HostedCloudEntitlement | null;
   initialEmail?: string;
   onAuthenticate: (input: WebAuthInput) => Promise<void>;
+  onRetry: () => void;
   onOpenCloud: () => void;
   onExportVault: () => void | Promise<void>;
 };
@@ -176,6 +178,7 @@ export default function WebAccessGate({
   entitlement = null,
   initialEmail = "",
   onAuthenticate,
+  onRetry,
   onOpenCloud,
   onExportVault
 }: WebAccessGateProps) {
@@ -193,6 +196,7 @@ export default function WebAccessGate({
 
   const unavailable = mode === "unavailable";
   const checking = mode === "checking";
+  const serverUnavailable = mode === "serverUnavailable";
   const reauthRequired = mode === "reauthRequired";
   const entitlementReason = entitlement?.reason ?? "";
   const trialExpired = entitlementReason.startsWith("TRIAL_") && entitlementReason !== "TRIAL_ACTIVE";
@@ -239,7 +243,7 @@ export default function WebAccessGate({
 
   if (
     !enabled ||
-    !["local", "unavailable", "checking", "reauthRequired"].includes(mode)
+    !["local", "unavailable", "checking", "serverUnavailable", "reauthRequired"].includes(mode)
   ) {
     return null;
   }
@@ -321,6 +325,8 @@ export default function WebAccessGate({
                 : trialExpired
                 ? t("webAccess.trialExpiredTitle")
                 : t("webAccess.unavailableTitle")
+              : serverUnavailable
+                ? t("webAccess.attentionTitle")
               : reauthRequired
                 ? t("webAccess.authReauthTitle")
                 : checking
@@ -334,6 +340,8 @@ export default function WebAccessGate({
                 : trialExpired
                 ? t("webAccess.trialExpiredDescription")
                 : t("webAccess.unavailableDescription")
+              : serverUnavailable
+                ? t("webAccess.authServerUnavailable")
               : reauthRequired
                 ? t("webAccess.authReauthDescription")
                 : checking
@@ -382,6 +390,21 @@ export default function WebAccessGate({
               <h2>{t("webAccess.authCheckingTitle")}</h2>
               <p>{t("webAccess.authCheckingDescription")}</p>
               <span className="web-auth-checking-indicator" aria-hidden="true" />
+            </div>
+          ) : serverUnavailable ? (
+            <div className="web-auth-unavailable" aria-live="polite">
+              <span className="web-auth-panel-icon" aria-hidden="true"><CloudGlyph /></span>
+              <p className="web-auth-panel-kicker">{t("webAccess.authSecureAccess")}</p>
+              <h2>{t("webAccess.attentionTitle")}</h2>
+              <p>{t("webAccess.authServerUnavailable")}</p>
+              <div className="web-auth-unavailable-actions">
+                <button type="button" className="web-auth-primary-action" disabled={!online} onClick={onRetry}>
+                  {t("sync.hostedRefresh")}
+                </button>
+                <a className="web-auth-secondary-action" href={marketingUrl("/download")} target="_blank" rel="noreferrer">
+                  {t("webAccess.downloadApp")}
+                </a>
+              </div>
             </div>
           ) : unavailable ? (
             <div className={`web-auth-unavailable${trialExpired ? " is-upgrade" : ""}`}>

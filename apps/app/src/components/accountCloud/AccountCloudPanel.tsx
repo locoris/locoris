@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { getDisplayVaultName } from "../../localization/displayNames";
 import { getErrorMessage } from "../../lib/errors";
+import { isHostedReauthRequiredError } from "../../lib/hostedAuthErrors";
 import { getHostedDeviceIdentity } from "../../lib/hostedDeviceIdentity";
 import { formatDateValue, useLocale, type LocaleRuntime } from "../../localization";
 import type { LocalVaultProfile } from "../../lib/localVaults";
@@ -314,6 +315,7 @@ function translateCloudError(message: string, t: ReturnType<typeof useTranslatio
       return t("sync.serverNotFound");
     case "UNAUTHORIZED":
     case "CLOUD_REAUTH_REQUIRED":
+    case "REFRESH_TOKEN_REQUIRED":
     case "REFRESH_TOKEN_INVALID":
     case "REFRESH_TOKEN_REVOKED":
     case "REFRESH_TOKEN_EXPIRED":
@@ -502,17 +504,7 @@ export default function AccountCloudPanel({
       .catch((error) => {
         if (!cancelled) {
           const message = getErrorMessage(error);
-          setAuthRequired(
-            [
-              "UNAUTHORIZED",
-              "CLOUD_REAUTH_REQUIRED",
-              "REFRESH_TOKEN_INVALID",
-              "REFRESH_TOKEN_REVOKED",
-              "REFRESH_TOKEN_EXPIRED",
-              "REFRESH_TOKEN_REUSED",
-              "REFRESH_TOKEN_DEVICE_MISMATCH"
-            ].includes(message)
-          );
+          setAuthRequired(isHostedReauthRequiredError(error));
           setInternalFeedback({
             tone: "error",
             text: translateCloudError(message, t)

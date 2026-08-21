@@ -173,6 +173,7 @@ import {
 } from "./lib/selfHostedEndpointUpdates";
 import { DEFAULT_NOTE_COLOR } from "./lib/palette";
 import { getErrorMessage } from "./lib/errors";
+import { isHostedReauthRequiredError } from "./lib/hostedAuthErrors";
 import { useAdaptiveLayout } from "./lib/useAdaptiveLayout";
 import useAutoDismissNotice from "./lib/useAutoDismissNotice";
 import { planExactHostedVaultBindingRecovery } from "./lib/cloudBindingRecovery";
@@ -1063,18 +1064,9 @@ export default function App() {
         try {
           await refreshHostedConnectionSession(connection, { force: true });
         } catch (error) {
-          const message = getErrorMessage(error);
-
           if (
             connection.role === "locorisCloud" &&
-            [
-              "CLOUD_REAUTH_REQUIRED",
-              "REFRESH_TOKEN_INVALID",
-              "REFRESH_TOKEN_REVOKED",
-              "REFRESH_TOKEN_EXPIRED",
-              "REFRESH_TOKEN_REUSED",
-              "REFRESH_TOKEN_DEVICE_MISMATCH"
-            ].includes(message)
+            isHostedReauthRequiredError(error)
           ) {
             setWebCloudAuthState("reauthRequired");
           }
@@ -1354,19 +1346,9 @@ export default function App() {
             return;
           }
 
-          const message = getErrorMessage(error);
-          const noBrowserSession = [
-            "UNAUTHORIZED",
-            "CLOUD_REAUTH_REQUIRED",
-            "REFRESH_TOKEN_REQUIRED",
-            "REFRESH_TOKEN_INVALID",
-            "REFRESH_TOKEN_REVOKED",
-            "REFRESH_TOKEN_EXPIRED",
-            "REFRESH_TOKEN_REUSED",
-            "REFRESH_TOKEN_DEVICE_MISMATCH"
-          ].includes(message);
+          const noBrowserSession = isHostedReauthRequiredError(error);
 
-          setWebCloudAuthState("signedOut");
+          setWebCloudAuthState(noBrowserSession ? "signedOut" : "serverUnavailable");
           setWebCloudOverview(null);
           setWebCloudInitialCheckComplete(true);
           setWebAccessFeedback(
@@ -1428,16 +1410,7 @@ export default function App() {
           return;
         }
 
-        const message = getErrorMessage(error);
-        const reauthRequired = [
-          "UNAUTHORIZED",
-          "CLOUD_REAUTH_REQUIRED",
-          "REFRESH_TOKEN_INVALID",
-          "REFRESH_TOKEN_REVOKED",
-          "REFRESH_TOKEN_EXPIRED",
-          "REFRESH_TOKEN_REUSED",
-          "REFRESH_TOKEN_DEVICE_MISMATCH"
-        ].includes(message);
+        const reauthRequired = isHostedReauthRequiredError(error);
 
         setWebCloudAuthState(reauthRequired ? "reauthRequired" : "serverUnavailable");
         setWebCloudInitialCheckComplete(true);
@@ -1675,6 +1648,10 @@ export default function App() {
       return "local";
     }
 
+    if (webCloudAuthState === "serverUnavailable" && !webCloudOverview) {
+      return "serverUnavailable";
+    }
+
     if (!locorisCloudConnection) {
       return "local";
     }
@@ -1688,7 +1665,7 @@ export default function App() {
     }
 
     if (webCloudAuthState === "serverUnavailable") {
-      return webCloudOverview ? (activeLocorisCloudBinding ? "cloud" : "cloudPending") : "checking";
+      return webCloudOverview ? (activeLocorisCloudBinding ? "cloud" : "cloudPending") : "serverUnavailable";
     }
 
     const entitlement = webCloudOverview?.entitlement ?? null;
@@ -1941,6 +1918,15 @@ export default function App() {
         title: t("webAccess.authCheckingTitle"),
         description: t("webAccess.authCheckingDescription"),
         primaryActionLabel: t("webAccess.manageCloud"),
+        secondaryActionLabel: t("webAccess.exportVault")
+      },
+      serverUnavailable: {
+        tone: "error" as const,
+        text: t("webAccess.attentionTitle"),
+        compactText: accountDisplayName,
+        title: t("webAccess.attentionTitle"),
+        description: t("webAccess.authServerUnavailable"),
+        primaryActionLabel: t("sync.hostedRefresh"),
         secondaryActionLabel: t("webAccess.exportVault")
       },
       reauthRequired: {
@@ -2452,14 +2438,7 @@ export default function App() {
         if (
           connection.provider === "hosted" &&
           connection.role === "locorisCloud" &&
-          [
-            "CLOUD_REAUTH_REQUIRED",
-            "REFRESH_TOKEN_INVALID",
-            "REFRESH_TOKEN_REVOKED",
-            "REFRESH_TOKEN_EXPIRED",
-            "REFRESH_TOKEN_REUSED",
-            "REFRESH_TOKEN_DEVICE_MISMATCH"
-          ].includes(errorMessage)
+          isHostedReauthRequiredError(error)
         ) {
           setWebCloudAuthState("reauthRequired");
         }
@@ -4589,16 +4568,7 @@ export default function App() {
           });
         });
       })().catch((error) => {
-        const message = getErrorMessage(error);
-        const reauthRequired = [
-          "UNAUTHORIZED",
-          "CLOUD_REAUTH_REQUIRED",
-          "REFRESH_TOKEN_INVALID",
-          "REFRESH_TOKEN_REVOKED",
-          "REFRESH_TOKEN_EXPIRED",
-          "REFRESH_TOKEN_REUSED",
-          "REFRESH_TOKEN_DEVICE_MISMATCH"
-        ].includes(message);
+        const reauthRequired = isHostedReauthRequiredError(error);
         setWebCloudAuthState(reauthRequired ? "reauthRequired" : "serverUnavailable");
         setWebAccessFeedback({
           tone: "error",
@@ -5137,6 +5107,7 @@ export default function App() {
           entitlement={null}
           accountPortalUrl={null}
           onAuthenticate={handleWebCloudAuthenticate}
+          onRetry={() => setWebCloudRetryTick((current) => current + 1)}
           onOpenCloud={openAccountCloudSettings}
           onExportVault={() => void handleExportCurrentVaultForWeb()}
         />
@@ -5147,9 +5118,9 @@ export default function App() {
   if (
     adaptiveLayout.runtimeKind === "web" &&
     settings &&
-    (["local", "unavailable", "checking", "reauthRequired"] as WebAccessMode[]).includes(
-      webAccessMode
-    )
+    (
+      ["local", "unavailable", "checking", "serverUnavailable", "reauthRequired"] as WebAccessMode[]
+    ).includes(webAccessMode)
   ) {
     return (
       <div
@@ -5173,6 +5144,10 @@ export default function App() {
             webAccessMode === "unavailable" ? "billing" : undefined
           )}
           onAuthenticate={handleWebCloudAuthenticate}
+          onRetry={() => {
+            setWebCloudAuthState("checking");
+            setWebCloudRetryTick((current) => current + 1);
+          }}
           onOpenCloud={openAccountCloudSettings}
           onExportVault={() => void handleExportCurrentVaultForWeb()}
         />
