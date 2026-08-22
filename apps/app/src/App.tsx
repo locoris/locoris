@@ -513,6 +513,11 @@ export default function App() {
   const syncInFlightRef = useRef(false);
   const syncRerunRequestedRef = useRef(false);
   const bootSyncKeyRef = useRef<string | null>(null);
+  const hostedBindingRecoveryPromiseRef = useRef<Promise<{
+    restored: number;
+    failed: number;
+  }> | null>(null);
+  const hostedBindingReconciliationKeyRef = useRef<string | null>(null);
   const lastRemoteRefreshAtRef = useRef<Record<string, number>>({});
   const previousOnlineRef = useRef(online);
   const previousVisibilityRef = useRef(isDocumentVisible);
@@ -605,10 +610,10 @@ export default function App() {
     };
   }, [activeLocalVaultId]);
 
-  const refreshSyncRegistryState = () => {
+  const refreshSyncRegistryState = useCallback(() => {
     setSyncConnections(listSyncConnections());
     setSyncBindings(listSyncBindings());
-  };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -4208,62 +4213,65 @@ export default function App() {
     };
   };
 
-  const applyVaultBinding = async (
-    input: {
-      localVaultId: string;
-      connectionId: string;
-      remoteVaultId: string;
-      remoteVaultName?: string;
-      syncToken: string;
-    },
-    options?: {
-      resetLocalSyncState?: boolean;
-      keepBindingMetadata?: boolean;
-      lastSyncAt?: number | null;
-      syncCursor?: string | null;
-      successMessage?: string | null;
-      scheduleSync?: boolean;
-    }
-  ) => {
-    if (options?.resetLocalSyncState ?? true) {
-      await resetLocalVaultSyncBinding(input.localVaultId);
-    }
+  const applyVaultBinding = useCallback(
+    async (
+      input: {
+        localVaultId: string;
+        connectionId: string;
+        remoteVaultId: string;
+        remoteVaultName?: string;
+        syncToken: string;
+      },
+      options?: {
+        resetLocalSyncState?: boolean;
+        keepBindingMetadata?: boolean;
+        lastSyncAt?: number | null;
+        syncCursor?: string | null;
+        successMessage?: string | null;
+        scheduleSync?: boolean;
+      }
+    ) => {
+      if (options?.resetLocalSyncState ?? true) {
+        await resetLocalVaultSyncBinding(input.localVaultId);
+      }
 
-    updateLocalVaultProfile(input.localVaultId, {
-      vaultGuid: input.remoteVaultId
-    });
-
-    await upsertSyncBinding({
-      ...input,
-      syncStatus: "idle",
-      lastError: null,
-      ...(options?.keepBindingMetadata
-        ? {}
-        : {
-            lastSyncAt: options?.lastSyncAt ?? null,
-            syncCursor: options?.syncCursor ?? null
-          })
-    });
-
-    setLocalVaults(listLocalVaultProfiles());
-    refreshSyncRegistryState();
-
-    if (options?.successMessage) {
-      setSyncFeedback({
-        tone: "success",
-        text: options.successMessage
+      updateLocalVaultProfile(input.localVaultId, {
+        vaultGuid: input.remoteVaultId
       });
-    }
 
-    if ((options?.scheduleSync ?? false) && input.localVaultId === activeLocalVaultId) {
-      window.setTimeout(() => {
-        requestAutoSync({
-          delayMs: 700,
-          force: true
+      await upsertSyncBinding({
+        ...input,
+        syncStatus: "idle",
+        lastError: null,
+        ...(options?.keepBindingMetadata
+          ? {}
+          : {
+              lastSyncAt: options?.lastSyncAt ?? null,
+              syncCursor: options?.syncCursor ?? null
+            })
+      });
+
+      setLocalVaults(listLocalVaultProfiles());
+      refreshSyncRegistryState();
+
+      if (options?.successMessage) {
+        setSyncFeedback({
+          tone: "success",
+          text: options.successMessage
         });
-      }, 0);
-    }
-  };
+      }
+
+      if ((options?.scheduleSync ?? false) && input.localVaultId === activeLocalVaultId) {
+        window.setTimeout(() => {
+          requestAutoSync({
+            delayMs: 700,
+            force: true
+          });
+        }, 0);
+      }
+    },
+    [activeLocalVaultId, refreshSyncRegistryState, requestAutoSync]
+  );
 
   const handleBindVaultToConnection = async (input: {
     localVaultId: string;
@@ -4282,66 +4290,69 @@ export default function App() {
     });
   };
 
-  const handleRefreshHostedConnectionCredentials = async (connection: SyncConnection) => {
-    if (connection.provider !== "hosted") {
-      return;
-    }
-
-    if (!settings) {
-      throw new Error("APP_SETTINGS_NOT_READY");
-    }
-
-    const hostedBindings = syncBindings.filter((binding) => binding.connectionId === connection.id);
-
-    if (hostedBindings.length === 0) {
-      return;
-    }
-
-    const refreshedBindings: SyncVaultBinding[] = [];
-
-    for (const binding of hostedBindings) {
-      const response = await registerHostedVaultDevice(
-        connection.serverUrl,
-        connection.sessionToken,
-        binding.remoteVaultId,
-        getHostedDeviceIdentity(settings.localDeviceId)
-      );
-      const refreshedBinding = {
-        ...binding,
-        syncToken: response.token,
-        syncStatus: "idle",
-        lastError: null,
-        updatedAt: Date.now()
-      } satisfies SyncVaultBinding;
-
-      await applyVaultBinding(
-        {
-          localVaultId: binding.localVaultId,
-          connectionId: binding.connectionId,
-          remoteVaultId: binding.remoteVaultId,
-          remoteVaultName: binding.remoteVaultName,
-          syncToken: response.token
-        },
-        {
-          resetLocalSyncState: false,
-          keepBindingMetadata: true,
-          successMessage: null,
-          scheduleSync: false
-        }
-      );
-
-      if (binding.lastError || binding.syncStatus === "error") {
-        refreshedBindings.push(refreshedBinding);
+  const handleRefreshHostedConnectionCredentials = useCallback(
+    async (connection: SyncConnection) => {
+      if (connection.provider !== "hosted") {
+        return;
       }
-    }
 
-    for (const binding of refreshedBindings) {
-      await runBoundVaultSync(binding.localVaultId, {
-        bindingOverride: binding,
-        connectionOverride: connection
-      });
-    }
-  };
+      if (!settings) {
+        throw new Error("APP_SETTINGS_NOT_READY");
+      }
+
+      const hostedBindings = syncBindings.filter((binding) => binding.connectionId === connection.id);
+
+      if (hostedBindings.length === 0) {
+        return;
+      }
+
+      const refreshedBindings: SyncVaultBinding[] = [];
+
+      for (const binding of hostedBindings) {
+        const response = await registerHostedVaultDevice(
+          connection.serverUrl,
+          connection.sessionToken,
+          binding.remoteVaultId,
+          getHostedDeviceIdentity(settings.localDeviceId)
+        );
+        const refreshedBinding = {
+          ...binding,
+          syncToken: response.token,
+          syncStatus: "idle",
+          lastError: null,
+          updatedAt: Date.now()
+        } satisfies SyncVaultBinding;
+
+        await applyVaultBinding(
+          {
+            localVaultId: binding.localVaultId,
+            connectionId: binding.connectionId,
+            remoteVaultId: binding.remoteVaultId,
+            remoteVaultName: binding.remoteVaultName,
+            syncToken: response.token
+          },
+          {
+            resetLocalSyncState: false,
+            keepBindingMetadata: true,
+            successMessage: null,
+            scheduleSync: false
+          }
+        );
+
+        if (!binding.syncToken.trim() || binding.lastError || binding.syncStatus === "error") {
+          refreshedBindings.push(refreshedBinding);
+        }
+      }
+
+      for (const binding of refreshedBindings) {
+        await runBoundVaultSync(binding.localVaultId, {
+          bindingOverride: binding,
+          connectionOverride: connection
+        });
+      }
+    },
+    [applyVaultBinding, runBoundVaultSync, settings, syncBindings]
+  );
 
   const handleRefreshGoogleDriveConnectionCredentials = async (connection: SyncConnection) => {
     if (connection.provider !== "googleDrive") {
@@ -4371,68 +4382,246 @@ export default function App() {
     }
   };
 
-  const handleRestoreHostedVaultBindings = async (
-    connection: SyncConnection,
-    remoteVaults: HostedAccountVault[]
-  ) => {
-    if (connection.provider !== "hosted" || !settings) {
-      return { restored: 0, failed: 0 };
+  const handleRestoreHostedVaultBindings = useCallback(
+    async (connection: SyncConnection, remoteVaults: HostedAccountVault[]) => {
+      if (connection.provider !== "hosted" || !settings) {
+        return { restored: 0, failed: 0 };
+      }
+
+      let restored = 0;
+      let failed = 0;
+      const candidates = planExactHostedVaultBindingRecovery(
+        localVaults,
+        listSyncBindings(),
+        remoteVaults
+      );
+      let recoveryConnection = connection;
+
+      for (const { localVault: vault, remoteVault } of candidates) {
+        try {
+          const registerDevice = (candidate: SyncConnection) =>
+            registerHostedVaultDevice(
+              candidate.serverUrl,
+              candidate.sessionToken,
+              remoteVault.id,
+              getHostedDeviceIdentity(settings.localDeviceId)
+            );
+          let registration: Awaited<ReturnType<typeof registerHostedVaultDevice>>;
+
+          try {
+            registration = await registerDevice(recoveryConnection);
+          } catch (error) {
+            if (!isHostedReauthRequiredError(error)) {
+              throw error;
+            }
+
+            recoveryConnection = await refreshHostedConnectionSession(recoveryConnection, {
+              force: true
+            });
+            registration = await registerDevice(recoveryConnection);
+          }
+
+          await applyVaultBinding(
+            {
+              localVaultId: vault.id,
+              connectionId: recoveryConnection.id,
+              remoteVaultId: remoteVault.id,
+              remoteVaultName: remoteVault.name,
+              syncToken: registration.token
+            },
+            {
+              resetLocalSyncState: false,
+              keepBindingMetadata: false,
+              lastSyncAt: null,
+              syncCursor: null,
+              successMessage: null,
+              scheduleSync: false
+            }
+          );
+
+          const binding = listSyncBindings().find((entry) => entry.localVaultId === vault.id) ?? null;
+
+          if (binding) {
+            await runBoundVaultSync(vault.id, {
+              bindingOverride: binding,
+              connectionOverride: recoveryConnection
+            });
+          }
+
+          restored += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+
+      refreshSyncRegistryState();
+      return { restored, failed };
+    },
+    [
+      applyVaultBinding,
+      localVaults,
+      refreshHostedConnectionSession,
+      refreshSyncRegistryState,
+      runBoundVaultSync,
+      settings
+    ]
+  );
+
+  const restoreHostedVaultBindingsSingleFlight = useCallback(
+    (connection: SyncConnection, remoteVaults: HostedAccountVault[]) => {
+      if (hostedBindingRecoveryPromiseRef.current) {
+        return hostedBindingRecoveryPromiseRef.current;
+      }
+
+      const recovery = handleRestoreHostedVaultBindings(connection, remoteVaults).finally(() => {
+        if (hostedBindingRecoveryPromiseRef.current === recovery) {
+          hostedBindingRecoveryPromiseRef.current = null;
+        }
+      });
+
+      hostedBindingRecoveryPromiseRef.current = recovery;
+      return recovery;
+    },
+    [handleRestoreHostedVaultBindings]
+  );
+
+  useEffect(() => {
+    if (!online || !settings || !locorisCloudConnection) {
+      if (!locorisCloudConnection) {
+        hostedBindingReconciliationKeyRef.current = null;
+      }
+      return;
     }
 
-    let restored = 0;
-    let failed = 0;
-    const candidates = planExactHostedVaultBindingRecovery(
-      localVaults,
-      listSyncBindings(),
-      remoteVaults
-    );
+    const localIdentityKey = localVaults
+      .map((vault) => `${vault.id}:${vault.vaultGuid}`)
+      .sort()
+      .join("|");
+    const bindingIdentityKey = syncBindings
+      .map(
+        (binding) =>
+          `${binding.localVaultId}:${binding.connectionId}:${binding.remoteVaultId}:${binding.syncToken.trim() ? "ready" : "missing"}`
+      )
+      .sort()
+      .join("|");
+    const reconciliationKey = [
+      locorisCloudConnection.id,
+      locorisCloudConnection.userId ?? "",
+      locorisCloudConnection.serverUrl,
+      localIdentityKey,
+      bindingIdentityKey
+    ].join("::");
 
-    for (const { localVault: vault, remoteVault } of candidates) {
+    if (hostedBindingReconciliationKeyRef.current === reconciliationKey) {
+      return;
+    }
+
+    hostedBindingReconciliationKeyRef.current = reconciliationKey;
+    let cancelled = false;
+
+    const loadOverviewWithSessionRepair = async () => {
+      let connection =
+        listSyncConnections().find((entry) => entry.id === locorisCloudConnection.id) ??
+        locorisCloudConnection;
+
+      if (
+        shouldRefreshHostedSession(connection) ||
+        (!connection.sessionToken.trim() && canRefreshHostedSession(connection))
+      ) {
+        connection = await refreshHostedConnectionSession(connection, { force: true });
+      }
 
       try {
-        const registration = await registerHostedVaultDevice(
-          connection.serverUrl,
-          connection.sessionToken,
-          remoteVault.id,
-          getHostedDeviceIdentity(settings.localDeviceId)
-        );
-
-        await applyVaultBinding(
-          {
-            localVaultId: vault.id,
-            connectionId: connection.id,
-            remoteVaultId: remoteVault.id,
-            remoteVaultName: remoteVault.name,
-            syncToken: registration.token
-          },
-          {
-            resetLocalSyncState: false,
-            keepBindingMetadata: false,
-            lastSyncAt: null,
-            syncCursor: null,
-            successMessage: null,
-            scheduleSync: false
-          }
-        );
-
-        const binding = listSyncBindings().find((entry) => entry.localVaultId === vault.id) ?? null;
-
-        if (binding) {
-          await runBoundVaultSync(vault.id, {
-            bindingOverride: binding,
-            connectionOverride: connection
-          });
+        return {
+          connection,
+          overview: await loadHostedAccountOverview(connection.serverUrl, connection.sessionToken)
+        };
+      } catch (error) {
+        if (getErrorMessage(error) !== "UNAUTHORIZED") {
+          throw error;
         }
 
-        restored += 1;
-      } catch {
-        failed += 1;
+        connection = await refreshHostedConnectionSession(connection, { force: true });
+        return {
+          connection,
+          overview: await loadHostedAccountOverview(connection.serverUrl, connection.sessionToken)
+        };
       }
-    }
+    };
 
-    refreshSyncRegistryState();
-    return { restored, failed };
-  };
+    void loadOverviewWithSessionRepair()
+      .then(async ({ connection, overview }) => {
+        const bindingsNeedingCredentials = listSyncBindings().some(
+          (binding) => binding.connectionId === connection.id && !binding.syncToken.trim()
+        );
+
+        if (bindingsNeedingCredentials) {
+          await handleRefreshHostedConnectionCredentials(connection);
+        }
+
+        const restoration = await restoreHostedVaultBindingsSingleFlight(
+          connection,
+          overview.vaults
+        );
+        let nextOverview = overview;
+
+        if (restoration.restored > 0) {
+          nextOverview = await loadHostedAccountOverview(
+            connection.serverUrl,
+            connection.sessionToken
+          );
+          setSyncFeedback(null);
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        if (adaptiveLayout.runtimeKind === "web") {
+          setWebCloudOverview(nextOverview);
+          setWebCloudAuthState("authenticated");
+          setWebCloudInitialCheckComplete(true);
+        }
+
+        if (restoration.failed > 0) {
+          setWebAccessFeedback({
+            tone: "error",
+            text: t("settings.accountCloudBindingsRestorePartial", {
+              restored: restoration.restored,
+              failed: restoration.failed
+            })
+          });
+        }
+      })
+      .catch((error) => {
+        hostedBindingReconciliationKeyRef.current = null;
+
+        if (cancelled) {
+          return;
+        }
+
+        if (adaptiveLayout.runtimeKind === "web" && isHostedReauthRequiredError(error)) {
+          setWebCloudAuthState("reauthRequired");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    adaptiveLayout.runtimeKind,
+    handleRefreshHostedConnectionCredentials,
+    localVaults,
+    locorisCloudConnection?.id,
+    locorisCloudConnection?.serverUrl,
+    locorisCloudConnection?.userId,
+    online,
+    refreshHostedConnectionSession,
+    restoreHostedVaultBindingsSingleFlight,
+    settings,
+    syncBindings,
+    t
+  ]);
 
   const handleWebCloudAuthenticate = async (input: WebAuthInput) => {
     if (!settings) {
@@ -4543,7 +4732,7 @@ export default function App() {
 
         void (async () => {
           await handleRefreshHostedConnectionCredentials(connection);
-          const restoration = await handleRestoreHostedVaultBindings(connection, overview.vaults);
+          const restoration = await restoreHostedVaultBindingsSingleFlight(connection, overview.vaults);
 
           if (restoration.failed > 0) {
             setWebAccessFeedback({
@@ -5430,7 +5619,7 @@ export default function App() {
             onUpdateConnection={handleUpdateSyncConnection}
             onRefreshHostedConnectionCredentials={handleRefreshHostedConnectionCredentials}
             onRefreshGoogleDriveConnectionCredentials={handleRefreshGoogleDriveConnectionCredentials}
-            onRestoreHostedVaultBindings={handleRestoreHostedVaultBindings}
+            onRestoreHostedVaultBindings={restoreHostedVaultBindingsSingleFlight}
             onBindVault={(input) => handleBindVaultToConnection(input)}
             onImportRemoteVault={(input) => handleImportRemoteVault(input)}
             onDeleteRemoteVault={(input) => handleDeleteRemoteVault(input)}
