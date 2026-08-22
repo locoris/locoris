@@ -8,14 +8,27 @@ export type HostedVaultBindingRecoveryCandidate = {
 
 export function planExactHostedVaultBindingRecovery(
   localVaults: readonly LocalVaultProfile[],
-  currentBindings: readonly Pick<SyncVaultBinding, "localVaultId">[],
+  currentBindings: readonly Pick<SyncVaultBinding, "localVaultId" | "remoteVaultId">[],
   remoteVaults: readonly HostedAccountVault[]
 ) {
   const boundLocalVaultIds = new Set(currentBindings.map((binding) => binding.localVaultId));
+  const boundRemoteVaultIds = new Set(currentBindings.map((binding) => binding.remoteVaultId));
   const remoteVaultById = new Map(remoteVaults.map((vault) => [vault.id, vault]));
+  const localVaultCountByGuid = new Map<string, number>();
+
+  for (const localVault of localVaults) {
+    localVaultCountByGuid.set(
+      localVault.vaultGuid,
+      (localVaultCountByGuid.get(localVault.vaultGuid) ?? 0) + 1
+    );
+  }
 
   return localVaults.flatMap((localVault) => {
-    if (boundLocalVaultIds.has(localVault.id)) {
+    if (
+      boundLocalVaultIds.has(localVault.id) ||
+      boundRemoteVaultIds.has(localVault.vaultGuid) ||
+      localVaultCountByGuid.get(localVault.vaultGuid) !== 1
+    ) {
       return [];
     }
 
