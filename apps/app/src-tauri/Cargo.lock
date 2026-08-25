@@ -2241,7 +2241,7 @@ dependencies = [
 
 [[package]]
 name = "locoris-app"
-version = "1.0.54"
+version = "1.0.55"
 dependencies = [
  "log",
  "mdns-sd",

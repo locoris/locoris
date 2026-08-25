@@ -1,0 +1,454 @@
+.account-cloud-identity {
+  --account-cloud-status-color: var(--settings-accent);
+  min-width: 0;
+  display: grid;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--account-cloud-status-color) 22%, rgba(255, 255, 255, 0.11));
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--account-cloud-status-color) 13%, transparent), transparent 46%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.062), rgba(255, 255, 255, 0.018) 64%),
+    rgba(255, 255, 255, 0.025);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(22px) saturate(126%);
+}
+
+.account-cloud-identity.is-ready {
+  --account-cloud-status-color: var(--settings-accent-secondary);
+}
+
+.account-cloud-identity.is-warning {
+  --account-cloud-status-color: var(--text-emphasis, #ffe08a);
+}
+
+.account-cloud-identity.is-muted {
+  --account-cloud-status-color: color-mix(in srgb, var(--settings-accent) 52%, rgba(255, 255, 255, 0.34));
+}
+
+.account-cloud-identity-topline {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(250px, 0.9fr) minmax(390px, 1.25fr) auto;
+  align-items: center;
+  gap: clamp(12px, 1.4vw, 20px);
+  padding: 13px 15px;
+}
+
+.account-cloud-identity-topline > *,
+.account-cloud-identity-icon,
+.account-cloud-identity-copy,
+.account-cloud-identity-actions {
+  align-self: center;
+}
+
+.account-cloud-identity-main {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.account-cloud-identity-icon {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--account-cloud-status-color) 34%, rgba(255, 255, 255, 0.13));
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at 30% 18%, color-mix(in srgb, var(--account-cloud-status-color) 24%, transparent), transparent 55%),
+    rgba(255, 255, 255, 0.038);
+  color: color-mix(in srgb, var(--account-cloud-status-color) 64%, #fff 36%);
+}
+
+.account-cloud-identity-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.account-cloud-identity-copy {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  justify-content: stretch;
+  gap: 4px;
+}
+
+.account-cloud-identity-titleline {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-cloud-identity-titleline h3 {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: rgba(249, 251, 255, 0.97);
+  font-size: clamp(0.98rem, 1.16vw, 1.14rem);
+  font-weight: 810;
+  line-height: 1.14;
+}
+
+.account-cloud-profile-edit,
+.account-cloud-profile-icon-action,
+.account-cloud-icon-button {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--account-cloud-status-color) 20%, rgba(255, 255, 255, 0.11));
+  background: rgba(255, 255, 255, 0.035);
+  color: color-mix(in srgb, var(--account-cloud-status-color) 52%, #fff 48%);
+  cursor: pointer;
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 160ms ease,
+    background 160ms ease,
+    opacity 160ms ease;
+}
+
+.account-cloud-profile-edit {
+  width: 28px;
+  height: 28px;
+  border-color: transparent;
+  background: transparent;
+  opacity: 0.62;
+}
+
+.account-cloud-profile-edit svg {
+  width: 16px;
+  height: 16px;
+}
+
+.account-cloud-profile-edit path,
+.account-cloud-profile-icon-action path,
+.account-cloud-icon-button path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.account-cloud-identity-description {
+  min-width: 0;
+  color: rgba(196, 205, 235, 0.72);
+  overflow: hidden;
+  font-size: 0.68rem;
+  font-weight: 540;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-cloud-identity-chips {
+  min-width: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+  margin-top: 1px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+
+.account-cloud-identity-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.account-cloud-identity-chips > span {
+  min-height: 21px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border: 1px solid color-mix(in srgb, var(--account-cloud-status-color) 18%, rgba(255, 255, 255, 0.1));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--account-cloud-status-color) 7%, rgba(255, 255, 255, 0.022));
+  color: rgba(216, 224, 246, 0.82);
+  font-size: 0.58rem;
+  font-weight: 770;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.account-cloud-identity-chips > span.is-ready {
+  color: color-mix(in srgb, var(--settings-accent-secondary) 74%, #fff 26%);
+}
+
+.account-cloud-identity-chips > span.is-warning {
+  color: color-mix(in srgb, var(--text-emphasis, #ffe08a) 78%, #fff 22%);
+}
+
+.account-cloud-identity-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.account-cloud-icon-button {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+}
+
+.account-cloud-icon-button svg {
+  width: 19px;
+  height: 19px;
+}
+
+.account-cloud-icon-button.is-danger {
+  border-color: color-mix(in srgb, #ff8fb0 28%, rgba(255, 255, 255, 0.1));
+  color: color-mix(in srgb, #ffacc3 76%, #fff 24%);
+}
+
+.account-cloud-profile-inline {
+  min-width: 0;
+  width: min(520px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+}
+
+.account-cloud-profile-inline input {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--account-cloud-status-color) 42%, rgba(255, 255, 255, 0.14));
+  border-radius: 14px;
+  background: rgba(5, 8, 18, 0.34);
+  color: rgba(250, 252, 255, 0.96);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 760;
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--account-cloud-status-color) 8%, transparent);
+}
+
+.account-cloud-profile-icon-action {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+}
+
+.account-cloud-profile-icon-action svg {
+  width: 18px;
+  height: 18px;
+}
+
+.account-cloud-profile-icon-action.is-save {
+  border-color: color-mix(in srgb, var(--settings-accent-secondary) 34%, rgba(255, 255, 255, 0.12));
+  color: color-mix(in srgb, var(--settings-accent-secondary) 72%, #fff 28%);
+}
+
+.account-cloud-profile-edit:hover,
+.account-cloud-profile-edit:focus-visible,
+.account-cloud-profile-icon-action:hover,
+.account-cloud-profile-icon-action:focus-visible,
+.account-cloud-icon-button:hover,
+.account-cloud-icon-button:focus-visible {
+  outline: none;
+  opacity: 1;
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--account-cloud-status-color) 42%, rgba(255, 255, 255, 0.18));
+  background-color: rgba(255, 255, 255, 0.065);
+}
+
+.account-cloud-profile-edit:disabled,
+.account-cloud-profile-icon-action:disabled,
+.account-cloud-icon-button:disabled {
+  cursor: default;
+  opacity: 0.42;
+  transform: none;
+}
+
+.account-cloud-identity-usage {
+  min-width: 0;
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  border-left: 1px solid rgba(255, 255, 255, 0.075);
+  border-right: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+.account-cloud-identity-meter {
+  --account-cloud-meter-color: var(--settings-accent-secondary);
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-content: center;
+  gap: 4px;
+  padding: 4px clamp(10px, 1.1vw, 14px);
+}
+
+.account-cloud-identity-meter + .account-cloud-identity-meter {
+  border-left: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+.account-cloud-identity-meter.is-warning {
+  --account-cloud-meter-color: var(--text-emphasis, #ffe08a);
+}
+
+.account-cloud-identity-meter.is-error {
+  --account-cloud-meter-color: #ff8fb0;
+}
+
+.account-cloud-identity-meter.is-unlimited {
+  --account-cloud-meter-color: var(--settings-accent);
+}
+
+.account-cloud-identity-meter > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(196, 205, 235, 0.7);
+  font-size: 0.54rem;
+  font-weight: 820;
+  letter-spacing: 0.07em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.account-cloud-identity-meter strong {
+  min-width: 0;
+  color: rgba(250, 252, 255, 0.94);
+  overflow: hidden;
+  font-size: 0.67rem;
+  font-weight: 820;
+  line-height: 1.2;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-cloud-identity-track {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  display: block;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.account-cloud-identity-track > span {
+  width: var(--account-cloud-meter-fill, 0%);
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--account-cloud-meter-color) 78%, transparent), var(--account-cloud-meter-color));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--account-cloud-meter-color) 18%, transparent);
+  transition: width 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.account-cloud-identity-meter.is-unlimited .account-cloud-identity-track > span {
+  opacity: 0.42;
+}
+
+.account-cloud-identity-meter.is-loading .account-cloud-identity-track > span {
+  width: 34%;
+  opacity: 0.2;
+}
+
+@media (max-width: 1120px) {
+  .account-cloud-identity-topline {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px 14px;
+  }
+
+  .account-cloud-identity-usage {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.075);
+    padding-top: 9px;
+  }
+
+  .account-cloud-identity-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 760px), (orientation: portrait) {
+  .account-cloud-identity-topline {
+    padding: 12px;
+  }
+
+  .account-cloud-identity-actions .account-cloud-primary-action {
+    flex: 1 1 auto;
+  }
+
+  .account-cloud-icon-button {
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+  }
+}
+
+@media (max-width: 520px) {
+  .account-cloud-identity {
+    border-radius: 19px;
+  }
+
+  .account-cloud-identity-main {
+    align-items: center;
+    gap: 9px;
+  }
+
+  .account-cloud-identity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+  }
+
+  .account-cloud-identity-titleline h3 {
+    font-size: 0.96rem;
+  }
+
+  .account-cloud-profile-inline {
+    grid-column: 1 / -1;
+  }
+
+  .account-cloud-identity-usage {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .account-cloud-identity-meter {
+    align-content: center;
+    gap: 4px;
+    padding: 1px 7px 0;
+  }
+
+  .account-cloud-identity-meter strong {
+    min-height: 0;
+    font-size: 0.61rem;
+    text-align: left;
+  }
+
+  .account-cloud-identity-meter > span:first-child {
+    font-size: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-cloud-profile-edit,
+  .account-cloud-profile-icon-action,
+  .account-cloud-icon-button,
+  .account-cloud-identity-track > span {
+    transition: none;
+  }
+}

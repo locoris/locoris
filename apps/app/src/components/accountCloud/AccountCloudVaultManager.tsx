@@ -41,6 +41,7 @@ type AccountCloudVaultManagerProps = {
   onRequestDeleteLocalVault: (vault: LocalVaultProfile) => void;
   onRequestDeleteRemoteVault: (remoteVault: HostedAccountVault) => void;
   onRequestCloudSignIn: () => void;
+  onScopeChange?: () => void;
 };
 
 function VaultGlyph({ cloud = false }: { cloud?: boolean }) {
@@ -145,7 +146,8 @@ export default function AccountCloudVaultManager({
   onRenameRemoteVault,
   onRequestDeleteLocalVault,
   onRequestDeleteRemoteVault,
-  onRequestCloudSignIn
+  onRequestCloudSignIn,
+  onScopeChange
 }: AccountCloudVaultManagerProps) {
   const { t } = useTranslation();
   const [scope, setScope] = useState<VaultScope>("local");
@@ -181,6 +183,16 @@ export default function AccountCloudVaultManager({
     setEditingVault(null);
     setNameDraft("");
     setRenameError("");
+  };
+
+  const selectScope = (nextScope: VaultScope) => {
+    if (nextScope === scope) {
+      return;
+    }
+
+    setScope(nextScope);
+    cancelRename();
+    onScopeChange?.();
   };
 
   const submitRename = async (event: FormEvent, currentName: string) => {
@@ -229,10 +241,7 @@ export default function AccountCloudVaultManager({
           role="tab"
           aria-selected={scope === "local"}
           className={scope === "local" ? "is-active" : ""}
-          onClick={() => {
-            setScope("local");
-            cancelRename();
-          }}
+          onClick={() => selectScope("local")}
         >
           <VaultGlyph />
           <span>{t("settings.accountCloudLocalVaultsTab")}</span>
@@ -243,10 +252,7 @@ export default function AccountCloudVaultManager({
           role="tab"
           aria-selected={scope === "cloud"}
           className={scope === "cloud" ? "is-active" : ""}
-          onClick={() => {
-            setScope("cloud");
-            cancelRename();
-          }}
+          onClick={() => selectScope("cloud")}
         >
           <VaultGlyph cloud />
           <span>{t("settings.accountCloudCloudVaultsTab")}</span>
@@ -271,15 +277,6 @@ export default function AccountCloudVaultManager({
                   <VaultGlyph />
                 </span>
                 <div className="account-cloud-managed-copy">
-                  <div className="account-cloud-managed-chips">
-                    {active ? <span className="is-accent">{t("sync.localVaultActive")}</span> : null}
-                    <span>{vault.vaultKind === "private" ? t("settings.vaultKindPrivate") : t("settings.vaultKindRegular")}</span>
-                    <span className={binding ? "is-ready" : ""}>
-                      {binding ? t("settings.accountCloudConnected") : t("settings.accountCloudNotConnected")}
-                    </span>
-                    {locked ? <span className="is-warning">{t("settings.vaultEncryptionLocked")}</span> : null}
-                  </div>
-
                   {editing ? (
                     <form className="account-cloud-inline-rename" onSubmit={(event) => void submitRename(event, name)}>
                       <input
@@ -312,15 +309,24 @@ export default function AccountCloudVaultManager({
                     </button>
                   )}
 
+                  <div className="account-cloud-managed-chips">
+                    {active ? <span className="is-accent">{t("sync.localVaultActive")}</span> : null}
+                    <span>{vault.vaultKind === "private" ? t("settings.vaultKindPrivate") : t("settings.vaultKindRegular")}</span>
+                    <span className={binding ? "is-ready" : ""}>
+                      {binding ? t("settings.accountCloudConnected") : t("settings.accountCloudNotConnected")}
+                    </span>
+                    {locked ? <span className="is-warning">{t("settings.vaultEncryptionLocked")}</span> : null}
+                  </div>
+
                   {renameError && editing ? <small className="account-cloud-rename-error">{renameError}</small> : null}
-                  <p>
-                    {binding
-                      ? t("settings.accountCloudLocalVaultConnectedTo", {
-                          vault: binding.remoteVaultName,
-                          date: formatVaultActivity(binding.lastSyncAt, language) ?? t("settings.accountCloudNeverSynced")
-                        })
-                      : t("settings.accountCloudLocalVaultOnlyDescription")}
-                  </p>
+                  {binding ? (
+                    <p>
+                      {t("settings.accountCloudLocalVaultConnectedTo", {
+                        vault: binding.remoteVaultName,
+                        date: formatVaultActivity(binding.lastSyncAt, language) ?? t("settings.accountCloudNeverSynced")
+                      })}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="account-cloud-managed-actions">
@@ -359,7 +365,7 @@ export default function AccountCloudVaultManager({
                     <button
                       type="button"
                       className="account-cloud-compact-action"
-                      disabled={!cloudConnected || !cloudCanWrite || locked || Boolean(busyKey) || !online}
+                      disabled={(cloudConnected && !cloudCanWrite) || locked || Boolean(busyKey) || !online}
                       onClick={() => onConnectLocalVault(vault)}
                     >
                       {busy ? t("sync.syncing") : t("settings.accountCloudConnectVault")}
@@ -418,14 +424,6 @@ export default function AccountCloudVaultManager({
                   <VaultGlyph cloud />
                 </span>
                 <div className="account-cloud-managed-copy">
-                  <div className="account-cloud-managed-chips">
-                    <span>{remoteVault.vaultKind === "private" ? t("settings.vaultKindPrivate") : t("settings.vaultKindRegular")}</span>
-                    <span className={binding ? "is-ready" : ""}>
-                      {binding ? t("settings.accountCloudImportedOnDevice") : t("settings.accountCloudOnly")}
-                    </span>
-                    <span>{t("settings.accountCloudDeviceVaultCount", { count: remoteVault.deviceCount ?? remoteVault.tokenCount })}</span>
-                  </div>
-
                   {editing ? (
                     <form
                       className="account-cloud-inline-rename"
@@ -460,6 +458,14 @@ export default function AccountCloudVaultManager({
                       <EditGlyph />
                     </button>
                   )}
+
+                  <div className="account-cloud-managed-chips">
+                    <span>{remoteVault.vaultKind === "private" ? t("settings.vaultKindPrivate") : t("settings.vaultKindRegular")}</span>
+                    <span className={binding ? "is-ready" : ""}>
+                      {binding ? t("settings.accountCloudImportedOnDevice") : t("settings.accountCloudOnly")}
+                    </span>
+                    <span>{t("settings.accountCloudDeviceVaultCount", { count: remoteVault.deviceCount ?? remoteVault.tokenCount })}</span>
+                  </div>
 
                   {renameError && editing ? <small className="account-cloud-rename-error">{renameError}</small> : null}
                   <p>
