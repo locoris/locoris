@@ -16,7 +16,9 @@ const MOBILE_EDITOR_VIEWPORT_PROPERTIES = [
   "--locoris-mobile-editor-viewport-left",
   "--locoris-mobile-editor-viewport-width",
   "--locoris-mobile-editor-viewport-height",
-  "--locoris-mobile-editor-keyboard-inset"
+  "--locoris-mobile-editor-keyboard-inset",
+  "--locoris-mobile-editor-selection-toolbar-top",
+  "--locoris-mobile-editor-selection-toolbar-bottom"
 ] as const;
 const EDITOR_INTERACTIVE_SELECTOR = [
   "button",
@@ -62,6 +64,42 @@ function px(value: number) {
   return `${Math.max(0, Math.round(value * 100) / 100)}px`;
 }
 
+type MobileSelectionToolbarPlacement = {
+  selectionTop: number;
+  selectionBottom: number;
+  toolbarHeight: number;
+  safeTop: number;
+  safeBottom: number;
+  gap?: number;
+};
+
+export function resolveMobileSelectionToolbarTop({
+  selectionTop,
+  selectionBottom,
+  toolbarHeight,
+  safeTop,
+  safeBottom,
+  gap = 10
+}: MobileSelectionToolbarPlacement) {
+  const maximumTop = Math.max(safeTop, safeBottom - toolbarHeight);
+  const above = selectionTop - toolbarHeight - gap;
+  const below = selectionBottom + gap;
+
+  if (above >= safeTop) {
+    return Math.min(above, maximumTop);
+  }
+
+  if (below + toolbarHeight <= safeBottom) {
+    return Math.max(safeTop, below);
+  }
+
+  const availableAbove = Math.max(0, selectionTop - safeTop);
+  const availableBelow = Math.max(0, safeBottom - selectionBottom);
+  const preferred = availableAbove >= availableBelow ? above : below;
+
+  return Math.min(maximumTop, Math.max(safeTop, preferred));
+}
+
 export default function useMobileEditorExperience({
   editorPaneRef,
   editorStageRef,
@@ -91,12 +129,119 @@ export default function useMobileEditorExperience({
     );
     const visualViewport = window.visualViewport;
     let viewportFrame = 0;
+    let viewportShouldKeepCaretVisible = false;
     let caretFrame = 0;
     let caretTimer = 0;
+    let toolbarFrame = 0;
+    let toolbarTimer = 0;
     let pointerStart: { x: number; y: number } | null = null;
+    let suppressCaretUntil = 0;
+    let programmaticCaretScroll = false;
+
+    const cancelCaretVisibility = () => {
+      window.clearTimeout(caretTimer);
+      caretTimer = 0;
+
+      if (caretFrame) {
+        window.cancelAnimationFrame(caretFrame);
+        caretFrame = 0;
+      }
+    };
+
+    const markManualScroll = () => {
+      suppressCaretUntil = performance.now() + 420;
+      cancelCaretVisibility();
+    };
+
+    const clearToolbarPosition = () => {
+      documentRoot.style.removeProperty("--locoris-mobile-editor-selection-toolbar-top");
+      documentRoot.style.removeProperty("--locoris-mobile-editor-selection-toolbar-bottom");
+    };
+
+    const positionSelectionToolbar = () => {
+      toolbarFrame = 0;
+      const selection = window.getSelection();
+
+      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+        clearToolbarPosition();
+        return;
+      }
+
+      const selectionElement = getSelectionElement(selection);
+
+      if (!selectionElement?.closest(".locoris-editor-surface")) {
+        clearToolbarPosition();
+        return;
+      }
+
+      const toolbar = Array.from(
+        document.querySelectorAll<HTMLElement>(".editor-floating-toolbar-popover")
+      ).find((element) => element.getClientRects().length > 0);
+
+      if (!toolbar) {
+        return;
+      }
+
+      const selectionRect = selection.getRangeAt(0).getBoundingClientRect();
+      const toolbarRect = toolbar.getBoundingClientRect();
+      const stageRect = editorStage.getBoundingClientRect();
+      const viewportTop = visualViewport?.offsetTop ?? 0;
+      const viewportBottom = viewportTop + (visualViewport?.height ?? window.innerHeight);
+      const safeTop = Math.max(stageRect.top + 8, viewportTop + 8);
+      const safeBottom = Math.min(stageRect.bottom - 8, viewportBottom - 8);
+
+      if (
+        selectionRect.height <= 0 ||
+        toolbarRect.height <= 0 ||
+        safeBottom - safeTop < toolbarRect.height
+      ) {
+        clearToolbarPosition();
+        return;
+      }
+
+      const top = resolveMobileSelectionToolbarTop({
+        selectionTop: selectionRect.top,
+        selectionBottom: selectionRect.bottom,
+        toolbarHeight: toolbarRect.height,
+        safeTop,
+        safeBottom
+      });
+
+      documentRoot.style.setProperty(
+        "--locoris-mobile-editor-selection-toolbar-top",
+        px(top)
+      );
+      documentRoot.style.setProperty(
+        "--locoris-mobile-editor-selection-toolbar-bottom",
+        "auto"
+      );
+    };
+
+    const scheduleToolbarPosition = (delay = 0) => {
+      window.clearTimeout(toolbarTimer);
+
+      if (delay > 0) {
+        toolbarTimer = window.setTimeout(() => scheduleToolbarPosition(), delay);
+        return;
+      }
+
+      if (toolbarFrame) {
+        window.cancelAnimationFrame(toolbarFrame);
+      }
+
+      toolbarFrame = window.requestAnimationFrame(positionSelectionToolbar);
+    };
 
     const ensureCaretIsVisible = () => {
       caretFrame = 0;
+
+      if (
+        editorPane.dataset.mobileKeyboard !== "open" ||
+        performance.now() < suppressCaretUntil
+      ) {
+        return;
+      }
+
       const selection = window.getSelection();
 
       if (!selection || selection.rangeCount === 0 || !selection.isCollapsed) {
@@ -127,7 +272,11 @@ export default function useMobileEditorExperience({
       }
 
       if (Math.abs(delta) > 1) {
+        programmaticCaretScroll = true;
         editorStage.scrollBy({ top: delta, behavior: "auto" });
+        window.requestAnimationFrame(() => {
+          programmaticCaretScroll = false;
+        });
       }
     };
 
@@ -148,6 +297,8 @@ export default function useMobileEditorExperience({
 
     const syncVisualViewport = () => {
       viewportFrame = 0;
+      const shouldKeepCaretVisible = viewportShouldKeepCaretVisible;
+      viewportShouldKeepCaretVisible = false;
       const viewportTop = visualViewport?.offsetTop ?? 0;
       const viewportLeft = visualViewport?.offsetLeft ?? 0;
       const viewportWidth = visualViewport?.width ?? window.innerWidth;
@@ -170,12 +321,16 @@ export default function useMobileEditorExperience({
       documentRoot.style.setProperty("--locoris-mobile-editor-keyboard-inset", px(keyboardInset));
       editorPane.dataset.mobileKeyboard = keyboardOpen ? "open" : "closed";
 
-      if (editorHasFocus) {
+      if (shouldKeepCaretVisible && editorHasFocus && keyboardOpen) {
         scheduleCaretVisibility(48);
       }
+
+      scheduleToolbarPosition();
     };
 
-    const scheduleViewportSync = () => {
+    const scheduleViewportSync = (keepCaretVisible = false) => {
+      viewportShouldKeepCaretVisible ||= keepCaretVisible;
+
       if (viewportFrame) {
         window.cancelAnimationFrame(viewportFrame);
       }
@@ -189,6 +344,16 @@ export default function useMobileEditorExperience({
       }
 
       pointerStart = { x: event.clientX, y: event.clientY };
+    };
+
+    const handleEditorPointerMove = (event: PointerEvent) => {
+      const start = pointerStart;
+
+      if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) <= 9) {
+        return;
+      }
+
+      markManualScroll();
     };
 
     const handleEditorPointerUp = (event: PointerEvent) => {
@@ -207,19 +372,15 @@ export default function useMobileEditorExperience({
         return;
       }
 
-      const activeElement = document.activeElement;
-
-      if (
-        activeElement instanceof HTMLElement &&
-        editorPane.contains(activeElement) &&
-        activeElement.isContentEditable
-      ) {
+      if (event.target.closest(".bn-editor")) {
+        // iOS places the caret and focuses contenteditable correctly on the first tap.
+        // Calling editor.focus() here overwrites that native result and makes the next tap
+        // look like the first effective interaction.
         scheduleCaretVisibility(60);
         return;
       }
 
-      const isInsideEditor = Boolean(event.target.closest(".bn-editor"));
-      focusRequestRef.current({ moveToDocumentEnd: !isInsideEditor });
+      focusRequestRef.current({ moveToDocumentEnd: true });
       scheduleCaretVisibility(80);
     };
 
@@ -227,41 +388,90 @@ export default function useMobileEditorExperience({
       pointerStart = null;
     };
 
-    const handleFocusChange = () => {
-      scheduleViewportSync();
+    const handleFocusIn = () => {
+      scheduleViewportSync(true);
       scheduleCaretVisibility(60);
     };
 
-    const handleSelectionChange = () => scheduleCaretVisibility();
+    const handleFocusOut = () => scheduleViewportSync();
+
+    const handleInput = () => {
+      scheduleViewportSync(true);
+      scheduleCaretVisibility(40);
+    };
+
+    const handleSelectionChange = () => {
+      scheduleToolbarPosition();
+      scheduleToolbarPosition(36);
+    };
+
+    const handleEditorScroll = () => {
+      if (!programmaticCaretScroll) {
+        markManualScroll();
+      }
+
+      scheduleToolbarPosition();
+    };
+
+    const handleWheel = () => markManualScroll();
+
+    const handleViewportResize = () => scheduleViewportSync(true);
+    const handleViewportScroll = () => scheduleViewportSync();
+
+    const toolbarObserver = new MutationObserver((records) => {
+      const toolbarWasAdded = records.some((record) =>
+        Array.from(record.addedNodes).some(
+          (node) =>
+            node instanceof Element &&
+            (node.matches(".editor-floating-toolbar-popover") ||
+              Boolean(node.querySelector(".editor-floating-toolbar-popover")))
+        )
+      );
+
+      if (toolbarWasAdded) {
+        scheduleToolbarPosition();
+        scheduleToolbarPosition(36);
+      }
+    });
 
     syncVisualViewport();
-    visualViewport?.addEventListener("resize", scheduleViewportSync);
-    visualViewport?.addEventListener("scroll", scheduleViewportSync);
-    window.addEventListener("resize", scheduleViewportSync);
-    window.addEventListener("orientationchange", scheduleViewportSync);
+    toolbarObserver.observe(document.body, { childList: true, subtree: true });
+    visualViewport?.addEventListener("resize", handleViewportResize);
+    visualViewport?.addEventListener("scroll", handleViewportScroll);
+    window.addEventListener("resize", handleViewportResize);
+    window.addEventListener("orientationchange", handleViewportResize);
     document.addEventListener("selectionchange", handleSelectionChange);
     editorStage.addEventListener("pointerdown", handleEditorPointerDown, true);
+    editorStage.addEventListener("pointermove", handleEditorPointerMove, true);
     editorStage.addEventListener("pointerup", handleEditorPointerUp, true);
     editorStage.addEventListener("pointercancel", handleEditorPointerCancel, true);
-    editorStage.addEventListener("input", handleFocusChange);
-    editorPane.addEventListener("focusin", handleFocusChange);
-    editorPane.addEventListener("focusout", handleFocusChange);
+    editorStage.addEventListener("scroll", handleEditorScroll, { passive: true });
+    editorStage.addEventListener("wheel", handleWheel, { passive: true });
+    editorStage.addEventListener("input", handleInput);
+    editorPane.addEventListener("focusin", handleFocusIn);
+    editorPane.addEventListener("focusout", handleFocusOut);
 
     return () => {
-      visualViewport?.removeEventListener("resize", scheduleViewportSync);
-      visualViewport?.removeEventListener("scroll", scheduleViewportSync);
-      window.removeEventListener("resize", scheduleViewportSync);
-      window.removeEventListener("orientationchange", scheduleViewportSync);
+      toolbarObserver.disconnect();
+      visualViewport?.removeEventListener("resize", handleViewportResize);
+      visualViewport?.removeEventListener("scroll", handleViewportScroll);
+      window.removeEventListener("resize", handleViewportResize);
+      window.removeEventListener("orientationchange", handleViewportResize);
       document.removeEventListener("selectionchange", handleSelectionChange);
       editorStage.removeEventListener("pointerdown", handleEditorPointerDown, true);
+      editorStage.removeEventListener("pointermove", handleEditorPointerMove, true);
       editorStage.removeEventListener("pointerup", handleEditorPointerUp, true);
       editorStage.removeEventListener("pointercancel", handleEditorPointerCancel, true);
-      editorStage.removeEventListener("input", handleFocusChange);
-      editorPane.removeEventListener("focusin", handleFocusChange);
-      editorPane.removeEventListener("focusout", handleFocusChange);
+      editorStage.removeEventListener("scroll", handleEditorScroll);
+      editorStage.removeEventListener("wheel", handleWheel);
+      editorStage.removeEventListener("input", handleInput);
+      editorPane.removeEventListener("focusin", handleFocusIn);
+      editorPane.removeEventListener("focusout", handleFocusOut);
       window.cancelAnimationFrame(viewportFrame);
       window.cancelAnimationFrame(caretFrame);
+      window.cancelAnimationFrame(toolbarFrame);
       window.clearTimeout(caretTimer);
+      window.clearTimeout(toolbarTimer);
       delete editorPane.dataset.mobileKeyboard;
 
       previousProperties.forEach((value, property) => {
