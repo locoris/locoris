@@ -1,3 +1,5 @@
+import { useRef } from "react";
+
 import "./MobileEditorToolbar.css";
 
 type MobileEditorToolbarProps = {
@@ -29,12 +31,31 @@ function MobileEditorToolbarButton({
   onPress,
   emphasis = false
 }: MobileEditorToolbarButtonProps) {
+  const touchPressHandledRef = useRef(false);
+
   return (
     <button
       type="button"
       className={emphasis ? "is-emphasis" : undefined}
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={onPress}
+      onPointerDown={(event) => {
+        event.preventDefault();
+
+        if (event.pointerType !== "mouse") {
+          touchPressHandledRef.current = true;
+          onPress();
+        }
+      }}
+      onPointerCancel={() => {
+        touchPressHandledRef.current = false;
+      }}
+      onClick={() => {
+        if (touchPressHandledRef.current) {
+          touchPressHandledRef.current = false;
+          return;
+        }
+
+        onPress();
+      }}
       aria-label={label}
       title={label}
     >
