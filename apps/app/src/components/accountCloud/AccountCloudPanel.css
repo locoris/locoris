@@ -1,36 +1,20 @@
 .account-cloud-panel-shell {
-  --account-cloud-card: rgba(255, 255, 255, 0.04);
-  --account-cloud-card-strong: rgba(255, 255, 255, 0.068);
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
-}
-
-.account-cloud-hero-icon svg,
-.account-cloud-vault-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.account-cloud-hero-icon path,
-.account-cloud-vault-icon path {
-  fill: rgba(255, 255, 255, 0.035);
-  stroke: currentColor;
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .account-cloud-grid {
   min-width: 0;
   min-height: 0;
   display: grid;
+  grid-auto-rows: max-content;
   align-content: start;
-  gap: 14px;
+  gap: 10px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 1px 4px 8px 1px;
+  padding: 1px 4px 12px 1px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--settings-accent) 34%, transparent) transparent;
 }
@@ -38,17 +22,28 @@
 .account-cloud-wizard-grid {
   min-width: 0;
   min-height: 0;
-  width: min(1120px, 100%);
-  justify-self: center;
-  display: grid;
-  align-content: start;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 1px 4px 8px 1px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--settings-accent) 34%, transparent) transparent;
+}
+
+.account-cloud-content-flow {
+  min-width: 0;
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 10px;
+}
+
+.account-cloud-wizard-grid {
+  width: min(1120px, 100%);
+  justify-self: center;
+  display: grid;
+  align-content: start;
+  padding: 1px 4px 8px 1px;
 }
 
 .account-cloud-grid::-webkit-scrollbar,
@@ -63,172 +58,23 @@
   background: color-mix(in srgb, var(--settings-accent) 26%, rgba(255, 255, 255, 0.14));
 }
 
-.account-cloud-hero,
-.account-cloud-overview,
-.account-cloud-vaults,
-.account-cloud-devices,
-.account-cloud-warning {
-  min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--settings-accent) 13%, rgba(255, 255, 255, 0.105));
-  border-radius: 26px;
-  background:
-    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--settings-accent) 10%, transparent), transparent 48%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.056), rgba(255, 255, 255, 0.018)),
-    rgba(255, 255, 255, 0.026);
-  box-shadow:
-    0 18px 48px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.055);
-  backdrop-filter: blur(22px) saturate(126%);
-}
-
-.account-cloud-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
-  align-items: center;
-  padding: clamp(16px, 2vw, 22px);
-}
-
-.account-cloud-hero-main {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 14px;
-}
-
-.account-cloud-hero-icon,
-.account-cloud-vault-icon {
-  width: 46px;
-  height: 46px;
-  display: inline-grid;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--settings-accent) 28%, rgba(255, 255, 255, 0.13));
-  border-radius: 17px;
-  background:
-    radial-gradient(circle at 30% 18%, color-mix(in srgb, var(--settings-accent) 24%, transparent), transparent 54%),
-    rgba(255, 255, 255, 0.038);
-  color: color-mix(in srgb, var(--text) 76%, var(--settings-accent) 24%);
-}
-
-.account-cloud-hero-main p,
-.account-cloud-section-head p {
-  margin: 0 0 8px;
-  color: color-mix(in srgb, var(--settings-emphasis) 72%, var(--settings-accent) 28%);
-  font-size: 0.66rem;
-  font-weight: 860;
-  letter-spacing: 0.16em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.account-cloud-hero-main h3,
-.account-cloud-section-head h3 {
-  min-width: 0;
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: rgba(249, 251, 255, 0.96);
-  font-size: clamp(1.12rem, 1.65vw, 1.45rem);
-  font-weight: 780;
-  line-height: 1.12;
-}
-
-.account-cloud-hero-main span,
-.account-cloud-section-head span {
-  display: block;
-  min-width: 0;
-  margin-top: 7px;
-  color: rgba(196, 205, 235, 0.75);
-  font-size: 0.8rem;
-  font-weight: 520;
-  line-height: 1.46;
-}
-
-.account-cloud-profile-form {
-  min-width: 0;
-  max-width: 620px;
-  display: grid;
-  grid-template-columns: minmax(180px, 1fr) auto;
-  align-items: end;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.account-cloud-profile-form label {
-  min-width: 0;
-  display: grid;
-  gap: 7px;
-}
-
-.account-cloud-profile-form label > span {
-  margin: 0;
-  color: color-mix(in srgb, var(--settings-accent) 72%, #fff 28%);
-  font-size: 0.64rem;
-  font-weight: 820;
-  letter-spacing: 0.14em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.account-cloud-profile-form input {
-  width: 100%;
-  min-width: 0;
-  min-height: 42px;
-  padding: 0 14px;
-  border: 1px solid color-mix(in srgb, var(--settings-accent) 24%, rgba(255, 255, 255, 0.13));
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
-    rgba(0, 0, 0, 0.16);
-  color: rgba(250, 252, 255, 0.94);
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 720;
-  outline: none;
-}
-
-.account-cloud-profile-form input::placeholder {
-  color: rgba(200, 208, 236, 0.48);
-}
-
-.account-cloud-profile-form input:focus {
-  border-color: color-mix(in srgb, var(--settings-accent) 48%, rgba(255, 255, 255, 0.18));
-  box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--settings-accent) 12%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.07);
-}
-
-.account-cloud-profile-form .account-cloud-secondary-action {
-  min-height: 42px;
-}
-
-.account-cloud-hero-actions,
-.account-cloud-vault-actions {
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-}
-
 .account-cloud-primary-action,
 .account-cloud-secondary-action {
-  min-height: 38px;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 0 14px;
-  border-radius: 15px;
+  border-radius: 14px;
   font: inherit;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   font-weight: 800;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
   transition:
-    transform 160ms ease,
+    transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
     border-color 160ms ease,
     background 160ms ease,
     opacity 160ms ease;
@@ -253,11 +99,6 @@
   color: rgba(237, 242, 255, 0.88);
 }
 
-.account-cloud-secondary-action.is-danger {
-  border-color: color-mix(in srgb, #ff8fb0 38%, rgba(255, 255, 255, 0.12));
-  color: color-mix(in srgb, #ffacc3 82%, #fff 18%);
-}
-
 .account-cloud-primary-action:hover,
 .account-cloud-primary-action:focus-visible,
 .account-cloud-secondary-action:hover,
@@ -270,315 +111,317 @@
 .account-cloud-primary-action:disabled,
 .account-cloud-secondary-action:disabled {
   cursor: default;
-  opacity: 0.52;
+  opacity: 0.48;
   transform: none;
 }
 
-.account-cloud-overview {
-  display: grid;
-  gap: 16px;
-  padding: clamp(14px, 1.8vw, 20px);
-}
-
-.account-cloud-overview-meta {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.085);
-}
-
-.account-cloud-overview-meta > div {
-  min-width: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.account-cloud-overview-meta > div + div {
-  padding-left: 18px;
-  border-left: 1px solid rgba(255, 255, 255, 0.085);
-}
-
-.account-cloud-overview-meta span,
-.account-cloud-usage-copy span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: rgba(196, 205, 235, 0.72);
-  font-size: 0.65rem;
-  font-weight: 820;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.account-cloud-overview-meta strong,
-.account-cloud-usage-copy strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: rgba(252, 254, 255, 0.96);
-  font-size: 0.98rem;
-  font-weight: 820;
-  line-height: 1.22;
-}
-
-.account-cloud-usage-meters {
-  min-width: 0;
-  display: grid;
-  gap: 13px;
-}
-
-.account-cloud-usage-meter {
-  --account-cloud-meter-color: var(--settings-accent-secondary);
-  min-width: 0;
-  display: grid;
-  gap: 7px;
-}
-
-.account-cloud-usage-meter.is-warning {
-  --account-cloud-meter-color: var(--text-emphasis, #ffe08a);
-}
-
-.account-cloud-usage-meter.is-error {
-  --account-cloud-meter-color: #ff8fb0;
-}
-
-.account-cloud-usage-meter.is-unlimited {
-  --account-cloud-meter-color: var(--settings-accent);
-}
-
-.account-cloud-usage-copy {
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.account-cloud-usage-copy strong {
-  flex: 0 1 auto;
-  font-size: 0.82rem;
-  text-align: right;
-}
-
-.account-cloud-usage-track {
-  position: relative;
-  width: 100%;
-  height: 7px;
-  display: block;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-.account-cloud-usage-track > span {
-  width: var(--account-cloud-meter-fill, 0%);
-  height: 100%;
-  display: block;
-  border-radius: inherit;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--account-cloud-meter-color) 82%, transparent), var(--account-cloud-meter-color));
-  box-shadow: 0 0 16px color-mix(in srgb, var(--account-cloud-meter-color) 18%, transparent);
-  transition: width 220ms ease;
-}
-
-.account-cloud-usage-meter.is-unlimited .account-cloud-usage-track > span {
-  opacity: 0.42;
-}
-
-.account-cloud-overview-loading {
-  min-height: 54px;
-  display: grid;
-  place-items: center;
-  color: rgba(196, 205, 235, 0.72);
-  font-size: 0.8rem;
-  font-weight: 720;
-}
-
 .account-cloud-warning {
-  display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  border-color: color-mix(in srgb, #ff8fb0 24%, rgba(255, 255, 255, 0.12));
-  background:
-    radial-gradient(circle at 0% 0%, rgba(255, 143, 176, 0.13), transparent 52%),
-    rgba(255, 255, 255, 0.026);
-}
-
-.account-cloud-warning strong {
-  color: color-mix(in srgb, #ffc0d1 82%, #fff 18%);
-  font-size: 0.9rem;
-}
-
-.account-cloud-warning span {
-  color: rgba(220, 225, 244, 0.78);
-  font-size: 0.8rem;
-  line-height: 1.45;
-}
-
-.account-cloud-vaults,
-.account-cloud-devices {
-  display: grid;
-  gap: 14px;
-  padding: clamp(14px, 1.8vw, 20px);
-}
-
-.account-cloud-section-head {
-  min-width: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.account-cloud-vault-list {
-  min-width: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.account-cloud-vault-card {
-  --cloud-vault-accent: var(--settings-accent);
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 14px;
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--cloud-vault-accent) 18%, rgba(255, 255, 255, 0.1));
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cloud-vault-accent) 12%, transparent), transparent 56%),
-    rgba(255, 255, 255, 0.032);
-}
-
-.account-cloud-vault-card.is-locked {
-  --cloud-vault-accent: #ffb37d;
-}
-
-.account-cloud-vault-main {
   min-width: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 5px 12px;
+  padding: 13px 15px;
+  border: 1px solid color-mix(in srgb, #ff8fb0 24%, rgba(255, 255, 255, 0.12));
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255, 143, 176, 0.12), transparent 52%),
+    rgba(255, 255, 255, 0.025);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-.account-cloud-vault-icon {
-  width: 42px;
-  height: 42px;
-  color: color-mix(in srgb, var(--text) 76%, var(--cloud-vault-accent) 24%);
+.account-cloud-warning::before {
+  content: "!";
+  grid-row: 1 / 3;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, #ff8fb0 30%, rgba(255, 255, 255, 0.11));
+  border-radius: 12px;
+  background: rgba(255, 143, 176, 0.075);
+  color: color-mix(in srgb, #ffacc3 82%, #fff 18%);
+  font-size: 0.9rem;
+  font-weight: 850;
 }
 
-.account-cloud-vault-copy {
+.account-cloud-warning strong {
+  min-width: 0;
+  color: color-mix(in srgb, #ffc0d1 82%, #fff 18%);
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.account-cloud-warning span {
+  min-width: 0;
+  color: rgba(220, 225, 244, 0.76);
+  font-size: 0.73rem;
+  line-height: 1.4;
+}
+
+.account-cloud-workspace-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 8;
   min-width: 0;
   display: grid;
-  gap: 6px;
-}
-
-.account-cloud-chip-row {
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.account-cloud-chip-row span {
-  min-height: 24px;
-  display: inline-flex;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: center;
-  padding: 0 8px;
-  border: 1px solid color-mix(in srgb, var(--cloud-vault-accent) 20%, rgba(255, 255, 255, 0.1));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--cloud-vault-accent) 8%, rgba(255, 255, 255, 0.024));
-  color: rgba(220, 228, 250, 0.82);
-  font-size: 0.64rem;
-  font-weight: 760;
-  white-space: nowrap;
+  gap: 10px;
+  min-height: 54px;
+  padding: 5px 0;
+  background:
+    linear-gradient(180deg, rgb(var(--surface-deep-rgb) / 0.97), rgb(var(--surface-deep-rgb) / 0.9) 78%, transparent);
+  backdrop-filter: blur(22px) saturate(124%);
+  -webkit-backdrop-filter: blur(22px) saturate(124%);
 }
 
-.account-cloud-chip-row span.is-ready {
-  color: color-mix(in srgb, var(--settings-accent-secondary) 72%, #fff 28%);
+.account-cloud-workspace-action-slot {
+  min-width: 204px;
+  display: grid;
+  justify-items: end;
 }
 
-.account-cloud-chip-row span.is-warning {
-  color: #ffd2a4;
+.account-cloud-workspace-action-slot.is-empty {
+  visibility: hidden;
+  pointer-events: none;
 }
 
-.account-cloud-vault-copy strong,
-.account-cloud-vault-copy small {
+.account-cloud-import-action svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.account-cloud-section-tabs {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  width: fit-content;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid color-mix(in srgb, var(--settings-accent) 18%, rgba(255, 255, 255, 0.1));
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.012)),
+    rgba(0, 0, 0, 0.13);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
-.account-cloud-vault-copy strong {
-  color: rgba(252, 254, 255, 0.96);
-  font-size: 0.96rem;
-  font-weight: 780;
-}
-
-.account-cloud-vault-copy small {
-  color: rgba(196, 205, 235, 0.72);
+.account-cloud-section-tabs button {
+  min-width: 150px;
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  color: rgba(203, 211, 236, 0.72);
+  font: inherit;
   font-size: 0.76rem;
+  font-weight: 790;
+  cursor: pointer;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.account-cloud-section-tabs button.is-active {
+  border-color: color-mix(in srgb, var(--settings-accent) 34%, rgba(255, 255, 255, 0.12));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--settings-accent) 17%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0.016)),
+    rgba(255, 255, 255, 0.03);
+  color: rgba(250, 252, 255, 0.96);
+  box-shadow:
+    0 10px 24px color-mix(in srgb, var(--settings-accent) 7%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.account-cloud-section-tabs button:hover,
+.account-cloud-section-tabs button:focus-visible {
+  outline: none;
+  color: rgba(245, 248, 255, 0.94);
+  border-color: color-mix(in srgb, var(--settings-accent) 25%, rgba(255, 255, 255, 0.11));
+}
+
+.account-cloud-section-tabs svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.account-cloud-section-tabs small {
+  min-width: 24px;
+  min-height: 24px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: inherit;
+  font-size: 0.64rem;
+}
+
+.account-cloud-workspace-content {
+  min-width: 0;
+  animation: account-cloud-content-enter 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .account-cloud-device-empty {
   min-width: 0;
-  padding: 14px;
+  min-height: 154px;
+  display: grid;
+  place-items: center;
+  padding: 20px;
   border: 1px dashed color-mix(in srgb, var(--settings-accent) 20%, rgba(255, 255, 255, 0.1));
-  border-radius: 18px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.075);
   color: rgba(196, 205, 235, 0.74);
   font-size: 0.76rem;
   line-height: 1.45;
+  text-align: center;
 }
 
-@media (max-width: 920px), (orientation: portrait) {
-  .account-cloud-hero,
-  .account-cloud-vault-card,
-  .account-cloud-section-head {
-    grid-template-columns: 1fr;
+@keyframes account-cloud-content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
   }
 
-  .account-cloud-hero-actions,
-  .account-cloud-vault-actions {
-    justify-content: stretch;
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 760px), (orientation: portrait) {
+  .settings-panel-shell.account-cloud-panel-shell {
+    display: block;
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
 
+  .settings-panel-shell.account-cloud-panel-shell::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-panel-shell.account-cloud-panel-shell > .account-cloud-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin-bottom: 8px;
+  }
+
+  .account-cloud-grid {
+    gap: 8px;
+    overflow: visible;
+    padding: 1px 1px 8px;
+  }
+
+  .account-cloud-wizard-grid {
+    overflow: visible;
+  }
+
+  .account-cloud-workspace-toolbar {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 52px;
+  }
+
+  .account-cloud-section-tabs {
+    width: 100%;
+  }
+
+  .account-cloud-section-tabs button {
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .account-cloud-import-action {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 620px) {
+  .account-cloud-workspace-toolbar {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 8px;
+  }
+
+  .account-cloud-workspace-action-slot {
+    min-width: 44px;
+    width: 44px;
+  }
+
+  .account-cloud-import-action {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+  }
+
+  .account-cloud-import-action span {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .account-cloud-section-tabs button {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 0 10px;
+  }
+
+  .account-cloud-section-tabs small {
+    display: none;
+  }
+
+  .account-cloud-warning {
+    padding: 12px;
+  }
+}
+
+@media (min-width: 721px) and (orientation: landscape) {
+  .settings-panel-shell.account-cloud-panel-shell {
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+    overflow: hidden;
+  }
+
+  .settings-panel-shell.account-cloud-panel-shell > .account-cloud-grid {
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
   .account-cloud-primary-action,
-  .account-cloud-secondary-action {
-    flex: 1 1 auto;
+  .account-cloud-secondary-action,
+  .account-cloud-section-tabs button {
+    transition: none;
   }
 
-  .account-cloud-profile-form {
-    grid-template-columns: 1fr;
-  }
-
-}
-
-@media (max-width: 520px) {
-  .account-cloud-overview-meta {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .account-cloud-overview-meta > div + div {
-    padding-top: 12px;
-    padding-left: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.085);
-    border-left: 0;
-  }
-
-  .account-cloud-usage-copy {
-    align-items: flex-start;
-  }
-
-  .account-cloud-usage-copy strong {
-    max-width: 58%;
-  }
-
-  .account-cloud-vault-main {
-    align-items: start;
+  .account-cloud-workspace-content {
+    animation: none;
   }
 }

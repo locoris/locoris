@@ -14,6 +14,7 @@ import type { LocalVaultKind, LocalVaultProfile } from "../lib/localVaults";
 import { getDisplayVaultName } from "../localization/displayNames";
 import { getErrorMessage } from "../lib/errors";
 import { getHostedDeviceIdentity } from "../lib/hostedDeviceIdentity";
+import { resolveLocorisCloudUrl } from "../lib/locorisCloud";
 import {
   connectGoogleDriveAccount,
   createHostedVault,
@@ -185,7 +186,6 @@ type PanelModal =
   | { kind: "manageSelfHosted"; connection: SyncConnection }
   | { kind: "editSelfHostedEndpoint"; connection: SyncConnection; initialServerUrl?: string }
   | { kind: "hostedWizard"; connection?: SyncConnection | null }
-  | { kind: "addHosted"; connection?: SyncConnection | null }
   | { kind: "addGoogleDrive" }
   | null;
 
@@ -200,8 +200,6 @@ type ConfirmState = {
   secondaryTone?: "default" | "danger";
   secondaryAction?: () => Promise<void> | void;
 } | null;
-
-type HostedMode = "login" | "register";
 
 type LinkMetric = {
   id: string;
@@ -675,12 +673,6 @@ export default function SyncSettingsPanel({
   const [vaultPassphraseConfirmDraft, setVaultPassphraseConfirmDraft] = useState("");
   const [selfHostedEditingConnectionId, setSelfHostedEditingConnectionId] = useState<string | null>(null);
   const [incomingSelfHostedPackage, setIncomingSelfHostedPackage] = useState("");
-  const [hostedMode, setHostedMode] = useState<HostedMode>("login");
-  const [hostedUrlDraft, setHostedUrlDraft] = useState("");
-  const [hostedNameDraft, setHostedNameDraft] = useState("");
-  const [hostedEmailDraft, setHostedEmailDraft] = useState("");
-  const [hostedPasswordDraft, setHostedPasswordDraft] = useState("");
-  const [hostedDraftError, setHostedDraftError] = useState<string | null>(null);
   const [encryptionPassphraseDraft, setEncryptionPassphraseDraft] = useState("");
   const [encryptionPassphraseConfirmDraft, setEncryptionPassphraseConfirmDraft] = useState("");
   const [encryptionNextPassphraseDraft, setEncryptionNextPassphraseDraft] = useState("");
@@ -1295,12 +1287,6 @@ export default function SyncSettingsPanel({
 
   const resetConnectionDrafts = () => {
     setSelfHostedEditingConnectionId(null);
-    setHostedMode("login");
-    setHostedUrlDraft("");
-    setHostedNameDraft("");
-    setHostedEmailDraft("");
-    setHostedPasswordDraft("");
-    setHostedDraftError(null);
     setEncryptionPassphraseDraft("");
     setEncryptionPassphraseConfirmDraft("");
     setEncryptionNextPassphraseDraft("");
@@ -1396,12 +1382,6 @@ export default function SyncSettingsPanel({
   };
 
   const openHostedConnectionModal = (connection?: SyncConnection | null) => {
-    setHostedMode("login");
-    setHostedUrlDraft(connection?.serverUrl ?? "");
-    setHostedNameDraft("");
-    setHostedEmailDraft(connection?.userEmail ?? "");
-    setHostedPasswordDraft("");
-    setHostedDraftError(null);
     setPanelModal({ kind: "hostedWizard", connection: connection ?? null });
   };
 
@@ -1510,98 +1490,6 @@ export default function SyncSettingsPanel({
       showFeedback("success", t("settings.connectionAdded"));
     }
     closeModal();
-  };
-
-  const handleAddHostedConnection = async () => {
-    const hostedEditingConnection =
-      panelModal?.kind === "addHosted" ? panelModal.connection ?? null : null;
-
-    if (!hostedUrlDraft.trim()) {
-      setHostedDraftError(t("sync.hostedUrlRequired"));
-      return;
-    }
-
-    if (!hostedEmailDraft.trim() || !hostedPasswordDraft.trim()) {
-      setHostedDraftError(t("sync.hostedCredentialsRequired"));
-      return;
-    }
-
-    setHostedDraftError(null);
-    setBusyKey("add-hosted");
-
-    try {
-      const result =
-        hostedMode === "register" && !hostedEditingConnection
-          ? await registerHostedAccount(hostedUrlDraft.trim(), {
-              name: hostedNameDraft.trim() || hostedEmailDraft.trim(),
-              email: hostedEmailDraft.trim(),
-              password: hostedPasswordDraft,
-              ...getHostedDeviceIdentity(settings.localDeviceId)
-            })
-          : await loginHostedAccount(hostedUrlDraft.trim(), {
-              email: hostedEmailDraft.trim(),
-              password: hostedPasswordDraft,
-              ...getHostedDeviceIdentity(settings.localDeviceId)
-            });
-
-      if (hostedEditingConnection) {
-        const refreshedConnection = {
-          ...hostedEditingConnection,
-          serverUrl: hostedUrlDraft.trim(),
-          sessionToken: result.session.token,
-          refreshToken: result.session.refreshToken ?? "",
-          tokenExpiresAt: result.session.expiresAt,
-          userId: result.user.id,
-          userName: result.user.name,
-          userEmail: result.user.email ?? "",
-          updatedAt: Date.now()
-        } satisfies SyncConnection;
-
-        await Promise.resolve(
-          onUpdateConnection(hostedEditingConnection.id, {
-            serverUrl: refreshedConnection.serverUrl,
-            sessionToken: refreshedConnection.sessionToken,
-            refreshToken: refreshedConnection.refreshToken ?? null,
-            tokenExpiresAt: refreshedConnection.tokenExpiresAt,
-            userId: refreshedConnection.userId,
-            userName: refreshedConnection.userName,
-            userEmail: refreshedConnection.userEmail
-          })
-        );
-        await Promise.resolve(onRefreshHostedConnectionCredentials(refreshedConnection));
-      } else {
-        await Promise.resolve(
-          onCreateConnection({
-            provider: "hosted",
-            serverUrl: hostedUrlDraft.trim(),
-            sessionToken: result.session.token,
-            refreshToken: result.session.refreshToken ?? null,
-            tokenExpiresAt: result.session.expiresAt,
-            userId: result.user.id,
-            userName: result.user.name,
-            userEmail: result.user.email ?? ""
-          })
-        );
-      }
-
-      resetConnectionDrafts();
-      showFeedback(
-        "success",
-        hostedEditingConnection
-          ? t("settings.hostedReconnectSuccess")
-          : hostedMode === "register"
-            ? t("sync.hostedAccountCreated")
-            : t("sync.hostedLoggedIn")
-      );
-      closeModal();
-    } catch (error) {
-      const message = getErrorMessage(error);
-      const translatedMessage = translateSyncManagerError(message, t);
-      setHostedDraftError(translatedMessage);
-      showFeedback("error", translatedMessage);
-    } finally {
-      setBusyKey(null);
-    }
   };
 
   const loadHostedOverviewForWizard = async (connection: SyncConnection): Promise<HostedAccountOverview> => {
@@ -3851,7 +3739,7 @@ export default function SyncSettingsPanel({
                     ? t("settings.selfHostedEndpointKicker")
                   : panelModal?.kind === "addGoogleDrive"
                     ? t("sync.googleDrive")
-                    : panelModal?.kind === "hostedWizard" || panelModal?.kind === "addHosted"
+                    : panelModal?.kind === "hostedWizard"
                       ? t("sync.hosted")
                       : t("sync.selfHosted")
         }
@@ -3874,8 +3762,6 @@ export default function SyncSettingsPanel({
                     ? t("settings.googleDriveConnectionTitle")
                     : panelModal?.kind === "hostedWizard"
                       ? t("settings.cloudWizardTitle")
-                      : panelModal?.kind === "addHosted"
-                      ? t("settings.hostedConnectionTitle")
                       : selfHostedEditingConnection
                         ? t("settings.selfHostedReconnectTitle")
                         : t("settings.selfHostedConnectionTitle")
@@ -4314,7 +4200,7 @@ export default function SyncSettingsPanel({
                 localVaults={sortedVaults}
                 selectedLocalVaultId={selectedLocalVaultId}
                 activeLocalVaultId={activeLocalVaultId}
-                defaultServerUrl={panelModal.connection?.serverUrl ?? hostedUrlDraft}
+                serverUrl={resolveLocorisCloudUrl()}
                 getVaultLabel={getVaultLabel}
                 translateError={(message) => translateSyncManagerError(message, t)}
                 onAuthenticate={handleCloudWizardAuthenticate}
@@ -4326,105 +4212,6 @@ export default function SyncSettingsPanel({
                 onRefreshOverview={loadHostedOverviewForWizard}
                 onClose={closeModal}
               />
-            ) : null}
-
-            {panelModal.kind === "addHosted" ? (
-              <div className="sync-settings-modal-body">
-                <p className="sync-settings-modal-copy">
-                  {panelModal.connection
-                    ? t("settings.hostedReconnectDescription")
-                    : t("settings.hostedModalDescription")}
-                </p>
-                {!panelModal.connection ? (
-                  <div className="sync-settings-mode-switch">
-                    <button
-                      type="button"
-                      className={hostedMode === "login" ? "is-active" : ""}
-                      onClick={() => {
-                        setHostedMode("login");
-                        setHostedDraftError(null);
-                      }}
-                    >
-                      {t("sync.hostedLogin")}
-                    </button>
-                    <button
-                      type="button"
-                      className={hostedMode === "register" ? "is-active" : ""}
-                      onClick={() => {
-                        setHostedMode("register");
-                        setHostedDraftError(null);
-                      }}
-                    >
-                      {t("sync.hostedRegister")}
-                    </button>
-                  </div>
-                ) : null}
-                <input
-                  className="sync-settings-input"
-                  value={hostedUrlDraft}
-                  onChange={(event) => {
-                    setHostedUrlDraft(event.target.value);
-                    setHostedDraftError(null);
-                  }}
-                  placeholder={t("sync.endpointPlaceholder")}
-                  autoFocus
-                />
-                {hostedMode === "register" && !panelModal.connection ? (
-                  <input
-                    className="sync-settings-input"
-                    value={hostedNameDraft}
-                    onChange={(event) => {
-                      setHostedNameDraft(event.target.value);
-                      setHostedDraftError(null);
-                    }}
-                    placeholder={t("sync.hostedNamePlaceholder")}
-                  />
-                ) : null}
-                <input
-                  className="sync-settings-input"
-                  value={hostedEmailDraft}
-                  onChange={(event) => {
-                    setHostedEmailDraft(event.target.value);
-                    setHostedDraftError(null);
-                  }}
-                  placeholder={t("sync.hostedEmailPlaceholder")}
-                  type="email"
-                />
-                <input
-                  className="sync-settings-input"
-                  value={hostedPasswordDraft}
-                  onChange={(event) => {
-                    setHostedPasswordDraft(event.target.value);
-                    setHostedDraftError(null);
-                  }}
-                  placeholder={t("sync.hostedPasswordPlaceholder")}
-                  type="password"
-                />
-                {hostedDraftError ? (
-                  <div className="sync-settings-modal-error" role="alert">
-                    {hostedDraftError}
-                  </div>
-                ) : null}
-                <div className="sync-settings-modal-actions">
-                  <button type="button" className="sync-settings-inline-action" onClick={closeModal}>
-                    {t("dialog.cancel")}
-                  </button>
-                  <button
-                    type="button"
-                    className="sync-settings-primary-action"
-                    disabled={busyKey === "add-hosted"}
-                    onClick={() => void handleAddHostedConnection()}
-                  >
-                    {busyKey === "add-hosted"
-                      ? t("sync.syncing")
-                      : panelModal.connection
-                        ? t("settings.hostedReconnectSave")
-                        : hostedMode === "register"
-                          ? t("sync.hostedRegister")
-                          : t("sync.hostedLogin")}
-                  </button>
-                </div>
-              </div>
             ) : null}
 
             {panelModal.kind === "addGoogleDrive" ? (

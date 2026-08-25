@@ -83,6 +83,7 @@ import {
   lockVaultEncryptionSession,
   unlockVaultEncryptionSession
 } from "./lib/e2eeSession";
+import { resolveLocorisCloudUrl } from "./lib/locorisCloud";
 import {
   buildFolderPathMap,
   getDescendantFolderIds,
@@ -275,15 +276,6 @@ function useOnlineStatus() {
   }, []);
 
   return online;
-}
-
-function resolveLocorisCloudServerUrl(settings: AppSettings, connection?: SyncConnection | null) {
-  return (
-    connection?.serverUrl.trim() ||
-    settings.hostedUrl.trim() ||
-    import.meta.env.VITE_LOCORIS_CLOUD_URL?.trim() ||
-    (import.meta.env.DEV ? "http://localhost:8787" : "")
-  );
 }
 
 function buildLocorisCloudAccountUrl(serverUrl: string, view?: "overview" | "vaults" | "devices" | "billing") {
@@ -1267,7 +1259,7 @@ export default function App() {
     }
 
     if (!locorisCloudConnection) {
-      const serverUrl = resolveLocorisCloudServerUrl(settings);
+      const serverUrl = resolveLocorisCloudUrl();
 
       if (!serverUrl) {
         setWebCloudAuthState("signedOut");
@@ -4632,7 +4624,7 @@ export default function App() {
       throw new Error("SERVER_UNAVAILABLE");
     }
 
-    const serverUrl = resolveLocorisCloudServerUrl(settings, locorisCloudConnection);
+    const serverUrl = resolveLocorisCloudUrl();
 
     if (!serverUrl) {
       throw new Error("CLOUD_ENDPOINT_NOT_CONFIGURED");
@@ -5329,7 +5321,7 @@ export default function App() {
           initialEmail={locorisCloudConnection?.userEmail ?? ""}
           entitlement={webCloudOverview?.entitlement ?? null}
           accountPortalUrl={buildLocorisCloudAccountUrl(
-            resolveLocorisCloudServerUrl(settings, locorisCloudConnection),
+            resolveLocorisCloudUrl(),
             webAccessMode === "unavailable" ? "billing" : undefined
           )}
           onAuthenticate={handleWebCloudAuthenticate}

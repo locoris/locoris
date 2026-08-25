@@ -32,6 +32,23 @@
   padding-top: max(8px, env(safe-area-inset-top));
 }
 
+.locoris-adaptive-shell[data-mobile-shell="true"] .orbital-modal-window.orbital-editor-modal-window.is-note-mode {
+  position: fixed;
+  inset:
+    var(--locoris-mobile-editor-viewport-top, 0px)
+    auto
+    auto
+    var(--locoris-mobile-editor-viewport-left, 0px) !important;
+  width: var(--locoris-mobile-editor-viewport-width, 100dvw);
+  min-width: 0;
+  max-width: var(--locoris-mobile-editor-viewport-width, 100dvw);
+  height: var(--locoris-mobile-editor-viewport-height, 100dvh);
+  min-height: 0;
+  max-height: var(--locoris-mobile-editor-viewport-height, 100dvh);
+  overflow: hidden;
+  contain: layout paint;
+}
+
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-toolbar {
   display: none;
 }
@@ -69,7 +86,7 @@
     rgba(7, 9, 20, 0.72);
   color: var(--text);
   font-family: var(--editor-title-font);
-  font-size: 0.96rem;
+  font-size: 16px;
   font-weight: 650;
   line-height: 1.2;
   outline: none;
@@ -190,6 +207,20 @@
   overflow: hidden;
 }
 
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane[data-mobile-keyboard="open"] {
+  padding-bottom: 6px;
+}
+
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-stage-column,
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-stage-frame {
   min-height: 0;
@@ -204,20 +235,32 @@
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-stage-shell {
   height: 100%;
   min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   border-radius: 24px;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  scroll-padding-block: 20px 28px;
 }
 
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-stage-shell .bn-editor {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  box-sizing: border-box;
   padding:
     22px
     max(16px, env(safe-area-inset-right))
-    calc(118px + env(safe-area-inset-bottom))
-    max(50px, calc(env(safe-area-inset-left) + 44px));
+    calc(72px + env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  font-size: max(16px, var(--editor-copy-size));
+  touch-action: pan-x pan-y;
 }
 
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-stage-shell .bn-side-menu {
+  display: none !important;
   width: 38px;
   height: auto !important;
   display: grid;
@@ -260,12 +303,14 @@
   height: 18px;
 }
 
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-floating-toolbar-popover {
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-floating-toolbar-popover,
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-link-toolbar-popover,
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-file-panel-popover {
   position: fixed !important;
   inset:
     auto
     max(8px, env(safe-area-inset-right))
-    max(82px, calc(env(safe-area-inset-bottom) + 78px))
+    max(68px, calc(env(safe-area-inset-bottom) + 64px))
     max(8px, env(safe-area-inset-left)) !important;
   width: auto !important;
   max-width: calc(100vw - 16px) !important;
@@ -275,6 +320,85 @@
   box-sizing: border-box;
   overflow: hidden;
   border-radius: 24px;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-link-toolbar-popover,
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-file-panel-popover {
+  max-height: min(42vh, 320px);
+  max-height: min(
+    calc(var(--locoris-mobile-editor-viewport-height, 100dvh) * 0.42),
+    320px
+  );
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-stage-shell .bn-container,
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-stage-shell .ProseMirror {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"]
+  .editor-stage-shell
+  .bn-editor
+  [data-content-type="table"] {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  touch-action: pan-x pan-y;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"]
+  .editor-stage-shell
+  .bn-editor
+  [data-content-type="table"]
+  .tableWrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"]
+  .editor-stage-shell
+  .bn-editor
+  [data-content-type="table"]
+  .tableWrapper-inner {
+  width: 100%;
+  max-width: 100%;
+  max-height: min(52vh, 420px);
+  max-height: min(calc(var(--locoris-mobile-editor-viewport-height, 100dvh) * 0.52), 420px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  scrollbar-gutter: stable;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"]
+  .editor-stage-shell
+  .bn-editor
+  [data-content-type="table"]
+  table {
+  min-width: max-content;
+  max-width: none;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"]
+  .editor-stage-shell
+  .bn-editor
+  [data-content-type="table"]
+  td,
+.locoris-adaptive-shell[data-mobile-shell="true"]
+  .editor-stage-shell
+  .bn-editor
+  [data-content-type="table"]
+  th {
+  min-width: 112px !important;
 }
 
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-floating-toolbar-popover .editor-formatting-toolbar-shell {
@@ -743,59 +867,6 @@
     rgba(255, 255, 255, 0.026);
 }
 
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-formatbar {
-  grid-row: 3;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 5px;
-  padding: 6px;
-  border-radius: 23px;
-  border: 1px solid color-mix(in srgb, var(--editor-accent) 22%, rgb(var(--line-rgb) / 0.12));
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--editor-accent) 9%, transparent), transparent 48%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.062), rgba(255, 255, 255, 0.018)),
-    rgb(var(--surface-deep-rgb) / 0.84);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.046),
-    0 16px 36px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(18px);
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-formatbar button {
-  min-width: 0;
-  min-height: 42px;
-  border: 1px solid rgb(var(--line-rgb) / 0.11);
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.014)),
-    rgba(255, 255, 255, 0.024);
-  color: var(--text);
-  font: inherit;
-  display: grid;
-  place-items: center;
-  gap: 1px;
-  touch-action: manipulation;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-formatbar span {
-  display: block;
-  font-size: 0.88rem;
-  font-weight: 780;
-  line-height: 1;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-formatbar small {
-  display: block;
-  max-width: 100%;
-  color: var(--text-dim);
-  font-size: 0.52rem;
-  font-weight: 650;
-  line-height: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-layer {
   position: fixed;
   inset: 0;
@@ -978,10 +1049,20 @@
     max(8px, env(safe-area-inset-left)) !important;
   width: auto;
   max-height: min(82vh, calc(100vh - 24px));
-  max-height: min(82dvh, calc(100dvh - 24px));
+  max-height: min(
+    calc(var(--locoris-mobile-editor-viewport-height, 100dvh) - 20px),
+    620px
+  );
   overflow: hidden;
   z-index: 1350;
   border-radius: 28px;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-ai-panel textarea,
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-ai-panel input,
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-stage-shell input,
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-stage-shell textarea {
+  font-size: 16px;
 }
 
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-ai-command-card {

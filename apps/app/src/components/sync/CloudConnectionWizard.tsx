@@ -25,7 +25,7 @@ type CloudConnectionWizardProps = {
   localVaults: LocalVaultProfile[];
   selectedLocalVaultId: string;
   activeLocalVaultId: string;
-  defaultServerUrl: string;
+  serverUrl: string;
   getVaultLabel: (vault: Pick<LocalVaultProfile, "id" | "name"> | null | undefined) => string;
   translateError: (message: string) => string;
   onAuthenticate: (input: {
@@ -108,7 +108,7 @@ export default function CloudConnectionWizard({
   localVaults,
   selectedLocalVaultId,
   activeLocalVaultId,
-  defaultServerUrl,
+  serverUrl,
   getVaultLabel,
   translateError,
   onAuthenticate,
@@ -123,7 +123,6 @@ export default function CloudConnectionWizard({
   const { t } = useTranslation();
   const [step, setStep] = useState<CloudWizardStep>(initialConnection ? "choose" : "auth");
   const [authMode, setAuthMode] = useState<CloudWizardAuthMode>("login");
-  const [serverUrl, setServerUrl] = useState(initialConnection?.serverUrl || defaultServerUrl);
   const [name, setName] = useState("");
   const [email, setEmail] = useState(initialConnection?.userEmail || "");
   const [password, setPassword] = useState("");
@@ -379,11 +378,6 @@ export default function CloudConnectionWizard({
 
       {step === "auth" ? (
         <section className="cloud-wizard-section">
-          <label className="cloud-wizard-field">
-            <span>{t("settings.cloudWizardServerLabel")}</span>
-            <input value={serverUrl} onChange={(event) => setServerUrl(event.target.value)} placeholder={t("sync.endpointPlaceholder")} />
-          </label>
-
           <div className="cloud-wizard-auth-grid">
             <div className="cloud-wizard-auth-card">
               <div className="cloud-wizard-mode-switch" role="tablist" aria-label={t("settings.cloudWizardAuthMode")}>

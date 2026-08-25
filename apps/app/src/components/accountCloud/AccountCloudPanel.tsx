@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getDisplayVaultName } from "../../localization/displayNames";
@@ -32,12 +32,14 @@ import type {
 } from "../../types";
 import useAutoDismissNotice from "../../lib/useAutoDismissNotice";
 import { refreshHostedSessionSingleFlight } from "../../lib/hostedSessionRefresh";
+import { resolveLocorisCloudUrl } from "../../lib/locorisCloud";
 import ActionFeedbackToast, { useActionFeedbackAnchor } from "../ActionFeedbackToast";
 import ConfirmDialog from "../ConfirmDialog";
 import MobileGlassHeader from "../MobileGlassHeader";
 import SettingsSurface from "../SettingsSurface";
 import CloudConnectionWizard, { type CloudWizardAuthResult } from "../sync/CloudConnectionWizard";
 import AccountCloudDeviceList from "./AccountCloudDeviceList";
+import AccountCloudIdentity, { type AccountCloudUsageMeter } from "./AccountCloudIdentity";
 import AccountCloudVaultManager from "./AccountCloudVaultManager";
 import CloudVaultPickerSheet from "./CloudVaultPickerSheet";
 import "./AccountCloudPanel.css";
@@ -130,6 +132,8 @@ type DestructiveAction =
   | { kind: "device"; device: HostedAccountDevice; current: boolean }
   | null;
 
+type AccountCloudSection = "vaults" | "devices";
+
 function BackGlyph() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -146,11 +150,29 @@ function CloseGlyph() {
   );
 }
 
-function CloudGlyph() {
+function VaultSectionGlyph() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M5.7 14.7h9.1a3 3 0 0 0 .3-6 5 5 0 0 0-9.8-1.5A3.9 3.9 0 0 0 5.7 14.7Z" />
-      <path d="M8 10.9h4.5M10.3 8.7v4.5" />
+      <path d="M3.5 6.5h13v9h-13z" />
+      <path d="m3.5 6.5 2.4-1.8h8.2l2.4 1.8M7.3 9.5h5.4" />
+    </svg>
+  );
+}
+
+function DeviceSectionGlyph() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <rect x="3" y="3.5" width="14" height="10.5" rx="1.8" />
+      <path d="M7 16.5h6M10 14v2.5" />
+    </svg>
+  );
+}
+
+function ImportGlyph() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M3.5 6.5h13v9h-13z" />
+      <path d="m3.5 6.5 2.4-1.8h8.2l2.4 1.8M10 8.8v4.3m-2-2 2 2 2-2" />
     </svg>
   );
 }
@@ -368,7 +390,10 @@ export default function AccountCloudPanel({
   const [internalFeedback, setInternalFeedback] = useState<SyncFeedbackState>(null);
   const [authRequired, setAuthRequired] = useState(false);
   const [profileNameDraft, setProfileNameDraft] = useState("");
-  const [profileNameDirty, setProfileNameDirty] = useState(false);
+  const [profileNameEditing, setProfileNameEditing] = useState(false);
+  const [activeSection, setActiveSection] = useState<AccountCloudSection>("vaults");
+  const panelScrollRef = useRef<HTMLDivElement | null>(null);
+  const workspaceToolbarRef = useRef<HTMLDivElement | null>(null);
   const [destructiveAction, setDestructiveAction] = useState<DestructiveAction>(null);
   const [dismissedFeedbackKey, setDismissedFeedbackKey] = useState<string | null>(null);
   const feedbackAnchor = useActionFeedbackAnchor([
@@ -995,16 +1020,34 @@ export default function AccountCloudPanel({
     showFeedback("success", t("sync.hostedLoggedOut"));
   };
 
+  const keepWorkspaceNavigationVisible = () => {
+    const panel = panelScrollRef.current;
+    const toolbar = workspaceToolbarRef.current;
+
+    if (!panel || !toolbar || panel.scrollTop <= toolbar.offsetTop) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      panel.scrollTo({ top: toolbar.offsetTop, behavior: "auto" });
+    });
+  };
+
+  const selectSection = (section: AccountCloudSection) => {
+    if (section === activeSection) {
+      return;
+    }
+
+    setActiveSection(section);
+    keepWorkspaceNavigationVisible();
+  };
+
   const selectedVault =
     sortedVaults.find((vault) => vault.id === selectedLocalVaultId) ??
     sortedVaults.find((vault) => vault.id === activeLocalVaultId) ??
     sortedVaults[0] ??
     null;
-  const defaultServerUrl =
-    cloudConnection?.serverUrl ||
-    settings.hostedUrl ||
-    import.meta.env.VITE_LOCORIS_CLOUD_URL?.trim() ||
-    (import.meta.env.DEV ? "http://localhost:8787" : "");
+  const cloudServerUrl = resolveLocorisCloudUrl();
   const remoteVaults = overview?.vaults ?? [];
   const cloudImportAccountLabel = cloudConnection
     ? overview?.user.email ?? (cloudConnection.userEmail || cloudConnection.label || t("settings.accountCloudReady"))
@@ -1012,7 +1055,7 @@ export default function AccountCloudPanel({
   const cloudCanWrite = overview?.entitlement.capabilities.canWriteSync ?? true;
   const cloudCanDelete = overview?.entitlement.capabilities.canDeleteCloudData ?? true;
   const accountPeriodLabel = getAccountPeriodLabel(overview?.entitlement, localeRuntime, t);
-  const accountUsageMeters = overview
+  const accountUsageMeters: AccountCloudUsageMeter[] = overview
     ? [
         {
           key: "vaults",
@@ -1035,7 +1078,20 @@ export default function AccountCloudPanel({
           limit: overview.entitlement.limits.storageBytes,
           format: formatBytes
         }
-      ]
+      ].map((meter) => {
+        const limitLabel =
+          meter.limit === null || meter.limit === undefined
+            ? t("settings.accountCloudUnlimited")
+            : meter.format(meter.limit);
+
+        return {
+          key: meter.key,
+          label: meter.label,
+          valueLabel: `${meter.format(meter.used)} / ${limitLabel}`,
+          ratio: getUsageRatio(meter.used, meter.limit),
+          tone: getUsageTone(meter.used, meter.limit)
+        };
+      })
     : [];
   const cloudProfileName = overview?.user.name ?? cloudConnection?.userName ?? "";
   const cloudProfileEmail = overview?.user.email ?? cloudConnection?.userEmail ?? "";
@@ -1045,6 +1101,13 @@ export default function AccountCloudPanel({
     cloudConnection?.label,
     t("settings.accountCloudProfileFallbackName")
   );
+  const cloudProfileDescription = cloudConnection
+    ? cloudProfileName.trim()
+      ? t("settings.accountCloudProfileDescription")
+      : t("settings.accountCloudProfileFallbackDescription", {
+          fallback: cloudProfileDisplayName
+        })
+    : t("settings.accountCloudNoAccountDescription");
   const accountDevices = (() => {
     if (!cloudConnection || !overview) {
       return [];
@@ -1181,8 +1244,18 @@ export default function AccountCloudPanel({
 
   useEffect(() => {
     setProfileNameDraft(cloudProfileName);
-    setProfileNameDirty(false);
+    setProfileNameEditing(false);
   }, [cloudConnection?.id, cloudProfileName]);
+
+  const beginProfileEdit = () => {
+    setProfileNameDraft(cloudProfileName);
+    setProfileNameEditing(true);
+  };
+
+  const cancelProfileEdit = () => {
+    setProfileNameDraft(cloudProfileName);
+    setProfileNameEditing(false);
+  };
 
   const applyLocalProfileName = async (name: string) => {
     if (!cloudConnection) {
@@ -1207,7 +1280,6 @@ export default function AccountCloudPanel({
       })
     );
     setProfileNameDraft(name);
-    setProfileNameDirty(false);
   };
 
   const handleProfileSave = async () => {
@@ -1238,13 +1310,14 @@ export default function AccountCloudPanel({
         })
       );
       setProfileNameDraft(result.user.name);
-      setProfileNameDirty(false);
+      setProfileNameEditing(false);
       showFeedback("success", t("settings.accountCloudProfileSaved"));
     } catch (error) {
       const message = getErrorMessage(error);
 
       if (isProfileApiUnavailable(message)) {
         await applyLocalProfileName(profileNameDraft.trim());
+        setProfileNameEditing(false);
         showFeedback("success", t("settings.accountCloudProfileSavedLocally"));
       } else {
         showFeedback("error", translateCloudError(message, t));
@@ -1260,7 +1333,7 @@ export default function AccountCloudPanel({
         <MobileGlassHeader
           className="settings-panel-header account-cloud-panel-header has-back-action"
           kicker={t("settings.accountCloudTitle")}
-          title={wizardConnection ? t("settings.accountCloudManage") : t("settings.accountCloudSignIn")}
+          title={wizardConnection ? t("settings.hostedReconnect") : t("settings.accountCloudSignIn")}
           backLabel={t("settings.back")}
           closeLabel={t("orbit.closeModal")}
           backIcon={<BackGlyph />}
@@ -1275,7 +1348,7 @@ export default function AccountCloudPanel({
             localVaults={sortedVaults}
             activeLocalVaultId={activeLocalVaultId}
             selectedLocalVaultId={wizardSelectedVaultId}
-            defaultServerUrl={defaultServerUrl}
+            serverUrl={cloudServerUrl}
             getVaultLabel={getVaultLabel}
             translateError={(message) => translateCloudError(message, t)}
             onAuthenticate={handleAuthenticate}
@@ -1310,261 +1383,176 @@ export default function AccountCloudPanel({
         onClose={onClose}
       />
 
-      <div className="account-cloud-grid">
-        <section className="account-cloud-hero">
-          <div className="account-cloud-hero-main">
-            <span className="account-cloud-hero-icon" aria-hidden="true">
-              <CloudGlyph />
-            </span>
-            <div>
-              <p>{t("settings.accountCloudProfileKicker")}</p>
-              <h3>
-                {cloudConnection
-                  ? cloudProfileDisplayName
-                  : t("settings.accountCloudNoAccountTitle")}
-              </h3>
-              <span>
-                {cloudConnection
-                  ? cloudProfileName.trim()
-                    ? cloudProfileEmail || t("settings.accountCloudProfileDescription")
-                    : t("settings.accountCloudProfileFallbackDescription", {
-                        fallback: cloudProfileDisplayName
-                      })
-                  : t("settings.accountCloudNoAccountDescription")}
-              </span>
-              {cloudConnection ? (
-                <form
-                  className="account-cloud-profile-form"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void handleProfileSave();
-                  }}
-                >
-                  <label>
-                    <span>{t("settings.accountCloudProfileNameLabel")}</span>
-                    <input
-                      type="text"
-                      value={profileNameDraft}
-                      maxLength={120}
-                      placeholder={t("settings.accountCloudProfileNamePlaceholder")}
-                      disabled={busyKey !== null || !online}
-                      onChange={(event) => {
-                        setProfileNameDraft(event.target.value);
-                        setProfileNameDirty(true);
-                      }}
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    className="account-cloud-secondary-action"
-                    disabled={busyKey !== null || !online || !profileNameDirty || !profileNameChanged}
-                  >
-                    {busyKey === "profile" ? t("settings.connectionChecking") : t("settings.accountCloudProfileSave")}
-                  </button>
-                </form>
-              ) : null}
-            </div>
-          </div>
-          <div className="account-cloud-hero-actions">
+      <div ref={panelScrollRef} className="account-cloud-grid">
+        <AccountCloudIdentity
+          connected={Boolean(cloudConnection)}
+          authRequired={authRequired}
+          readOnly={Boolean(overview && !cloudCanWrite)}
+          online={online}
+          busyKey={busyKey}
+          displayName={cloudConnection ? cloudProfileDisplayName : t("settings.accountCloudNoAccountTitle")}
+          currentProfileName={cloudProfileName}
+          email={cloudConnection ? cloudProfileEmail : ""}
+          profileDescription={cloudProfileDescription}
+          profileDraft={profileNameDraft}
+          profileEditing={profileNameEditing}
+          planLabel={overview?.entitlement.plan.name ?? "—"}
+          periodLabel={accountPeriodLabel}
+          usageMeters={accountUsageMeters}
+          onBeginProfileEdit={beginProfileEdit}
+          onProfileDraftChange={setProfileNameDraft}
+          onCancelProfileEdit={cancelProfileEdit}
+          onSaveProfile={() => void handleProfileSave()}
+          onSignIn={() =>
+            setCloudWizard({
+              kind: "cloudWizard",
+              connection: cloudConnection,
+              vaultId: selectedVault?.id ?? null
+            })
+          }
+          onRefresh={() => void handleRefresh()}
+          onSignOut={() => void handleSignOut()}
+        />
+
+        <div ref={workspaceToolbarRef} className="account-cloud-workspace-toolbar">
+          <div
+            className="account-cloud-section-tabs"
+            role="tablist"
+            aria-label={t("settings.accountCloudTitle")}
+          >
             <button
               type="button"
-              className="account-cloud-primary-action"
-              onClick={() =>
-                setCloudWizard({
-                  kind: "cloudWizard",
-                  connection: cloudConnection,
-                  vaultId: selectedVault?.id ?? null
-                })
-              }
+              role="tab"
+              id="account-cloud-tab-vaults"
+              aria-controls="account-cloud-section-content"
+              aria-selected={activeSection === "vaults"}
+              className={activeSection === "vaults" ? "is-active" : ""}
+              onClick={() => selectSection("vaults")}
             >
-              {authRequired
-                ? t("settings.hostedReconnect")
-                : cloudConnection
-                  ? t("settings.accountCloudManage")
-                  : t("settings.accountCloudSignIn")}
+              <VaultSectionGlyph />
+              <span>{t("settings.accountCloudVaults")}</span>
+              <small>{sortedVaults.length}</small>
             </button>
-            {cloudConnection ? (
-              <>
-                <button
-                  type="button"
-                  className="account-cloud-secondary-action"
-                  disabled={busyKey !== null || !online}
-                  onClick={() => void handleRefresh()}
-                >
-                  {t("sync.hostedRefresh")}
-                </button>
-                <button
-                  type="button"
-                  className="account-cloud-secondary-action is-danger"
-                  disabled={busyKey !== null}
-                  onClick={() => void handleSignOut()}
-                >
-                  {t("sync.hostedLogout")}
-                </button>
-              </>
-            ) : null}
-          </div>
-        </section>
-
-        <section className="account-cloud-overview" aria-label={t("settings.accountCloudStatusTitle")}>
-          <div className="account-cloud-overview-meta">
-            <div>
-              <span>{t("settings.accountCloudPlan")}</span>
-              <strong>{overview?.entitlement.plan.name ?? "—"}</strong>
-            </div>
-            <div>
-              <span>{t("settings.accountCloudPeriod")}</span>
-              <strong>{accountPeriodLabel}</strong>
-            </div>
-          </div>
-
-          {overview ? (
-            <div className="account-cloud-usage-meters">
-              {accountUsageMeters.map((meter) => {
-                const ratio = getUsageRatio(meter.used, meter.limit);
-                const tone = getUsageTone(meter.used, meter.limit);
-                const limitLabel =
-                  meter.limit === null || meter.limit === undefined
-                    ? t("settings.accountCloudUnlimited")
-                    : meter.format(meter.limit);
-                const valueLabel = `${meter.format(meter.used)} / ${limitLabel}`;
-
-                return (
-                  <div
-                    key={meter.key}
-                    className={`account-cloud-usage-meter is-${tone} ${ratio === null ? "is-unlimited" : ""}`}
-                    style={{ "--account-cloud-meter-fill": `${(ratio ?? 1) * 100}%` } as CSSProperties}
-                  >
-                    <div className="account-cloud-usage-copy">
-                      <span>{meter.label}</span>
-                      <strong>{valueLabel}</strong>
-                    </div>
-                    <span
-                      className="account-cloud-usage-track"
-                      role={ratio === null ? undefined : "progressbar"}
-                      aria-label={meter.label}
-                      aria-valuemin={ratio === null ? undefined : 0}
-                      aria-valuemax={ratio === null ? undefined : meter.limit ?? undefined}
-                      aria-valuenow={ratio === null ? undefined : meter.used}
-                    >
-                      <span />
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="account-cloud-overview-loading" role="status">
-              {cloudConnection
-                ? busyKey === "overview"
-                  ? t("settings.connectionChecking")
-                  : t("settings.connectionUnavailable")
-                : t("settings.accountCloudSignedOut")}
-            </div>
-          )}
-        </section>
-
-        {duplicateCloudConnections.length > 0 ? (
-          <section className="account-cloud-warning">
-            <strong>{t("settings.accountCloudDuplicateTitle")}</strong>
-            <span>{t("settings.accountCloudDuplicateDescription", { count: duplicateCloudConnections.length })}</span>
-          </section>
-        ) : null}
-
-        {!cloudCanWrite ? (
-          <section className="account-cloud-warning">
-            <strong>{t("settings.accountCloudReadOnlyTitle")}</strong>
-            <span>{t("settings.accountCloudReadOnlyDescription")}</span>
-          </section>
-        ) : null}
-
-        <section className="account-cloud-vaults">
-          <div className="account-cloud-section-head">
-            <div>
-              <p>{t("settings.accountCloudVaultsKicker")}</p>
-              <h3>{t("settings.accountCloudVaultsTitle")}</h3>
-              <span>{t("settings.accountCloudVaultsDescription")}</span>
-            </div>
             <button
               type="button"
-              className="account-cloud-secondary-action"
-              disabled={!cloudConnection || busyKey !== null || !online}
+              role="tab"
+              id="account-cloud-tab-devices"
+              aria-controls="account-cloud-section-content"
+              aria-selected={activeSection === "devices"}
+              className={activeSection === "devices" ? "is-active" : ""}
+              onClick={() => selectSection("devices")}
+            >
+              <DeviceSectionGlyph />
+              <span>{t("settings.accountCloudDevices")}</span>
+              <small>{cloudConnection ? accountDevices.length : "—"}</small>
+            </button>
+          </div>
+
+          <div
+            className={`account-cloud-workspace-action-slot ${activeSection === "vaults" ? "" : "is-empty"}`}
+            aria-hidden={activeSection !== "vaults"}
+          >
+            <button
+              type="button"
+              className="account-cloud-secondary-action account-cloud-import-action"
+              disabled={!cloudConnection || authRequired || busyKey !== null || !online}
+              tabIndex={activeSection === "vaults" ? 0 : -1}
+              aria-label={t("settings.accountCloudImportFromCloud")}
               onClick={openCloudImport}
             >
-              {t("settings.accountCloudImportFromCloud")}
+              <ImportGlyph />
+              <span>{t("settings.accountCloudImportFromCloud")}</span>
             </button>
           </div>
+        </div>
 
-          <AccountCloudVaultManager
-            localVaults={sortedVaults}
-            remoteVaults={remoteVaults}
-            activeLocalVaultId={activeLocalVaultId}
-            cloudConnected={Boolean(cloudConnection)}
-            cloudCanWrite={cloudCanWrite}
-            cloudCanDelete={cloudCanDelete}
-            online={online}
-            busyKey={busyKey}
-            language={i18n.language}
-            vaultEncryptionById={vaultEncryptionById}
-            cloudBindingByLocalId={cloudBindingByLocalId}
-            cloudBindingByRemoteId={cloudBindingByRemoteId}
-            getVaultLabel={getVaultLabel}
-            onOpenLocalVault={onActivateLocalVault}
-            onConnectLocalVault={(vault) => {
-              if (cloudConnection) {
-                void handleConnectLocalVault(cloudConnection, vault).catch(() => undefined);
-              } else {
-                setCloudWizard({ kind: "cloudWizard", connection: null, vaultId: vault.id });
-              }
-            }}
-            onDisconnectLocalVault={(localVaultId) => void handleDisconnectVault(localVaultId)}
-            onRunVaultSync={(localVaultId) => void onRunVaultSync(localVaultId)}
-            onImportRemoteVault={(remoteVault) => void handleImportRemoteVault(remoteVault)}
-            onRenameLocalVault={handleRenameLocalVault}
-            onRenameRemoteVault={handleRenameRemoteVault}
-            onRequestDeleteLocalVault={(vault) => setDestructiveAction({ kind: "localVault", vault })}
-            onRequestDeleteRemoteVault={(vault) => setDestructiveAction({ kind: "remoteVault", vault })}
-            onRequestCloudSignIn={() =>
-              setCloudWizard({
-                kind: "cloudWizard",
-                connection: null,
-                vaultId: selectedVault?.id ?? null
-              })
-            }
-          />
-        </section>
+        <div className="account-cloud-content-flow">
+          {duplicateCloudConnections.length > 0 ? (
+            <section className="account-cloud-warning">
+              <strong>{t("settings.accountCloudDuplicateTitle")}</strong>
+              <span>{t("settings.accountCloudDuplicateDescription", { count: duplicateCloudConnections.length })}</span>
+            </section>
+          ) : null}
 
-        <section className="account-cloud-devices">
-          <div className="account-cloud-section-head">
-            <div>
-              <p>{t("settings.accountCloudDevicesKicker")}</p>
-              <h3>{t("settings.accountCloudDevicesTitle")}</h3>
-              <span>{t("settings.accountCloudDevicesDescription")}</span>
-            </div>
+          {!cloudCanWrite ? (
+            <section className="account-cloud-warning">
+              <strong>{t("settings.accountCloudReadOnlyTitle")}</strong>
+              <span>{t("settings.accountCloudReadOnlyDescription")}</span>
+            </section>
+          ) : null}
+
+          <div
+            key={activeSection}
+            id="account-cloud-section-content"
+            className="account-cloud-workspace-content"
+            role="tabpanel"
+            aria-labelledby={`account-cloud-tab-${activeSection}`}
+          >
+            {activeSection === "vaults" ? (
+              <AccountCloudVaultManager
+                localVaults={sortedVaults}
+                remoteVaults={remoteVaults}
+                activeLocalVaultId={activeLocalVaultId}
+                cloudConnected={Boolean(cloudConnection && !authRequired)}
+                cloudCanWrite={cloudCanWrite}
+                cloudCanDelete={cloudCanDelete}
+                online={online && !authRequired}
+                busyKey={busyKey}
+                language={i18n.language}
+                vaultEncryptionById={vaultEncryptionById}
+                cloudBindingByLocalId={cloudBindingByLocalId}
+                cloudBindingByRemoteId={cloudBindingByRemoteId}
+                getVaultLabel={getVaultLabel}
+                onOpenLocalVault={onActivateLocalVault}
+                onConnectLocalVault={(vault) => {
+                  if (cloudConnection && !authRequired) {
+                    void handleConnectLocalVault(cloudConnection, vault).catch(() => undefined);
+                  } else {
+                    setCloudWizard({
+                      kind: "cloudWizard",
+                      connection: authRequired ? cloudConnection : null,
+                      vaultId: vault.id
+                    });
+                  }
+                }}
+                onDisconnectLocalVault={(localVaultId) => void handleDisconnectVault(localVaultId)}
+                onRunVaultSync={(localVaultId) => void onRunVaultSync(localVaultId)}
+                onImportRemoteVault={(remoteVault) => void handleImportRemoteVault(remoteVault)}
+                onRenameLocalVault={handleRenameLocalVault}
+                onRenameRemoteVault={handleRenameRemoteVault}
+                onRequestDeleteLocalVault={(vault) => setDestructiveAction({ kind: "localVault", vault })}
+                onRequestDeleteRemoteVault={(vault) => setDestructiveAction({ kind: "remoteVault", vault })}
+                onRequestCloudSignIn={() =>
+                  setCloudWizard({
+                    kind: "cloudWizard",
+                    connection: authRequired ? cloudConnection : null,
+                    vaultId: selectedVault?.id ?? null
+                  })
+                }
+                onScopeChange={keepWorkspaceNavigationVisible}
+              />
+            ) : accountDevices.length > 0 ? (
+              <AccountCloudDeviceList
+                devices={accountDevices}
+                currentDeviceId={
+                  overview?.session.deviceId ?? getHostedDeviceIdentity(settings.localDeviceId).deviceId
+                }
+                language={i18n.language}
+                online={online && !authRequired}
+                busyDeviceId={busyKey?.startsWith("revoke-device:") ? busyKey.slice("revoke-device:".length) : null}
+                onRequestRevoke={(device, current) =>
+                  setDestructiveAction({ kind: "device", device, current })
+                }
+              />
+            ) : (
+              <div className="account-cloud-device-empty">
+                {cloudConnection
+                  ? t("settings.accountCloudDevicesUnavailable")
+                  : t("settings.accountCloudSignedOut")}
+              </div>
+            )}
           </div>
-
-          {accountDevices.length > 0 ? (
-            <AccountCloudDeviceList
-              devices={accountDevices}
-              currentDeviceId={
-                overview?.session.deviceId ?? getHostedDeviceIdentity(settings.localDeviceId).deviceId
-              }
-              language={i18n.language}
-              online={online}
-              busyDeviceId={busyKey?.startsWith("revoke-device:") ? busyKey.slice("revoke-device:".length) : null}
-              onRequestRevoke={(device, current) =>
-                setDestructiveAction({ kind: "device", device, current })
-              }
-            />
-          ) : (
-            <div className="account-cloud-device-empty">
-              {cloudConnection
-                ? t("settings.accountCloudDevicesUnavailable")
-                : t("settings.accountCloudSignedOut")}
-            </div>
-          )}
-        </section>
-
+        </div>
       </div>
 
       {visibleFeedback ? (

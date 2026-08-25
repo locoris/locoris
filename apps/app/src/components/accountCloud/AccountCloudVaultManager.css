@@ -1,7 +1,7 @@
 .account-cloud-vault-manager {
   min-width: 0;
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .account-cloud-vault-tabs {
@@ -10,29 +10,33 @@
   max-width: 100%;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 5px;
-  padding: 5px;
+  gap: 4px;
+  padding: 4px;
   border: 1px solid color-mix(in srgb, var(--settings-accent) 18%, rgba(255, 255, 255, 0.1));
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(0, 0, 0, 0.13);
 }
 
 .account-cloud-vault-tabs button {
   min-width: 150px;
-  min-height: 40px;
+  min-height: 38px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   padding: 0 12px;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 12px;
   background: transparent;
   color: rgba(203, 211, 236, 0.74);
   font: inherit;
   font-size: 0.76rem;
   font-weight: 790;
   cursor: pointer;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
 }
 
 .account-cloud-vault-tabs button.is-active {
@@ -42,6 +46,13 @@
     rgba(255, 255, 255, 0.03);
   color: rgba(250, 252, 255, 0.96);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.account-cloud-vault-tabs button:hover,
+.account-cloud-vault-tabs button:focus-visible {
+  outline: none;
+  color: rgba(246, 249, 255, 0.94);
+  border-color: color-mix(in srgb, var(--settings-accent) 24%, rgba(255, 255, 255, 0.11));
 }
 
 .account-cloud-vault-tabs svg {
@@ -75,7 +86,7 @@
   min-width: 0;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--settings-accent) 14%, rgba(255, 255, 255, 0.09));
-  border-radius: 22px;
+  border-radius: 19px;
   background: rgba(0, 0, 0, 0.08);
 }
 
@@ -85,8 +96,8 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  padding: 13px;
+  gap: 10px;
+  padding: 11px 12px;
   background:
     radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--managed-vault-accent) 8%, transparent), transparent 42%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.008));
@@ -111,21 +122,21 @@
 }
 
 .account-cloud-managed-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
 }
 
 .account-cloud-managed-icon svg,
 .account-cloud-manager-empty-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .account-cloud-managed-copy {
   min-width: 0;
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .account-cloud-managed-chips {
@@ -136,7 +147,7 @@
 }
 
 .account-cloud-managed-chips span {
-  min-height: 22px;
+  min-height: 20px;
   display: inline-flex;
   align-items: center;
   padding: 0 7px;
@@ -144,7 +155,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--managed-vault-accent) 6%, rgba(255, 255, 255, 0.02));
   color: rgba(208, 217, 241, 0.77);
-  font-size: 0.61rem;
+  font-size: 0.58rem;
   font-weight: 760;
   line-height: 1;
   white-space: nowrap;
@@ -188,7 +199,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.94rem;
+  font-size: 0.88rem;
   font-weight: 810;
   line-height: 1.2;
 }
@@ -211,7 +222,7 @@
   margin: 0;
   overflow-wrap: anywhere;
   color: rgba(194, 203, 231, 0.68);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   line-height: 1.38;
 }
 
@@ -375,7 +386,7 @@
   .account-cloud-managed-actions {
     grid-column: 1 / -1;
     justify-content: stretch;
-    padding-top: 2px;
+    padding-top: 1px;
   }
 
   .account-cloud-managed-actions .account-cloud-compact-action {
@@ -411,5 +422,11 @@
 
   .account-cloud-managed-actions .account-cloud-compact-action {
     min-height: 42px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-cloud-vault-tabs button {
+    transition: none;
   }
 }

@@ -24,6 +24,7 @@ import "./EditorPane.mobile.css";
 import ConfirmDialog from "./ConfirmDialog";
 import EditorFormattingToolbar from "./EditorFormattingToolbar";
 import FolderPicker from "./FolderPicker";
+import MobileEditorToolbar from "./MobileEditorToolbar";
 import NoteTransferModal from "./NoteTransferModal";
 import NoteStaticPreview from "./NoteStaticPreview";
 import {
@@ -74,6 +75,7 @@ import {
   saveBlobFileWithDialog
 } from "../lib/nativeFileIntegration";
 import { useAndroidBackHandler } from "../lib/useAndroidBackHandler";
+import useMobileEditorExperience from "./useMobileEditorExperience";
 import {
   createNoteDocxBlob,
   createNoteHtmlBlob,
@@ -106,7 +108,7 @@ type PendingMarkdownImport = {
 };
 type AiPanelState = {
   scope: GeminiAiScope;
-  status: "idle" | "generating" | "applying" | "error";
+  status: "preparing" | "idle" | "generating" | "applying" | "error";
   customMode: GeminiCustomMode;
   customPrompt: string;
   targetLanguage: string;
@@ -1263,9 +1265,11 @@ export default function EditorPane({
   const [aiPanel, setAiPanel] = useState<AiPanelState | null>(null);
   const [aiPreview, setAiPreview] = useState<AiPreviewState | null>(null);
   const aiPanelRef = useRef<HTMLDivElement | null>(null);
+  const editorPaneRef = useRef<HTMLElement | null>(null);
   const spellcheckStageRef = useRef<HTMLDivElement | null>(null);
   const titleTimeoutRef = useRef<number | null>(null);
   const contentTimeoutRef = useRef<number | null>(null);
+  const aiPrepareTimeoutRef = useRef<number | null>(null);
   const markdownStatusTimeoutRef = useRef<number | null>(null);
   const taskStatusTimeoutRef = useRef<number | null>(null);
   const isTitleFieldFocusedRef = useRef(false);
@@ -1380,6 +1384,26 @@ export default function EditorPane({
     [editorDictionary, note.id, spellcheckConfiguration.signature]
   );
 
+  useMobileEditorExperience({
+    editorPaneRef,
+    editorStageRef: spellcheckStageRef,
+    onRequestEditorFocus: ({ moveToDocumentEnd }) => {
+      try {
+        if (moveToDocumentEnd) {
+          const lastBlock = editor.document.at(-1) as StoredBlock | undefined;
+
+          if (typeof lastBlock?.id === "string") {
+            editor.setTextCursorPosition(lastBlock.id, "end");
+          }
+        }
+
+        editor.focus();
+      } catch {
+        // BlockNote may be between document replacements; the native tap can still focus it.
+      }
+    }
+  });
+
   const readActiveFloatingMediaBlock = (): FloatingMediaSelectionSnapshot | null => {
     try {
       const block = editor.getTextCursorPosition().block as StoredBlock & { id?: string };
@@ -1416,7 +1440,7 @@ export default function EditorPane({
     const snapshot = floatingMediaSelectionRef.current;
 
     if (!snapshot || Date.now() > floatingMediaSelectionGraceUntilRef.current) {
-      return;
+      return false;
     }
 
     try {
@@ -1428,16 +1452,19 @@ export default function EditorPane({
 
       editor.getExtension(FormattingToolbarExtension)?.store.setState(true);
       floatingMediaSelectionGraceUntilRef.current = Date.now() + 3000;
+      return true;
     } catch {
       floatingMediaSelectionRef.current = null;
+      return false;
     }
   };
 
   const preserveFloatingMediaSelection = (
     event?: ReactMouseEvent<HTMLDivElement> | ReactPointerEvent<HTMLDivElement>
   ) => {
-    restoreFloatingMediaSelection();
-    event?.preventDefault();
+    if (restoreFloatingMediaSelection()) {
+      event?.preventDefault();
+    }
   };
 
   useEffect(() => {
@@ -1762,23 +1789,72 @@ export default function EditorPane({
 	  };
 
 	  const openAiPanel = (scope: GeminiAiScope, triggerRect?: DOMRect | null) => {
-    const snapshot = getAiSourceSnapshot(scope);
+	    const anchor = buildAiPanelAnchor(scope, triggerRect);
 
-    setAiPanel({
-      scope,
-      status: "idle",
-      customMode: snapshot.markdown ? "edit" : "generate",
-      customPrompt: "",
-      targetLanguage: translateInline(language, "editorPane.defaultTranslationTarget"),
-      error: null,
-      targetBlockIds: snapshot.targetBlockIds,
-      sourceMarkdown: snapshot.markdown,
-      sourceBlocks: snapshot.sourceBlocks,
-      targetBlocks: snapshot.targetBlocks,
-      inlineRange: snapshot.inlineRange,
-      anchor: buildAiPanelAnchor(scope, triggerRect)
-    });
-  };
+    if (aiPrepareTimeoutRef.current) {
+      window.clearTimeout(aiPrepareTimeoutRef.current);
+      aiPrepareTimeoutRef.current = null;
+    }
+
+    if (scope === "selection") {
+      const snapshot = getAiSourceSnapshot(scope);
+
+      setAiPanel({
+        scope,
+        status: "idle",
+        customMode: snapshot.markdown ? "edit" : "generate",
+        customPrompt: "",
+        targetLanguage: translateInline(language, "editorPane.defaultTranslationTarget"),
+        error: null,
+        targetBlockIds: snapshot.targetBlockIds,
+        sourceMarkdown: snapshot.markdown,
+        sourceBlocks: snapshot.sourceBlocks,
+        targetBlocks: snapshot.targetBlocks,
+        inlineRange: snapshot.inlineRange,
+        anchor
+      });
+      return;
+    }
+
+	    setAiPanel({
+	      scope,
+	      status: "preparing",
+	      customMode: "generate",
+	      customPrompt: "",
+	      targetLanguage: translateInline(language, "editorPane.defaultTranslationTarget"),
+	      error: null,
+	      targetBlockIds: [],
+	      sourceMarkdown: "",
+	      sourceBlocks: [],
+	      targetBlocks: [],
+	      inlineRange: null,
+	      anchor
+	    });
+    aiPrepareTimeoutRef.current = window.setTimeout(() => {
+      if (!aiPanelRef.current) {
+        aiPrepareTimeoutRef.current = null;
+        return;
+      }
+
+      const snapshot = getAiSourceSnapshot("note");
+
+      setAiPanel((previous) =>
+        previous?.scope === "note" && previous.status === "preparing"
+          ? {
+              ...previous,
+              status: "idle",
+              customMode: snapshot.markdown ? "edit" : "generate",
+              targetBlockIds: snapshot.targetBlockIds,
+              sourceMarkdown: snapshot.markdown,
+              sourceBlocks: snapshot.sourceBlocks,
+              targetBlocks: snapshot.targetBlocks,
+              inlineRange: snapshot.inlineRange
+            }
+          : previous
+      );
+      aiPrepareTimeoutRef.current = null;
+    }, 24);
+	  };
 
 	  useEffect(() => {
 	    const handleOpenAi = (event: Event) => {
@@ -2646,6 +2722,7 @@ export default function EditorPane({
 
   const applyMobileQuickBlock = (type: MobileQuickBlockType) => {
     try {
+      editor.focus();
       const activeBlock = editor.getTextCursorPosition().block as unknown as StoredBlock;
 
       if (typeof activeBlock.id !== "string") {
@@ -2665,6 +2742,7 @@ export default function EditorPane({
 
       editor.updateBlock(activeBlock.id, nextBlock as any);
       editor.setTextCursorPosition(activeBlock.id, "end");
+      editor.focus();
     } catch {
       // Mobile quick actions are best-effort; BlockNote keeps the current edit state.
     }
@@ -2807,6 +2885,7 @@ export default function EditorPane({
 
   const insertMobileBlockAfterCursor = (type: MobileInsertBlockType) => {
     try {
+      editor.focus();
       const activeBlock = editor.getTextCursorPosition().block as unknown as StoredBlock;
       const insertedBlocks = editor.insertBlocks(
         [buildMobileInsertBlock(type, activeBlock) as any],
@@ -2817,6 +2896,7 @@ export default function EditorPane({
 
       if (typeof insertedBlock?.id === "string" && MOBILE_INSERT_CURSOR_BLOCK_TYPES.has(type)) {
         editor.setTextCursorPosition(insertedBlock.id, "end");
+        editor.focus();
       }
 
       if (typeof insertedBlock?.id === "string" && MOBILE_INSERT_MEDIA_BLOCK_TYPES.has(type)) {
@@ -2864,13 +2944,20 @@ export default function EditorPane({
 	        window.clearTimeout(taskStatusTimeoutRef.current);
 	      }
 
+      if (aiPrepareTimeoutRef.current) {
+        window.clearTimeout(aiPrepareTimeoutRef.current);
+      }
+
 	      if (latestTitleDraftRef.current !== latestStoredTitleRef.current) {
         latestOnTitleChangeRef.current(latestTitleDraftRef.current.trim());
       }
     };
   }, []);
 
-  const aiPanelBusy = aiPanel?.status === "generating" || aiPanel?.status === "applying";
+  const aiPanelBusy =
+    aiPanel?.status === "preparing" ||
+    aiPanel?.status === "generating" ||
+    aiPanel?.status === "applying";
   const androidBackLayer = aiPreview
     ? "ai-preview"
     : aiPanel
@@ -2921,6 +3008,7 @@ export default function EditorPane({
 
   return (
     <section
+      ref={editorPaneRef}
       className={`editor-pane ${immersive ? "is-immersive" : ""} ${
         typographyMode === "reading" ? "is-reading" : ""
       } ${mobileNoteMenuOpen ? "is-mobile-note-menu-open" : ""}`}
@@ -2956,6 +3044,7 @@ export default function EditorPane({
           className="editor-pane-mobile-ai-action"
           onClick={() => openAiPanel("note")}
           aria-label={t("note.aiNote")}
+          aria-haspopup="dialog"
           title={t("note.aiNote")}
         >
           <AiSparkleGlyph />
@@ -3282,7 +3371,7 @@ export default function EditorPane({
             className="editor-ai-mobile-backdrop"
             aria-label={t("note.aiClose")}
             onClick={() => {
-              if (!aiPanelBusy) {
+              if (!aiPanelBusy || aiPanel?.status === "preparing") {
                 setAiPanel(null);
               }
             }}
@@ -3292,6 +3381,7 @@ export default function EditorPane({
             className={`editor-ai-panel ${aiPanel.anchor ? "is-floating" : "is-docked"} is-${
               aiPanel.scope
             } is-${aiPanel.anchor?.placement ?? "bottom"}`}
+            aria-busy={aiPanel.status === "preparing"}
             style={
               aiPanel.anchor
                 ? ({
@@ -3590,6 +3680,7 @@ export default function EditorPane({
                       strategy: "fixed"
                     },
                     elementProps: {
+                      className: "editor-link-toolbar-popover",
                       style: {
                         zIndex: 62
                       },
@@ -3605,6 +3696,7 @@ export default function EditorPane({
                       strategy: "fixed"
                     },
                     elementProps: {
+                      className: "editor-file-panel-popover",
                       style: {
                         zIndex: 64
                       },
@@ -3809,32 +3901,21 @@ export default function EditorPane({
         </aside>
       </div>
 
-      <div className="editor-pane-mobile-formatbar" aria-label={t("note.mobileFormatToolbar")}>
-        <button type="button" onClick={() => applyMobileQuickBlock("paragraph")}>
-          <span>P</span>
-          <small>{t("note.mobileParagraph")}</small>
-        </button>
-        <button type="button" onClick={() => applyMobileQuickBlock("heading")}>
-          <span>H</span>
-          <small>{t("note.mobileHeading")}</small>
-        </button>
-        <button type="button" onClick={() => applyMobileQuickBlock("bulletListItem")}>
-          <span>-</span>
-          <small>{t("note.mobileBulletList")}</small>
-        </button>
-        <button type="button" onClick={() => applyMobileQuickBlock("checkListItem")}>
-          <span>[]</span>
-          <small>{t("note.mobileChecklist")}</small>
-        </button>
-        <button type="button" onClick={() => showMobileFormattingToolbar()}>
-          <span>A</span>
-          <small>{t("note.mobileStyle")}</small>
-        </button>
-        <button type="button" onClick={() => setMobileInsertMenuOpen(true)}>
-          <span>+</span>
-          <small>{t("note.mobileInsert")}</small>
-        </button>
-      </div>
+      <MobileEditorToolbar
+        ariaLabel={t("note.mobileFormatToolbar")}
+        paragraphLabel={t("note.mobileParagraph")}
+        headingLabel={t("note.mobileHeading")}
+        bulletListLabel={t("note.mobileBulletList")}
+        checklistLabel={t("note.mobileChecklist")}
+        styleLabel={t("note.mobileStyle")}
+        insertLabel={t("note.mobileInsert")}
+        onParagraph={() => applyMobileQuickBlock("paragraph")}
+        onHeading={() => applyMobileQuickBlock("heading")}
+        onBulletList={() => applyMobileQuickBlock("bulletListItem")}
+        onChecklist={() => applyMobileQuickBlock("checkListItem")}
+        onStyle={showMobileFormattingToolbar}
+        onInsert={() => setMobileInsertMenuOpen(true)}
+      />
     </section>
   );
 }
