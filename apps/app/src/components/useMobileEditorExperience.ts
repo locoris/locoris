@@ -11,6 +11,32 @@ type UseMobileEditorExperienceOptions = {
 };
 
 const MOBILE_SHELL_SELECTOR = '.locoris-adaptive-shell[data-mobile-shell="true"]';
+const MOBILE_EDITOR_POPOVER_SELECTOR = [
+  ".editor-floating-toolbar-popover",
+  ".editor-link-toolbar-popover",
+  ".editor-file-panel-popover",
+  ".bn-menu-dropdown",
+  ".bn-form-popover",
+  ".bn-panel-popover"
+].join(",");
+const MOBILE_EDITOR_SUBMENU_SELECTOR = [
+  ".bn-menu-dropdown",
+  ".bn-form-popover",
+  ".bn-panel-popover"
+].join(",");
+const MOBILE_EDITOR_POPOVER_ACTION_SELECTOR = [
+  "button:not(:disabled)",
+  "a[href]",
+  "[role='button']:not([aria-disabled='true'])",
+  "[role='menuitem']:not([aria-disabled='true'])",
+  "[role='option']:not([aria-disabled='true'])"
+].join(",");
+const MOBILE_EDITOR_POPOVER_FIELD_SELECTOR = [
+  "input",
+  "textarea",
+  "select",
+  "[contenteditable='true']"
+].join(",");
 const MOBILE_EDITOR_VIEWPORT_PROPERTIES = [
   "--locoris-mobile-editor-viewport-top",
   "--locoris-mobile-editor-viewport-left",
@@ -73,6 +99,28 @@ type MobileSelectionToolbarPlacement = {
   gap?: number;
 };
 
+type MobilePopoverPlacement = {
+  anchorTop: number;
+  anchorRight: number;
+  anchorBottom: number;
+  anchorLeft: number;
+  popoverWidth: number;
+  popoverHeight: number;
+  viewportTop: number;
+  viewportRight: number;
+  viewportBottom: number;
+  viewportLeft: number;
+  gap?: number;
+  margin?: number;
+};
+
+type MobilePopoverPosition = {
+  top: number;
+  left: number;
+  maxHeight: number;
+  placement: "above" | "below";
+};
+
 export function resolveMobileSelectionToolbarTop({
   selectionTop,
   selectionBottom,
@@ -98,6 +146,49 @@ export function resolveMobileSelectionToolbarTop({
   const preferred = availableAbove >= availableBelow ? above : below;
 
   return Math.min(maximumTop, Math.max(safeTop, preferred));
+}
+
+export function resolveMobilePopoverPosition({
+  anchorTop,
+  anchorRight,
+  anchorBottom,
+  anchorLeft,
+  popoverWidth,
+  popoverHeight,
+  viewportTop,
+  viewportRight,
+  viewportBottom,
+  viewportLeft,
+  gap = 8,
+  margin = 8
+}: MobilePopoverPlacement): MobilePopoverPosition {
+  const safeTop = viewportTop + margin;
+  const safeRight = viewportRight - margin;
+  const safeBottom = viewportBottom - margin;
+  const safeLeft = viewportLeft + margin;
+  const availableAbove = Math.max(0, anchorTop - gap - safeTop);
+  const availableBelow = Math.max(0, safeBottom - anchorBottom - gap);
+  const placement =
+    availableBelow >= Math.min(popoverHeight, 160) || availableBelow >= availableAbove
+      ? "below"
+      : "above";
+  const maxHeight = placement === "below" ? availableBelow : availableAbove;
+  const renderedHeight = Math.min(popoverHeight, maxHeight);
+  const renderedWidth = Math.min(popoverWidth, Math.max(0, safeRight - safeLeft));
+  const preferredLeft =
+    anchorLeft + renderedWidth <= safeRight
+      ? anchorLeft
+      : anchorRight - renderedWidth;
+  const left = Math.min(
+    Math.max(safeLeft, preferredLeft),
+    Math.max(safeLeft, safeRight - renderedWidth)
+  );
+  const top =
+    placement === "below"
+      ? anchorBottom + gap
+      : Math.max(safeTop, anchorTop - gap - renderedHeight);
+
+  return { top, left, maxHeight, placement };
 }
 
 export default function useMobileEditorExperience({
@@ -134,6 +225,12 @@ export default function useMobileEditorExperience({
     let caretTimer = 0;
     let toolbarFrame = 0;
     let toolbarTimer = 0;
+    let submenuFrame = 0;
+    let submenuTimer = 0;
+    let lastPopoverAnchorRect: DOMRect | null = null;
+    let syntheticPopoverClick = false;
+    let suppressedNativeClickTarget: HTMLElement | null = null;
+    let suppressNativeClickUntil = 0;
     let pointerStart: { x: number; y: number } | null = null;
     let suppressCaretUntil = 0;
     let programmaticCaretScroll = false;
@@ -232,6 +329,78 @@ export default function useMobileEditorExperience({
       toolbarFrame = window.requestAnimationFrame(positionSelectionToolbar);
     };
 
+    const clearSubmenuPosition = (submenu: HTMLElement) => {
+      submenu.classList.remove("locoris-mobile-editor-submenu");
+      submenu.removeAttribute("data-mobile-placement");
+      submenu.style.removeProperty("--locoris-mobile-editor-submenu-top");
+      submenu.style.removeProperty("--locoris-mobile-editor-submenu-left");
+      submenu.style.removeProperty("--locoris-mobile-editor-submenu-max-height");
+    };
+
+    const positionEditorSubmenus = () => {
+      submenuFrame = 0;
+      const anchorRect = lastPopoverAnchorRect;
+
+      if (!anchorRect) {
+        return;
+      }
+
+      const viewportTop = visualViewport?.offsetTop ?? 0;
+      const viewportLeft = visualViewport?.offsetLeft ?? 0;
+      const viewportRight = viewportLeft + (visualViewport?.width ?? window.innerWidth);
+      const viewportBottom = viewportTop + (visualViewport?.height ?? window.innerHeight);
+
+      document.querySelectorAll<HTMLElement>(MOBILE_EDITOR_SUBMENU_SELECTOR).forEach((submenu) => {
+        if (submenu.getClientRects().length === 0) {
+          clearSubmenuPosition(submenu);
+          return;
+        }
+
+        const submenuRect = submenu.getBoundingClientRect();
+
+        if (submenuRect.width <= 0 || submenuRect.height <= 0) {
+          return;
+        }
+
+        const position = resolveMobilePopoverPosition({
+          anchorTop: anchorRect.top,
+          anchorRight: anchorRect.right,
+          anchorBottom: anchorRect.bottom,
+          anchorLeft: anchorRect.left,
+          popoverWidth: submenuRect.width,
+          popoverHeight: submenuRect.height,
+          viewportTop,
+          viewportRight,
+          viewportBottom,
+          viewportLeft
+        });
+
+        submenu.classList.add("locoris-mobile-editor-submenu");
+        submenu.dataset.mobilePlacement = position.placement;
+        submenu.style.setProperty("--locoris-mobile-editor-submenu-top", px(position.top));
+        submenu.style.setProperty("--locoris-mobile-editor-submenu-left", px(position.left));
+        submenu.style.setProperty(
+          "--locoris-mobile-editor-submenu-max-height",
+          px(position.maxHeight)
+        );
+      });
+    };
+
+    const scheduleSubmenuPosition = (delay = 0) => {
+      window.clearTimeout(submenuTimer);
+
+      if (delay > 0) {
+        submenuTimer = window.setTimeout(() => scheduleSubmenuPosition(), delay);
+        return;
+      }
+
+      if (submenuFrame) {
+        window.cancelAnimationFrame(submenuFrame);
+      }
+
+      submenuFrame = window.requestAnimationFrame(positionEditorSubmenus);
+    };
+
     const ensureCaretIsVisible = () => {
       caretFrame = 0;
 
@@ -326,6 +495,7 @@ export default function useMobileEditorExperience({
       }
 
       scheduleToolbarPosition();
+      scheduleSubmenuPosition();
     };
 
     const scheduleViewportSync = (keepCaretVisible = false) => {
@@ -418,19 +588,80 @@ export default function useMobileEditorExperience({
     const handleViewportResize = () => scheduleViewportSync(true);
     const handleViewportScroll = () => scheduleViewportSync();
 
+    const handlePopoverPointerDown = (event: PointerEvent) => {
+      if (
+        event.button !== 0 ||
+        !(event.target instanceof Element)
+      ) {
+        return;
+      }
+
+      const popover = event.target.closest<HTMLElement>(MOBILE_EDITOR_POPOVER_SELECTOR);
+      const action = event.target.closest<HTMLElement>(MOBILE_EDITOR_POPOVER_ACTION_SELECTOR);
+
+      if (
+        !popover ||
+        !action ||
+        !popover.contains(action) ||
+        action.matches(MOBILE_EDITOR_POPOVER_FIELD_SELECTOR)
+      ) {
+        return;
+      }
+
+      lastPopoverAnchorRect = action.getBoundingClientRect();
+
+      if (event.pointerType === "mouse") {
+        scheduleSubmenuPosition(42);
+        return;
+      }
+
+      // BlockNote and Mantine normally move focus before their click handlers run.
+      // On iOS that closes the selection and makes the first tap a no-op. Activate
+      // the control while the current editor selection is still intact.
+      event.preventDefault();
+      event.stopPropagation();
+      suppressedNativeClickTarget = action;
+      suppressNativeClickUntil = performance.now() + 720;
+      syntheticPopoverClick = true;
+      action.click();
+      syntheticPopoverClick = false;
+      scheduleToolbarPosition();
+      scheduleSubmenuPosition();
+      scheduleSubmenuPosition(42);
+    };
+
+    const handlePopoverClick = (event: MouseEvent) => {
+      if (
+        syntheticPopoverClick ||
+        performance.now() > suppressNativeClickUntil ||
+        !(event.target instanceof Node) ||
+        !suppressedNativeClickTarget?.contains(event.target)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      suppressedNativeClickTarget = null;
+      suppressNativeClickUntil = 0;
+    };
+
     const toolbarObserver = new MutationObserver((records) => {
-      const toolbarWasAdded = records.some((record) =>
+      const floatingUiWasAdded = records.some((record) =>
         Array.from(record.addedNodes).some(
           (node) =>
             node instanceof Element &&
-            (node.matches(".editor-floating-toolbar-popover") ||
-              Boolean(node.querySelector(".editor-floating-toolbar-popover")))
+            (node.matches(MOBILE_EDITOR_POPOVER_SELECTOR) ||
+              Boolean(node.querySelector(MOBILE_EDITOR_POPOVER_SELECTOR)))
         )
       );
 
-      if (toolbarWasAdded) {
+      if (floatingUiWasAdded) {
         scheduleToolbarPosition();
         scheduleToolbarPosition(36);
+        scheduleSubmenuPosition();
+        scheduleSubmenuPosition(42);
       }
     });
 
@@ -441,6 +672,8 @@ export default function useMobileEditorExperience({
     window.addEventListener("resize", handleViewportResize);
     window.addEventListener("orientationchange", handleViewportResize);
     document.addEventListener("selectionchange", handleSelectionChange);
+    document.addEventListener("pointerdown", handlePopoverPointerDown, true);
+    document.addEventListener("click", handlePopoverClick, true);
     editorStage.addEventListener("pointerdown", handleEditorPointerDown, true);
     editorStage.addEventListener("pointermove", handleEditorPointerMove, true);
     editorStage.addEventListener("pointerup", handleEditorPointerUp, true);
@@ -458,6 +691,8 @@ export default function useMobileEditorExperience({
       window.removeEventListener("resize", handleViewportResize);
       window.removeEventListener("orientationchange", handleViewportResize);
       document.removeEventListener("selectionchange", handleSelectionChange);
+      document.removeEventListener("pointerdown", handlePopoverPointerDown, true);
+      document.removeEventListener("click", handlePopoverClick, true);
       editorStage.removeEventListener("pointerdown", handleEditorPointerDown, true);
       editorStage.removeEventListener("pointermove", handleEditorPointerMove, true);
       editorStage.removeEventListener("pointerup", handleEditorPointerUp, true);
@@ -470,9 +705,15 @@ export default function useMobileEditorExperience({
       window.cancelAnimationFrame(viewportFrame);
       window.cancelAnimationFrame(caretFrame);
       window.cancelAnimationFrame(toolbarFrame);
+      window.cancelAnimationFrame(submenuFrame);
       window.clearTimeout(caretTimer);
       window.clearTimeout(toolbarTimer);
+      window.clearTimeout(submenuTimer);
       delete editorPane.dataset.mobileKeyboard;
+
+      document.querySelectorAll<HTMLElement>(MOBILE_EDITOR_SUBMENU_SELECTOR).forEach(
+        clearSubmenuPosition
+      );
 
       previousProperties.forEach((value, property) => {
         if (value) {

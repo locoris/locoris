@@ -24,6 +24,7 @@ import "./EditorPane.mobile.css";
 import ConfirmDialog from "./ConfirmDialog";
 import EditorFormattingToolbar from "./EditorFormattingToolbar";
 import FolderPicker from "./FolderPicker";
+import MobileEditorPressButton from "./MobileEditorPressButton";
 import MobileEditorToolbar from "./MobileEditorToolbar";
 import NoteTransferModal from "./NoteTransferModal";
 import NoteStaticPreview from "./NoteStaticPreview";
@@ -3015,15 +3016,14 @@ export default function EditorPane({
       style={{ "--note-accent": note.color || DEFAULT_NOTE_COLOR } as CSSProperties}
     >
 	      <div className="editor-pane-mobile-header">
-        <button
-          type="button"
+        <MobileEditorPressButton
           className="editor-pane-mobile-icon-action"
-          onClick={onClose}
+          onPress={() => onClose?.()}
           aria-label={t("note.mobileBack")}
           title={t("note.mobileBack")}
         >
           <MobileBackGlyph />
-        </button>
+        </MobileEditorPressButton>
 
         <input
           value={titleDraft}
@@ -3039,53 +3039,49 @@ export default function EditorPane({
           placeholder={t("note.titlePlaceholder")}
         />
 
-        <button
-          type="button"
+        <MobileEditorPressButton
           className="editor-pane-mobile-ai-action"
-          onClick={() => openAiPanel("note")}
+          onPress={() => openAiPanel("note")}
           aria-label={t("note.aiNote")}
           aria-haspopup="dialog"
           title={t("note.aiNote")}
         >
           <AiSparkleGlyph />
-        </button>
+        </MobileEditorPressButton>
 
         <div
           className="editor-pane-mobile-mode-switch"
           role="group"
           aria-label={t("note.typographyMode")}
         >
-          <button
-            type="button"
+          <MobileEditorPressButton
             className={typographyMode === "focus" ? "is-active" : ""}
             aria-label={t("note.typographyFocus")}
             aria-pressed={typographyMode === "focus"}
             title={t("note.typographyFocus")}
-            onClick={() => setTypographyMode("focus")}
+            onPress={() => setTypographyMode("focus")}
           >
             <MobileFocusModeGlyph />
-          </button>
-          <button
-            type="button"
+          </MobileEditorPressButton>
+          <MobileEditorPressButton
             className={typographyMode === "reading" ? "is-active" : ""}
             aria-label={t("note.typographyReading")}
             aria-pressed={typographyMode === "reading"}
             title={t("note.typographyReading")}
-            onClick={() => setTypographyMode("reading")}
+            onPress={() => setTypographyMode("reading")}
           >
             <MobileReadingModeGlyph />
-          </button>
+          </MobileEditorPressButton>
         </div>
 
-        <button
-          type="button"
+        <MobileEditorPressButton
           className="editor-pane-mobile-icon-action"
-          onClick={() => setMobileNoteMenuOpen(true)}
+          onPress={() => setMobileNoteMenuOpen(true)}
           aria-label={t("note.mobileMore")}
           title={t("note.mobileMore")}
         >
           <MobileMoreGlyph />
-	        </button>
+	        </MobileEditorPressButton>
 	      </div>
 
 	      {taskCreationStatus ? (
