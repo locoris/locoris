@@ -1,9 +1,61 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isRepeatedMobileEditorTap,
+  placeMobileCaretFromPoint,
   resolveMobilePopoverPosition,
   resolveMobileSelectionToolbarTop
 } from "../src/components/useMobileEditorExperience";
+
+describe("mobile editor tap intent", () => {
+  it("keeps nearby rapid taps available for native word selection", () => {
+    expect(
+      isRepeatedMobileEditorTap(
+        { time: 100, x: 120, y: 240 },
+        { time: 360, x: 127, y: 245 }
+      )
+    ).toBe(true);
+  });
+
+  it("treats a later or distant tap as a new caret placement", () => {
+    expect(
+      isRepeatedMobileEditorTap(
+        { time: 100, x: 120, y: 240 },
+        { time: 700, x: 120, y: 240 }
+      )
+    ).toBe(false);
+    expect(
+      isRepeatedMobileEditorTap(
+        { time: 100, x: 120, y: 240 },
+        { time: 220, x: 170, y: 240 }
+      )
+    ).toBe(false);
+  });
+});
+
+describe("mobile editor first-tap caret", () => {
+  it("places a collapsed caret at the point returned by the browser", () => {
+    const editable = document.createElement("div");
+    editable.contentEditable = "true";
+    const text = document.createTextNode("Locoris note");
+    editable.append(text);
+    document.body.append(editable);
+    const range = document.createRange();
+    range.setStart(text, 7);
+    range.collapse(true);
+    Object.defineProperty(document, "caretRangeFromPoint", {
+      configurable: true,
+      value: () => range
+    });
+
+    expect(placeMobileCaretFromPoint(editable, 40, 24)).toBe(true);
+    expect(window.getSelection()?.anchorNode).toBe(text);
+    expect(window.getSelection()?.anchorOffset).toBe(7);
+    window.getSelection()?.removeAllRanges();
+    delete (document as Document & { caretRangeFromPoint?: unknown }).caretRangeFromPoint;
+    editable.remove();
+  });
+});
 
 describe("mobile editor selection toolbar placement", () => {
   it("places the toolbar above the selection when there is room", () => {

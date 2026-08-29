@@ -25,7 +25,23 @@ import ConfirmDialog from "./ConfirmDialog";
 import EditorFormattingToolbar from "./EditorFormattingToolbar";
 import FolderPicker from "./FolderPicker";
 import MobileEditorPressButton from "./MobileEditorPressButton";
-import MobileEditorToolbar from "./MobileEditorToolbar";
+import MobileNoteEditorAccessoryBar from "./MobileNoteEditorAccessoryBar";
+import MobileNoteEditorHeader from "./MobileNoteEditorHeader";
+import MobileNoteFormatSheet, {
+  type MobileNoteFormatSnapshot
+} from "./MobileNoteFormatSheet";
+import MobileNoteInsertSheet, {
+  type MobileNoteInsertGroup
+} from "./MobileNoteInsertSheet";
+import {
+  MOBILE_EDITOR_OPEN_FORMAT_EVENT,
+  MOBILE_EDITOR_OPEN_LINK_EVENT
+} from "./mobileEditorEvents";
+import {
+  captureMobileEditorFormatSelection,
+  restoreMobileEditorFormatSelection,
+  type MobileEditorFormatSelection
+} from "./mobileEditorFormatSelection";
 import NoteTransferModal from "./NoteTransferModal";
 import NoteStaticPreview from "./NoteStaticPreview";
 import {
@@ -35,7 +51,12 @@ import {
 import TagInputField from "./TagInputField";
 import { COLOR_PALETTE, DEFAULT_NOTE_COLOR } from "../lib/palette";
 import { isCommitEnterKey } from "../lib/keyboardInput";
-import { editorBlockNoteSchema } from "../lib/blocknoteSchema";
+import {
+  EDITOR_FONT_CHOICES,
+  editorBlockNoteSchema,
+  isEditorStoredFontId,
+  type EditorFontChoiceId
+} from "../lib/blocknoteSchema";
 import {
   readPersistentString,
   writePersistentString
@@ -76,6 +97,7 @@ import {
   saveBlobFileWithDialog
 } from "../lib/nativeFileIntegration";
 import { useAndroidBackHandler } from "../lib/useAndroidBackHandler";
+import { useAdaptiveLayout } from "../lib/useAdaptiveLayout";
 import useMobileEditorExperience from "./useMobileEditorExperience";
 import {
   createNoteDocxBlob,
@@ -379,36 +401,6 @@ function AiSparkleGlyph() {
         d="M19 16.75l.58 1.67 1.67.58-1.67.58L19 21.25l-.58-1.67-1.67-.58 1.67-.58.58-1.67ZM5.25 3.5l.82 2.18 2.18.82-2.18.82L5.25 9.5l-.82-2.18-2.18-.82 2.18-.82.82-2.18Z"
         fill="currentColor"
         opacity="0.72"
-      />
-    </svg>
-  );
-}
-
-function MobileBackGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-      <path
-        d="M14.75 5.25 8 12l6.75 6.75M8.75 12H20"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.9"
-      />
-    </svg>
-  );
-}
-
-function MobileMoreGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-      <path
-        d="M5.75 12h.01M12 12h.01M18.25 12h.01"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="3.2"
       />
     </svg>
   );
@@ -1246,6 +1238,7 @@ export default function EditorPane({
   onClose
 }: EditorPaneProps) {
   const { t } = useTranslation();
+  const { isMobileShell } = useAdaptiveLayout();
   const { preferences: localePreferences, runtime: localeRuntime } = useLocale();
   const [titleDraft, setTitleDraft] = useState(note.title);
   const [typographyMode, setTypographyMode] = useState<EditorTypographyMode>(() => {
@@ -1262,6 +1255,11 @@ export default function EditorPane({
     useState<PendingMarkdownImport | null>(null);
   const [mobileNoteMenuOpen, setMobileNoteMenuOpen] = useState(false);
   const [mobileInsertMenuOpen, setMobileInsertMenuOpen] = useState(false);
+  const [mobileFormatMenuOpen, setMobileFormatMenuOpen] = useState(false);
+  const [mobileFormatSheetMode, setMobileFormatSheetMode] = useState<"format" | "link">("format");
+  const [mobileLinkDraft, setMobileLinkDraft] = useState("");
+  const [mobileFontChoice, setMobileFontChoice] = useState<EditorFontChoiceId>("default");
+  const [mobileEditorStateRevision, setMobileEditorStateRevision] = useState(0);
   const [taskCreationStatus, setTaskCreationStatus] = useState<TaskCreationStatus>(null);
   const [aiPanel, setAiPanel] = useState<AiPanelState | null>(null);
   const [aiPreview, setAiPreview] = useState<AiPreviewState | null>(null);
@@ -1280,6 +1278,7 @@ export default function EditorPane({
   const checklistStableOrderRef = useRef(new Map<string, number>());
   const floatingMediaSelectionRef = useRef<FloatingMediaSelectionSnapshot | null>(null);
   const floatingMediaSelectionGraceUntilRef = useRef(0);
+  const mobileFormatSelectionRef = useRef<MobileEditorFormatSelection | null>(null);
   const latestTitleDraftRef = useRef(titleDraft);
   const latestStoredTitleRef = useRef(note.title);
   const latestEditorRef = useRef<ReturnType<typeof useCreateBlockNote> | null>(null);
@@ -1323,6 +1322,11 @@ export default function EditorPane({
     setNoteTransferBusy(null);
     setMobileNoteMenuOpen(false);
     setMobileInsertMenuOpen(false);
+    setMobileFormatMenuOpen(false);
+    setMobileFormatSheetMode("format");
+    setMobileLinkDraft("");
+    setMobileFontChoice("default");
+    mobileFormatSelectionRef.current = null;
     setAiPanel(null);
     setAiPreview(null);
     checklistStableOrderRef.current = new Map();
@@ -1386,6 +1390,7 @@ export default function EditorPane({
   );
 
   useMobileEditorExperience({
+    enabled: isMobileShell,
     editorPaneRef,
     editorStageRef: spellcheckStageRef,
     onRequestEditorFocus: ({ moveToDocumentEnd }) => {
@@ -1404,6 +1409,164 @@ export default function EditorPane({
       }
     }
   });
+
+  const readMobileActiveFont = (): EditorFontChoiceId => {
+    try {
+      const activeFont = editor.getActiveStyles().font;
+      return isEditorStoredFontId(activeFont) ? activeFont : "default";
+    } catch {
+      return "default";
+    }
+  };
+
+  const rememberMobileFormatSelection = () => {
+    const nextSelection = captureMobileEditorFormatSelection(editor);
+    mobileFormatSelectionRef.current = nextSelection;
+    return nextSelection !== null;
+  };
+
+  const restoreMobileFormatSelection = () => {
+    const snapshot = mobileFormatSelectionRef.current;
+    if (!snapshot) {
+      return false;
+    }
+
+    if (!restoreMobileEditorFormatSelection(editor, snapshot)) {
+      mobileFormatSelectionRef.current = null;
+      return false;
+    }
+
+    return true;
+  };
+
+  const runWithMobileFormatSelection = (action: () => void) => {
+    try {
+      restoreMobileFormatSelection();
+      action();
+      rememberMobileFormatSelection();
+      setMobileEditorStateRevision((revision) => revision + 1);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const refreshMobileEditorState = () => {
+      setMobileEditorStateRevision((revision) => revision + 1);
+    };
+    const unsubscribeSelection = editor.onSelectionChange(refreshMobileEditorState);
+    const unsubscribeContent = editor.onChange(refreshMobileEditorState);
+
+    return () => {
+      unsubscribeSelection();
+      unsubscribeContent();
+    };
+  }, [editor]);
+
+  useEffect(() => {
+    const openFormatSheet = () => {
+      rememberMobileFormatSelection();
+      editor.getExtension(FormattingToolbarExtension)?.store.setState(false);
+      try {
+        setMobileLinkDraft(editor.getSelectedLinkUrl() ?? "");
+      } catch {
+        setMobileLinkDraft("");
+      }
+      setMobileFontChoice(readMobileActiveFont());
+      setMobileInsertMenuOpen(false);
+      setMobileFormatSheetMode("format");
+      setMobileFormatMenuOpen(true);
+    };
+    const openLinkSheet = () => {
+      rememberMobileFormatSelection();
+      editor.getExtension(FormattingToolbarExtension)?.store.setState(false);
+      try {
+        setMobileLinkDraft(editor.getSelectedLinkUrl() ?? "");
+      } catch {
+        setMobileLinkDraft("");
+      }
+      setMobileFontChoice(readMobileActiveFont());
+      setMobileInsertMenuOpen(false);
+      setMobileFormatSheetMode("link");
+      setMobileFormatMenuOpen(true);
+    };
+
+    window.addEventListener(MOBILE_EDITOR_OPEN_FORMAT_EVENT, openFormatSheet);
+    window.addEventListener(MOBILE_EDITOR_OPEN_LINK_EVENT, openLinkSheet);
+
+    return () => {
+      window.removeEventListener(MOBILE_EDITOR_OPEN_FORMAT_EVENT, openFormatSheet);
+      window.removeEventListener(MOBILE_EDITOR_OPEN_LINK_EVENT, openLinkSheet);
+    };
+  }, [editor]);
+
+  useEffect(() => {
+    if (!isMobileShell || !mobileFormatMenuOpen || mobileFormatSheetMode !== "format") {
+      return;
+    }
+
+    let outerFrame = 0;
+    let innerFrame = 0;
+    outerFrame = window.requestAnimationFrame(() => {
+      innerFrame = window.requestAnimationFrame(() => {
+        const editorStage = spellcheckStageRef.current;
+        const sheet = editorPaneRef.current?.querySelector<HTMLElement>(
+          ".mobile-note-format-sheet .mobile-note-sheet"
+        );
+        const selection = window.getSelection();
+
+        if (!editorStage || !sheet || !selection || selection.rangeCount === 0) {
+          return;
+        }
+
+        const range = selection.getRangeAt(0);
+        const selectionNode = range.commonAncestorContainer instanceof Element
+          ? range.commonAncestorContainer
+          : range.commonAncestorContainer.parentElement;
+
+        if (!selectionNode || !editorStage.contains(selectionNode)) {
+          return;
+        }
+
+        const selectionRects = Array.from(range.getClientRects());
+        const focusRect = selectionRects.at(-1) ?? range.getBoundingClientRect();
+        const sheetRect = sheet.getBoundingClientRect();
+        const stageRect = editorStage.getBoundingClientRect();
+        const sheetOffsetParent = sheet.offsetParent;
+        const settledSheetTop = sheetOffsetParent instanceof HTMLElement
+          ? sheetOffsetParent.getBoundingClientRect().top + sheet.offsetTop
+          : sheetRect.top;
+
+        if (focusRect.height <= 0 || sheetRect.height <= 0 || stageRect.height <= 0) {
+          return;
+        }
+
+        const visibleBottom = Math.min(stageRect.bottom, settledSheetTop) - 18;
+        const visibleTop = stageRect.top + 16;
+        let delta = 0;
+
+        if (focusRect.bottom > visibleBottom) {
+          delta = focusRect.bottom - visibleBottom;
+        } else if (focusRect.top < visibleTop) {
+          delta = focusRect.top - visibleTop;
+        }
+
+        if (Math.abs(delta) > 1) {
+          const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          editorStage.scrollBy({
+            top: delta,
+            behavior: reduceMotion ? "auto" : "smooth"
+          });
+        }
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(outerFrame);
+      window.cancelAnimationFrame(innerFrame);
+    };
+  }, [isMobileShell, mobileFormatMenuOpen, mobileFormatSheetMode]);
 
   const readActiveFloatingMediaBlock = (): FloatingMediaSelectionSnapshot | null => {
     try {
@@ -2912,14 +3075,163 @@ export default function EditorPane({
     }
   };
 
-  const showMobileFormattingToolbar = () => {
+  const openMobileFormatSheet = () => {
+    rememberMobileFormatSelection();
+    editor.getExtension(FormattingToolbarExtension)?.store.setState(false);
+    try {
+      setMobileLinkDraft(editor.getSelectedLinkUrl() ?? "");
+    } catch {
+      setMobileLinkDraft("");
+    }
+
+    setMobileFontChoice(readMobileActiveFont());
+    setMobileInsertMenuOpen(false);
+    setMobileFormatSheetMode("format");
+    setMobileFormatMenuOpen(true);
+  };
+
+  const closeMobileFormatSheet = () => {
+    const snapshot = mobileFormatSelectionRef.current;
+    const restored = restoreMobileFormatSelection();
     try {
       editor.focus();
-      editor.getExtension(FormattingToolbarExtension)?.store.setState(true);
+      if (restored && snapshot && snapshot.anchor !== snapshot.head) {
+        editor.getExtension(FormattingToolbarExtension)?.store.setState(true);
+      }
     } catch {
-      // Formatting toolbar visibility is controlled by BlockNote when unavailable.
+      // The note may be closing while the format sheet is dismissed.
+    }
+    setMobileFormatMenuOpen(false);
+    window.setTimeout(() => {
+      mobileFormatSelectionRef.current = null;
+    }, 0);
+  };
+
+  const applyMobileBlockFormat = (type: string) => {
+    runWithMobileFormatSelection(() => {
+      const blocks = editor.getSelection()?.blocks ?? [editor.getTextCursorPosition().block];
+      const headingLevel = type.startsWith("heading")
+        ? Number(type.replace("heading", "")) || 2
+        : null;
+      const nextType = headingLevel ? "heading" : type as MobileQuickBlockType;
+
+      blocks.forEach((block) => {
+        const storedBlock = block as unknown as StoredBlock;
+        const preservedProps = getMobileBlockCarryProps(storedBlock);
+        const props = headingLevel
+          ? { ...preservedProps, level: headingLevel }
+          : nextType === "checkListItem"
+            ? { ...preservedProps, checked: Boolean(storedBlock.props?.checked) }
+            : preservedProps;
+
+        editor.updateBlock(block.id, {
+          type: nextType,
+          props
+        } as any);
+      });
+    });
+  };
+
+  const applyMobileInlineStyle = (style: string) => {
+    runWithMobileFormatSelection(() => {
+      editor.toggleStyles({ [style]: true } as any);
+    });
+  };
+
+  const applyMobileAlignment = (alignment: string) => {
+    runWithMobileFormatSelection(() => {
+      const blocks = editor.getSelection()?.blocks ?? [editor.getTextCursorPosition().block];
+      blocks.forEach((block) => {
+        editor.updateBlock(block.id, {
+          props: { ...block.props, textAlignment: alignment }
+        } as any);
+      });
+    });
+  };
+
+  const applyMobileFont = (font: string) => {
+    runWithMobileFormatSelection(() => {
+      if (font === "default") {
+        editor.removeStyles({ font: "" } as any);
+        setMobileFontChoice("default");
+      } else if (isEditorStoredFontId(font)) {
+        editor.addStyles({ font } as any);
+        setMobileFontChoice(font);
+      }
+    });
+  };
+
+  const nestMobileFormatBlock = () => {
+    runWithMobileFormatSelection(() => {
+      editor.nestBlock();
+    });
+  };
+
+  const unnestMobileFormatBlock = () => {
+    runWithMobileFormatSelection(() => {
+      editor.unnestBlock();
+    });
+  };
+
+  const applyMobileLink = () => {
+    const url = mobileLinkDraft.trim();
+    if (!url) {
+      return;
+    }
+
+    const applied = runWithMobileFormatSelection(() => {
+      const selectedText = editor.getSelectedText();
+      editor.createLink(url, selectedText || url);
+    });
+
+    if (applied) {
+      closeMobileFormatSheet();
     }
   };
+
+  const mobileFormatSnapshot = useMemo<MobileNoteFormatSnapshot>(() => {
+    try {
+      const block = editor.getTextCursorPosition().block as unknown as StoredBlock;
+      const activeStyles = editor.getActiveStyles() as Record<string, unknown>;
+      const headingLevel = block.type === "heading" && typeof block.props?.level === "number"
+        ? block.props.level
+        : null;
+
+      return {
+        blockType: block.type ?? "paragraph",
+        headingLevel,
+        alignment: typeof block.props?.textAlignment === "string" ? block.props.textAlignment : "left",
+        activeFont: mobileFontChoice,
+        activeStyles,
+        canNest: editor.canNestBlock(),
+        canUnnest: editor.canUnnestBlock()
+      };
+    } catch {
+      return {
+        blockType: "paragraph",
+        headingLevel: null,
+        alignment: "left",
+        activeFont: mobileFontChoice,
+        activeStyles: {},
+        canNest: false,
+        canUnnest: false
+      };
+    }
+  }, [editor, mobileEditorStateRevision, mobileFontChoice]);
+
+  const mobileInsertGroups: MobileNoteInsertGroup[] = MOBILE_INSERT_BLOCK_GROUPS.map((group) => ({
+    id: group.key,
+    title: t(group.titleKey),
+    items: group.items.map((type) => {
+      const copy = getMobileInsertBlockCopy(type);
+      return {
+        id: type,
+        glyph: getMobileInsertBlockGlyph(type),
+        title: copy.title,
+        description: copy.subtext
+      };
+    })
+  }));
 
   useEffect(() => {
     return () => {
@@ -2967,6 +3279,8 @@ export default function EditorPane({
         ? "markdown-import"
         : noteTransferOpen
           ? "transfer"
+          : mobileFormatMenuOpen
+            ? "mobile-format-menu"
           : mobileInsertMenuOpen
             ? "mobile-insert-menu"
             : mobileNoteMenuOpen
@@ -2997,6 +3311,11 @@ export default function EditorPane({
       return;
     }
 
+    if (androidBackLayer === "mobile-format-menu") {
+      closeMobileFormatSheet();
+      return;
+    }
+
     if (androidBackLayer === "mobile-insert-menu") {
       setMobileInsertMenuOpen(false);
       return;
@@ -3015,74 +3334,29 @@ export default function EditorPane({
       } ${mobileNoteMenuOpen ? "is-mobile-note-menu-open" : ""}`}
       style={{ "--note-accent": note.color || DEFAULT_NOTE_COLOR } as CSSProperties}
     >
-	      <div className="editor-pane-mobile-header">
-        <MobileEditorPressButton
-          className="editor-pane-mobile-icon-action"
-          onPress={() => onClose?.()}
-          aria-label={t("note.mobileBack")}
-          title={t("note.mobileBack")}
-        >
-          <MobileBackGlyph />
-        </MobileEditorPressButton>
-
-        <input
-          value={titleDraft}
-          onChange={(event) => handleTitleChange(event.target.value)}
-          onFocus={() => {
-            isTitleFieldFocusedRef.current = true;
-          }}
-          onBlur={() => {
-            isTitleFieldFocusedRef.current = false;
-            flushTitleDraft();
-          }}
-          className="note-title-input editor-pane-mobile-title-field"
-          placeholder={t("note.titlePlaceholder")}
-        />
-
-        <MobileEditorPressButton
-          className="editor-pane-mobile-ai-action"
-          onPress={() => openAiPanel("note")}
-          aria-label={t("note.aiNote")}
-          aria-haspopup="dialog"
-          title={t("note.aiNote")}
-        >
-          <AiSparkleGlyph />
-        </MobileEditorPressButton>
-
-        <div
-          className="editor-pane-mobile-mode-switch"
-          role="group"
-          aria-label={t("note.typographyMode")}
-        >
-          <MobileEditorPressButton
-            className={typographyMode === "focus" ? "is-active" : ""}
-            aria-label={t("note.typographyFocus")}
-            aria-pressed={typographyMode === "focus"}
-            title={t("note.typographyFocus")}
-            onPress={() => setTypographyMode("focus")}
-          >
-            <MobileFocusModeGlyph />
-          </MobileEditorPressButton>
-          <MobileEditorPressButton
-            className={typographyMode === "reading" ? "is-active" : ""}
-            aria-label={t("note.typographyReading")}
-            aria-pressed={typographyMode === "reading"}
-            title={t("note.typographyReading")}
-            onPress={() => setTypographyMode("reading")}
-          >
-            <MobileReadingModeGlyph />
-          </MobileEditorPressButton>
-        </div>
-
-        <MobileEditorPressButton
-          className="editor-pane-mobile-icon-action"
-          onPress={() => setMobileNoteMenuOpen(true)}
-          aria-label={t("note.mobileMore")}
-          title={t("note.mobileMore")}
-        >
-          <MobileMoreGlyph />
-	        </MobileEditorPressButton>
-	      </div>
+	      <MobileNoteEditorHeader
+        title={titleDraft}
+        titlePlaceholder={t("note.titlePlaceholder")}
+        saveLabel={t(`saveState.${saveState}`)}
+        saveState={saveState}
+        backLabel={t("note.mobileBack")}
+        aiLabel={t("note.aiNote")}
+        moreLabel={t("note.mobileMore")}
+        onTitleChange={(event) => handleTitleChange(event.target.value)}
+        onTitleFocus={() => {
+          isTitleFieldFocusedRef.current = true;
+        }}
+        onTitleBlur={() => {
+          isTitleFieldFocusedRef.current = false;
+          flushTitleDraft();
+        }}
+        onBack={() => onClose?.()}
+        onAi={() => openAiPanel("note")}
+        onMore={() => {
+          editor.getExtension(FormattingToolbarExtension)?.store.setState(false);
+          setMobileNoteMenuOpen(true);
+        }}
+      />
 
 	      {taskCreationStatus ? (
 	        <div className={`editor-pane-mobile-task-toast is-${taskCreationStatus.tone}`} role="status">
@@ -3569,62 +3843,72 @@ export default function EditorPane({
       ) : null}
 
       {mobileNoteMenuOpen ? (
-        <button
-          type="button"
+        <MobileEditorPressButton
           className="editor-pane-mobile-sheet-backdrop"
           aria-label={t("dialog.cancel")}
-          onClick={() => setMobileNoteMenuOpen(false)}
+          onPress={() => setMobileNoteMenuOpen(false)}
         />
       ) : null}
 
       {mobileInsertMenuOpen ? (
-        <div className="editor-pane-mobile-insert-layer" role="presentation">
-          <button
-            type="button"
-            className="editor-pane-mobile-insert-backdrop"
-            aria-label={t("dialog.cancel")}
-            onClick={() => setMobileInsertMenuOpen(false)}
-          />
-          <section
-            className="editor-pane-mobile-insert-menu"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t("note.mobileInsertMenuTitle")}
-          >
-            <div className="editor-pane-mobile-insert-head">
-              <span>{t("note.mobileInsertMenuTitle")}</span>
-              <p>{t("note.mobileInsertMenuSubtitle")}</p>
-            </div>
-            <div className="editor-pane-mobile-insert-scroll">
-              {MOBILE_INSERT_BLOCK_GROUPS.map((group) => (
-                <section key={group.key} className="editor-pane-mobile-insert-group">
-                  <h3>{t(group.titleKey)}</h3>
-                  <div className="editor-pane-mobile-insert-grid">
-                    {group.items.map((type) => {
-                      const copy = getMobileInsertBlockCopy(type);
+        <MobileNoteInsertSheet
+          title={t("note.mobileInsertMenuTitle")}
+          subtitle={t("note.mobileInsertMenuSubtitle")}
+          closeLabel={t("dialog.cancel")}
+          groups={mobileInsertGroups}
+          onSelect={(type) => insertMobileBlockAfterCursor(type as MobileInsertBlockType)}
+          onClose={() => setMobileInsertMenuOpen(false)}
+        />
+      ) : null}
 
-                      return (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => insertMobileBlockAfterCursor(type)}
-                        >
-                          <span className="editor-pane-mobile-insert-glyph">
-                            {getMobileInsertBlockGlyph(type)}
-                          </span>
-                          <span className="editor-pane-mobile-insert-copy">
-                            <strong>{copy.title}</strong>
-                            {copy.subtext ? <small>{copy.subtext}</small> : null}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
-            </div>
-          </section>
-        </div>
+      {mobileFormatMenuOpen ? (
+        <MobileNoteFormatSheet
+          mode={mobileFormatSheetMode}
+          title={t("note.mobileStyle")}
+          closeLabel={t("dialog.cancel")}
+          doneLabel={t("dialog.ok")}
+          fontLabel={t("note.font")}
+          linkLabel={editorDictionary.formatting_toolbar.link.tooltip}
+          linkPlaceholder="https://"
+          snapshot={mobileFormatSnapshot}
+          linkDraft={mobileLinkDraft}
+          blockChoices={[
+            { id: "paragraph", label: t("note.mobileParagraph"), glyph: "P" },
+            { id: "heading1", label: getMobileInsertBlockCopy("heading1").title, glyph: "H1" },
+            { id: "heading2", label: getMobileInsertBlockCopy("heading2").title, glyph: "H2" },
+            { id: "heading3", label: getMobileInsertBlockCopy("heading3").title, glyph: "H3" },
+            { id: "bulletListItem", label: t("note.mobileBulletList"), glyph: "-" },
+            { id: "numberedListItem", label: t("note.mobileNumberedList"), glyph: "1" },
+            { id: "checkListItem", label: t("note.mobileChecklist"), glyph: "[]" },
+            { id: "quote", label: t("note.mobileQuote"), glyph: ">" }
+          ]}
+          inlineChoices={[
+            { id: "bold", label: editorDictionary.formatting_toolbar.bold.tooltip, glyph: "B" },
+            { id: "italic", label: editorDictionary.formatting_toolbar.italic.tooltip, glyph: "I" },
+            { id: "underline", label: editorDictionary.formatting_toolbar.underline.tooltip, glyph: "U" },
+            { id: "strike", label: editorDictionary.formatting_toolbar.strike.tooltip, glyph: "S" }
+          ]}
+          alignmentChoices={[
+            { id: "left", label: editorDictionary.formatting_toolbar.align_left.tooltip, glyph: "L" },
+            { id: "center", label: editorDictionary.formatting_toolbar.align_center.tooltip, glyph: "C" },
+            { id: "right", label: editorDictionary.formatting_toolbar.align_right.tooltip, glyph: "R" }
+          ]}
+          fontChoices={EDITOR_FONT_CHOICES.map((font) => ({
+            id: font.id,
+            label: t(font.labelKey),
+            preview: font.preview,
+            stack: font.stack
+          }))}
+          onLinkDraftChange={setMobileLinkDraft}
+          onBlock={applyMobileBlockFormat}
+          onInline={applyMobileInlineStyle}
+          onAlignment={applyMobileAlignment}
+          onFont={applyMobileFont}
+          onNest={nestMobileFormatBlock}
+          onUnnest={unnestMobileFormatBlock}
+          onApplyLink={applyMobileLink}
+          onClose={closeMobileFormatSheet}
+        />
       ) : null}
 
       <div className="editor-pane-shell">
@@ -3719,14 +4003,13 @@ export default function EditorPane({
                 {t("note.updated")}: {formatTimestamp(note.updatedAt)}
               </p>
             </div>
-            <button
-              type="button"
+            <MobileEditorPressButton
               className="editor-pane-mobile-sheet-close"
-              onClick={() => setMobileNoteMenuOpen(false)}
+              onPress={() => setMobileNoteMenuOpen(false)}
               aria-label={t("dialog.cancel")}
             >
               <CloseGlyph />
-            </button>
+            </MobileEditorPressButton>
           </div>
 
           <section className="editor-pane-mobile-options-summary" aria-label={t("note.details")}>
@@ -3746,6 +4029,17 @@ export default function EditorPane({
               {t("note.tags").toLowerCase()}
             </span>
           </section>
+
+          <div className="editor-pane-mobile-options-typography" role="group" aria-label={t("note.typographyMode")}>
+            <MobileEditorPressButton className={typographyMode === "focus" ? "is-active" : ""} aria-pressed={typographyMode === "focus"} onPress={() => setTypographyMode("focus")}>
+              <MobileFocusModeGlyph />
+              <span>{t("note.typographyFocus")}</span>
+            </MobileEditorPressButton>
+            <MobileEditorPressButton className={typographyMode === "reading" ? "is-active" : ""} aria-pressed={typographyMode === "reading"} onPress={() => setTypographyMode("reading")}>
+              <MobileReadingModeGlyph />
+              <span>{t("note.typographyReading")}</span>
+            </MobileEditorPressButton>
+          </div>
 
           <section className="editor-pane-detail-card editor-pane-mobile-options-card">
             <div className="editor-pane-mobile-options-section-head">
@@ -3897,20 +4191,28 @@ export default function EditorPane({
         </aside>
       </div>
 
-      <MobileEditorToolbar
+      <MobileNoteEditorAccessoryBar
         ariaLabel={t("note.mobileFormatToolbar")}
-        paragraphLabel={t("note.mobileParagraph")}
-        headingLabel={t("note.mobileHeading")}
-        bulletListLabel={t("note.mobileBulletList")}
+        tableLabel={getMobileInsertBlockCopy("table").title}
+        formatLabel={t("note.mobileStyle")}
         checklistLabel={t("note.mobileChecklist")}
-        styleLabel={t("note.mobileStyle")}
         insertLabel={t("note.mobileInsert")}
-        onParagraph={() => applyMobileQuickBlock("paragraph")}
-        onHeading={() => applyMobileQuickBlock("heading")}
-        onBulletList={() => applyMobileQuickBlock("bulletListItem")}
+        aiLabel={t("note.aiNote")}
+        dismissLabel={t("dialog.ok")}
+        onTable={() => insertMobileBlockAfterCursor("table")}
+        onFormat={openMobileFormatSheet}
         onChecklist={() => applyMobileQuickBlock("checkListItem")}
-        onStyle={showMobileFormattingToolbar}
-        onInsert={() => setMobileInsertMenuOpen(true)}
+        onInsert={() => {
+          editor.getExtension(FormattingToolbarExtension)?.store.setState(false);
+          setMobileFormatMenuOpen(false);
+          setMobileInsertMenuOpen(true);
+        }}
+        onAi={() => openAiPanel("note")}
+        onDismiss={() => {
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+          }
+        }}
       />
     </section>
   );
