@@ -1,5 +1,3 @@
-.editor-pane-mobile-header,
-.editor-pane-mobile-formatbar,
 .editor-pane-mobile-sheet-backdrop,
 .editor-pane-mobile-sheet-head,
 .editor-pane-mobile-options-handle,
@@ -7,7 +5,6 @@
 .editor-pane-mobile-options-section-head,
 .editor-pane-mobile-options-field-title,
 .editor-pane-mobile-option-icon,
-.editor-pane-mobile-insert-layer,
 .editor-pane-mobile-task-toast,
 .editor-ai-mobile-backdrop,
 .editor-pane-mobile-only-action {
@@ -19,13 +16,52 @@
 }
 
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane {
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  position: relative;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 8px;
   padding:
     max(8px, env(safe-area-inset-top))
     max(8px, env(safe-area-inset-right))
     max(8px, env(safe-area-inset-bottom))
     max(8px, env(safe-area-inset-left));
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-options-typography {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding: 5px;
+  border: 1px solid rgb(var(--line-rgb) / 0.1);
+  border-radius: 19px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-options-typography button {
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 760;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-options-typography button.is-active {
+  border-color: color-mix(in srgb, var(--editor-accent) 34%, rgb(var(--line-rgb) / 0.12));
+  background: color-mix(in srgb, var(--editor-accent) 14%, rgba(255, 255, 255, 0.025));
+  color: var(--text);
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-options-typography svg {
+  width: 18px;
+  height: 18px;
 }
 
 .locoris-adaptive-shell[data-mobile-shell="true"] .orbital-editor-modal-window.is-note-mode .editor-pane {
@@ -64,53 +100,6 @@
   display: none;
 }
 
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-header {
-  grid-row: 1;
-  min-width: 0;
-  min-height: 48px;
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 40px auto 40px;
-  gap: 6px;
-  align-items: center;
-  padding: 6px;
-  border-radius: 23px;
-  border: 1px solid color-mix(in srgb, var(--editor-accent) 22%, rgb(var(--line-rgb) / 0.12));
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--editor-accent) 10%, transparent), transparent 44%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.066), rgba(255, 255, 255, 0.018)),
-    rgb(var(--surface-deep-rgb) / 0.82);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 18px 40px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(18px);
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-title-field {
-  width: 100%;
-  min-width: 0;
-  min-height: 36px;
-  padding: 0 10px;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--editor-accent) 18%, rgb(var(--line-rgb) / 0.11));
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.016)),
-    rgba(7, 9, 20, 0.72);
-  color: var(--text);
-  font-family: var(--editor-title-font);
-  font-size: 16px;
-  font-weight: 650;
-  line-height: 1.2;
-  outline: none;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-title-field:focus {
-  border-color: color-mix(in srgb, var(--editor-accent) 42%, rgb(var(--cyan-rgb) / 0.2));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--editor-accent) 18%, transparent);
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-icon-action,
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-ai-action,
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-mode-switch button,
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-sheet-close {
   min-width: 36px;
   min-height: 36px;
@@ -127,19 +116,9 @@
   touch-action: manipulation;
 }
 
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-icon-action svg,
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-ai-action svg,
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-sheet-close svg {
   width: 18px;
   height: 18px;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-ai-action {
-  border-color: color-mix(in srgb, var(--editor-accent) 34%, rgb(var(--line-rgb) / 0.14));
-  color: color-mix(in srgb, var(--text) 88%, var(--editor-accent) 12%);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--editor-accent) 20%, transparent), transparent 64%),
-    rgba(255, 255, 255, 0.032);
 }
 
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-task-toast {
@@ -170,45 +149,6 @@
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-task-toast.is-error {
   border-color: rgba(255, 118, 138, 0.28);
   color: #ffd9df;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-mode-switch {
-  min-width: 74px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 3px;
-  padding: 3px;
-  border-radius: 17px;
-  border: 1px solid rgb(var(--line-rgb) / 0.12);
-  background: rgba(255, 255, 255, 0.026);
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-mode-switch button {
-  min-width: 28px;
-  min-height: 30px;
-  padding: 0;
-  border: 0;
-  border-radius: 13px;
-  background: transparent;
-  color: var(--text-dim);
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-mode-switch button svg {
-  width: 17px;
-  height: 17px;
-  display: block;
-  opacity: 0.86;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-mode-switch button.is-active {
-  color: color-mix(in srgb, var(--text) 86%, var(--editor-accent) 14%);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.018)),
-    color-mix(in srgb, var(--editor-accent) 15%, rgba(255, 255, 255, 0.02));
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-mode-switch button.is-active svg {
-  opacity: 1;
 }
 
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-shell {
@@ -925,169 +865,6 @@
     rgba(255, 255, 255, 0.026);
 }
 
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 1330;
-  display: block;
-  pointer-events: none;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-backdrop {
-  position: absolute;
-  inset: 0;
-  border: 0;
-  background: transparent;
-  pointer-events: auto;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-menu {
-  position: absolute;
-  left: max(8px, env(safe-area-inset-left));
-  right: max(8px, env(safe-area-inset-right));
-  bottom: max(72px, calc(env(safe-area-inset-bottom) + 68px));
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 10px;
-  max-height: min(78vh, calc(100vh - 112px));
-  max-height: min(78dvh, calc(100dvh - 112px));
-  padding: 12px;
-  border-radius: 26px;
-  border: 1px solid color-mix(in srgb, var(--editor-accent) 26%, rgb(var(--line-rgb) / 0.13));
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--editor-accent) 10%, transparent), transparent 44%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.074), rgba(255, 255, 255, 0.022)),
-    rgb(var(--surface-deep-rgb) / 0.94);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.055),
-    0 22px 54px rgba(0, 0, 0, 0.34);
-  backdrop-filter: blur(22px);
-  overflow: hidden;
-  pointer-events: auto;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-head {
-  display: grid;
-  gap: 4px;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-head span {
-  color: var(--text);
-  font-size: 0.86rem;
-  font-weight: 760;
-  line-height: 1.2;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-head p {
-  margin: 0;
-  color: var(--text-dim);
-  font-size: 0.68rem;
-  line-height: 1.38;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-scroll {
-  min-height: 0;
-  display: grid;
-  gap: 12px;
-  overflow: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  padding: 1px 2px 2px;
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--editor-accent) 34%, transparent) transparent;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-group {
-  min-width: 0;
-  display: grid;
-  gap: 7px;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-group h3 {
-  margin: 0;
-  color: color-mix(in srgb, var(--text) 78%, var(--editor-accent) 22%);
-  font-size: 0.62rem;
-  font-weight: 780;
-  letter-spacing: 0;
-  line-height: 1.2;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-grid button {
-  min-width: 0;
-  min-height: 62px;
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid rgb(var(--line-rgb) / 0.11);
-  border-radius: 18px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--editor-accent) 8%, transparent), transparent 62%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.046), rgba(255, 255, 255, 0.014)),
-    rgba(255, 255, 255, 0.024);
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  touch-action: manipulation;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-grid button:active {
-  transform: translateY(1px);
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-glyph {
-  width: 34px;
-  height: 34px;
-  border-radius: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--editor-accent) 28%, rgb(var(--line-rgb) / 0.13));
-  background:
-    radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--editor-accent) 22%, transparent), transparent 58%),
-    rgba(255, 255, 255, 0.032);
-  color: color-mix(in srgb, var(--text) 84%, var(--editor-accent) 16%);
-  font-size: 0.68rem;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-copy {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-grid strong {
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 0.7rem;
-  font-weight: 760;
-  line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-grid small {
-  display: -webkit-box;
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--text-dim);
-  font-size: 0.58rem;
-  font-weight: 620;
-  line-height: 1.22;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
 .locoris-adaptive-shell[data-mobile-shell="true"] .editor-ai-mobile-backdrop {
   position: fixed;
   inset: 0;
@@ -1200,34 +977,6 @@
 }
 
 @media (max-width: 430px) {
-  .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-header {
-    grid-template-columns: 38px minmax(0, 1fr) 38px minmax(58px, auto) 38px;
-    gap: 4px;
-    padding: 5px;
-  }
-
-  .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-title-field {
-    font-size: 0.9rem;
-  }
-
-  .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-formatbar {
-    gap: 4px;
-    padding: 5px;
-  }
-
-  .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-formatbar button {
-    min-height: 40px;
-    border-radius: 14px;
-  }
-
-  .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-formatbar small {
-    display: none;
-  }
-
-  .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-insert-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane-mobile-options-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

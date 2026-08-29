@@ -5,6 +5,7 @@ type MobileEditorFocusRequest = {
 };
 
 type UseMobileEditorExperienceOptions = {
+  enabled: boolean;
   editorPaneRef: RefObject<HTMLElement | null>;
   editorStageRef: RefObject<HTMLElement | null>;
   onRequestEditorFocus: (request: MobileEditorFocusRequest) => void;
@@ -17,12 +18,20 @@ const MOBILE_EDITOR_POPOVER_SELECTOR = [
   ".editor-file-panel-popover",
   ".bn-menu-dropdown",
   ".bn-form-popover",
-  ".bn-panel-popover"
+  ".bn-panel-popover",
+  ".mantine-Popover-dropdown",
+  ".mantine-Menu-dropdown",
+  ".mantine-Combobox-dropdown",
+  "[data-combobox-dropdown]"
 ].join(",");
 const MOBILE_EDITOR_SUBMENU_SELECTOR = [
   ".bn-menu-dropdown",
   ".bn-form-popover",
-  ".bn-panel-popover"
+  ".bn-panel-popover",
+  ".mantine-Popover-dropdown",
+  ".mantine-Menu-dropdown",
+  ".mantine-Combobox-dropdown",
+  "[data-combobox-dropdown]"
 ].join(",");
 const MOBILE_EDITOR_POPOVER_ACTION_SELECTOR = [
   "button:not(:disabled)",
@@ -57,9 +66,7 @@ const EDITOR_INTERACTIVE_SELECTOR = [
   "[role='dialog']",
   ".bn-side-menu",
   ".bn-table-handle",
-  ".bn-table-cell-handle",
-  ".tableWrapper-inner",
-  ".table-widgets-container"
+  ".bn-table-cell-handle"
 ].join(",");
 
 function getSelectionElement(selection: Selection) {
@@ -88,6 +95,68 @@ function getCaretRect(selection: Selection) {
 
 function px(value: number) {
   return `${Math.max(0, Math.round(value * 100) / 100)}px`;
+}
+
+function getEditableRoot(target: Element, editorStage: HTMLElement) {
+  const closestEditable = target.closest<HTMLElement>("[contenteditable='true']");
+
+  if (closestEditable && editorStage.contains(closestEditable)) {
+    return closestEditable;
+  }
+
+  return editorStage.querySelector<HTMLElement>(".bn-editor[contenteditable='true'], .ProseMirror[contenteditable='true']");
+}
+
+export function placeMobileCaretFromPoint(editable: HTMLElement, x: number, y: number) {
+  const documentWithCaretApi = document as Document & {
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+  };
+  let range: Range | null = null;
+  const caretPosition = documentWithCaretApi.caretPositionFromPoint?.(x, y);
+
+  if (caretPosition && editable.contains(caretPosition.offsetNode)) {
+    range = document.createRange();
+    range.setStart(caretPosition.offsetNode, caretPosition.offset);
+    range.collapse(true);
+  } else {
+    const caretRange = documentWithCaretApi.caretRangeFromPoint?.(x, y) ?? null;
+    if (caretRange && editable.contains(caretRange.startContainer)) {
+      range = caretRange;
+    }
+  }
+
+  if (!range) {
+    return false;
+  }
+
+  const selection = window.getSelection();
+  if (!selection) {
+    return false;
+  }
+
+  selection.removeAllRanges();
+  selection.addRange(range);
+  return true;
+}
+
+type MobileEditorTap = {
+  time: number;
+  x: number;
+  y: number;
+};
+
+export function isRepeatedMobileEditorTap(
+  previous: MobileEditorTap | null,
+  current: MobileEditorTap,
+  maximumDelay = 420,
+  maximumDistance = 24
+) {
+  return Boolean(
+    previous &&
+      current.time - previous.time <= maximumDelay &&
+      Math.hypot(current.x - previous.x, current.y - previous.y) <= maximumDistance
+  );
 }
 
 type MobileSelectionToolbarPlacement = {
@@ -192,6 +261,7 @@ export function resolveMobilePopoverPosition({
 }
 
 export default function useMobileEditorExperience({
+  enabled,
   editorPaneRef,
   editorStageRef,
   onRequestEditorFocus
@@ -207,7 +277,7 @@ export default function useMobileEditorExperience({
     const editorStage = editorStageRef.current;
     const mobileShell = editorPane?.closest(MOBILE_SHELL_SELECTOR);
 
-    if (!editorPane || !editorStage || !mobileShell) {
+    if (!enabled || !editorPane || !editorStage || !mobileShell) {
       return;
     }
 
@@ -232,6 +302,14 @@ export default function useMobileEditorExperience({
     let suppressedNativeClickTarget: HTMLElement | null = null;
     let suppressNativeClickUntil = 0;
     let pointerStart: { x: number; y: number } | null = null;
+    let pointerEditableRoot: HTMLElement | null = null;
+    let pointerStartedWithEditorFocus = false;
+    let lastEditorTap: MobileEditorTap | null = null;
+    let mobileActionStart: {
+      action: HTMLElement;
+      x: number;
+      y: number;
+    } | null = null;
     let suppressCaretUntil = 0;
     let programmaticCaretScroll = false;
 
@@ -509,11 +587,39 @@ export default function useMobileEditorExperience({
     };
 
     const handleEditorPointerDown = (event: PointerEvent) => {
-      if (event.button !== 0) {
+      if (event.button !== 0 || !(event.target instanceof Element)) {
         return;
       }
 
       pointerStart = { x: event.clientX, y: event.clientY };
+      pointerEditableRoot = null;
+      pointerStartedWithEditorFocus = false;
+
+      if (event.target.closest(EDITOR_INTERACTIVE_SELECTOR)) {
+        return;
+      }
+
+      const editorBody = event.target.closest(".bn-editor, .ProseMirror");
+      if (!editorBody) {
+        return;
+      }
+
+      const editable = getEditableRoot(event.target, editorStage);
+      if (!editable) {
+        return;
+      }
+
+      pointerEditableRoot = editable;
+      pointerStartedWithEditorFocus = document.activeElement === editable;
+
+      if (!pointerStartedWithEditorFocus) {
+        // Focus inside the original touch gesture so iOS opens the keyboard on the
+        // first tap. Placing the range from the touch coordinates avoids BlockNote's
+        // default focus command moving the caret to the previous cursor position.
+        editable.focus({ preventScroll: true });
+        placeMobileCaretFromPoint(editable, event.clientX, event.clientY);
+        scheduleViewportSync(true);
+      }
     };
 
     const handleEditorPointerMove = (event: PointerEvent) => {
@@ -529,6 +635,10 @@ export default function useMobileEditorExperience({
     const handleEditorPointerUp = (event: PointerEvent) => {
       const start = pointerStart;
       pointerStart = null;
+      const editable = pointerEditableRoot;
+      const startedWithFocus = pointerStartedWithEditorFocus;
+      pointerEditableRoot = null;
+      pointerStartedWithEditorFocus = false;
 
       if (!start || !(event.target instanceof Element)) {
         return;
@@ -543,9 +653,23 @@ export default function useMobileEditorExperience({
       }
 
       if (event.target.closest(".bn-editor")) {
-        // iOS places the caret and focuses contenteditable correctly on the first tap.
-        // Calling editor.focus() here overwrites that native result and makes the next tap
-        // look like the first effective interaction.
+        const currentTap = {
+          time: performance.now(),
+          x: event.clientX,
+          y: event.clientY
+        };
+        const repeatedTap = isRepeatedMobileEditorTap(lastEditorTap, currentTap);
+        lastEditorTap = currentTap;
+
+        if (editable && !startedWithFocus) {
+          editable.focus({ preventScroll: true });
+          placeMobileCaretFromPoint(editable, event.clientX, event.clientY);
+        } else if (editable && !repeatedTap) {
+          // A programmatic focus restored after a sheet closes does not always make
+          // the next iOS tap move the caret. Keep single taps deterministic while
+          // leaving repeated taps to Safari's native word/paragraph selection.
+          placeMobileCaretFromPoint(editable, event.clientX, event.clientY);
+        }
         scheduleCaretVisibility(60);
         return;
       }
@@ -556,6 +680,8 @@ export default function useMobileEditorExperience({
 
     const handleEditorPointerCancel = () => {
       pointerStart = null;
+      pointerEditableRoot = null;
+      pointerStartedWithEditorFocus = false;
     };
 
     const handleFocusIn = () => {
@@ -600,9 +726,10 @@ export default function useMobileEditorExperience({
       const action = event.target.closest<HTMLElement>(MOBILE_EDITOR_POPOVER_ACTION_SELECTOR);
 
       if (
-        !popover ||
         !action ||
-        !popover.contains(action) ||
+        (!popover && !editorPane.contains(action)) ||
+        (popover && !popover.contains(action)) ||
+        action.closest("[data-mobile-editor-press='true']") ||
         action.matches(MOBILE_EDITOR_POPOVER_FIELD_SELECTOR)
       ) {
         return;
@@ -611,7 +738,18 @@ export default function useMobileEditorExperience({
       lastPopoverAnchorRect = action.getBoundingClientRect();
 
       if (event.pointerType === "mouse") {
-        scheduleSubmenuPosition(42);
+        if (popover) {
+          scheduleSubmenuPosition(42);
+        }
+        return;
+      }
+
+      if (!popover) {
+        mobileActionStart = {
+          action,
+          x: event.clientX,
+          y: event.clientY
+        };
         return;
       }
 
@@ -628,6 +766,33 @@ export default function useMobileEditorExperience({
       scheduleToolbarPosition();
       scheduleSubmenuPosition();
       scheduleSubmenuPosition(42);
+    };
+
+    const handleMobileActionPointerUp = (event: PointerEvent) => {
+      const start = mobileActionStart;
+      mobileActionStart = null;
+
+      if (
+        !start ||
+        event.pointerType === "mouse" ||
+        !(event.target instanceof Node) ||
+        !start.action.contains(event.target) ||
+        Math.hypot(event.clientX - start.x, event.clientY - start.y) > 9
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      suppressedNativeClickTarget = start.action;
+      suppressNativeClickUntil = performance.now() + 720;
+      syntheticPopoverClick = true;
+      start.action.click();
+      syntheticPopoverClick = false;
+    };
+
+    const handleMobileActionPointerCancel = () => {
+      mobileActionStart = null;
     };
 
     const handlePopoverClick = (event: MouseEvent) => {
@@ -673,6 +838,8 @@ export default function useMobileEditorExperience({
     window.addEventListener("orientationchange", handleViewportResize);
     document.addEventListener("selectionchange", handleSelectionChange);
     document.addEventListener("pointerdown", handlePopoverPointerDown, true);
+    document.addEventListener("pointerup", handleMobileActionPointerUp, true);
+    document.addEventListener("pointercancel", handleMobileActionPointerCancel, true);
     document.addEventListener("click", handlePopoverClick, true);
     editorStage.addEventListener("pointerdown", handleEditorPointerDown, true);
     editorStage.addEventListener("pointermove", handleEditorPointerMove, true);
@@ -692,6 +859,8 @@ export default function useMobileEditorExperience({
       window.removeEventListener("orientationchange", handleViewportResize);
       document.removeEventListener("selectionchange", handleSelectionChange);
       document.removeEventListener("pointerdown", handlePopoverPointerDown, true);
+      document.removeEventListener("pointerup", handleMobileActionPointerUp, true);
+      document.removeEventListener("pointercancel", handleMobileActionPointerCancel, true);
       document.removeEventListener("click", handlePopoverClick, true);
       editorStage.removeEventListener("pointerdown", handleEditorPointerDown, true);
       editorStage.removeEventListener("pointermove", handleEditorPointerMove, true);
@@ -723,5 +892,5 @@ export default function useMobileEditorExperience({
         }
       });
     };
-  }, [editorPaneRef, editorStageRef]);
+  }, [editorPaneRef, editorStageRef, enabled]);
 }

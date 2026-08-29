@@ -1,0 +1,26 @@
+.mobile-note-format-sheet__content { display: grid; gap: 12px; }
+.mobile-note-format-sheet__styles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.mobile-note-format-sheet__style { min-width: 0; min-height: 58px; padding: 6px 3px; border: 1px solid rgb(var(--line-rgb) / .11); border-radius: 17px; background: rgba(255,255,255,.025); color: var(--text-dim); display: grid; place-items: center; gap: 3px; font: inherit; }
+.mobile-note-format-sheet__style span { color: var(--text); font-size: .9rem; font-weight: 820; line-height: 1; }
+.mobile-note-format-sheet__style small { max-width: 100%; overflow: hidden; font-size: .52rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-note-format-sheet__style.is-active,
+.mobile-note-format-sheet__strip button.is-active,
+.mobile-note-format-sheet__fonts button.is-active { border-color: color-mix(in srgb, var(--editor-accent) 48%, rgb(var(--line-rgb) / .13)); background: color-mix(in srgb, var(--editor-accent) 16%, rgba(255,255,255,.03)); color: var(--text); }
+.mobile-note-format-sheet__strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 1px repeat(3, minmax(0, 1fr)); gap: 5px; padding: 5px; border: 1px solid rgb(var(--line-rgb) / .1); border-radius: 19px; background: rgba(255,255,255,.018); }
+.mobile-note-format-sheet__strip button { min-width: 0; height: 40px; padding: 0; border: 1px solid transparent; border-radius: 14px; background: transparent; color: var(--text-dim); font: inherit; font-size: .85rem; font-weight: 850; }
+.mobile-note-format-sheet__separator { align-self: stretch; width: 1px; background: rgb(var(--line-rgb) / .12); }
+.mobile-note-format-sheet__section { display: grid; gap: 6px; }
+.mobile-note-format-sheet__section h3 { margin: 0 3px; color: color-mix(in srgb, var(--text) 72%, var(--editor-accent) 28%); font-size: .6rem; font-weight: 850; }
+.mobile-note-format-sheet__fonts { display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none; }
+.mobile-note-format-sheet__fonts::-webkit-scrollbar { display: none; }
+.mobile-note-format-sheet__fonts button { flex: 0 0 94px; min-width: 0; height: 50px; padding: 5px 7px; border: 1px solid rgb(var(--line-rgb) / .11); border-radius: 16px; background: rgba(255,255,255,.024); color: var(--text); display: grid; place-items: center; gap: 2px; font: inherit; }
+.mobile-note-format-sheet__fonts button span { font-size: .84rem; font-weight: 760; }
+.mobile-note-format-sheet__fonts button small { max-width: 100%; overflow: hidden; color: var(--text-dim); font-size: .5rem; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-note-format-sheet__link-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+.mobile-note-format-sheet__link-row input { min-width: 0; height: 44px; padding: 0 12px; border: 1px solid rgb(var(--line-rgb) / .12); border-radius: 15px; outline: 0; background: rgba(4,7,16,.58); color: var(--text); font: inherit; font-size: 16px; }
+.mobile-note-format-sheet__link-row input:focus { border-color: color-mix(in srgb, var(--editor-accent) 46%, rgb(var(--line-rgb) / .14)); }
+.mobile-note-format-sheet__link-row button,
+.mobile-note-format-sheet__indent button { min-width: 48px; height: 44px; padding: 0 13px; border: 1px solid color-mix(in srgb, var(--editor-accent) 30%, rgb(var(--line-rgb) / .12)); border-radius: 15px; background: color-mix(in srgb, var(--editor-accent) 13%, rgba(255,255,255,.025)); color: var(--text); font: inherit; font-size: .68rem; font-weight: 780; }
+.mobile-note-format-sheet__indent { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+.mobile-note-format-sheet button:disabled { opacity: .36; }
+@media (max-width: 350px) { .mobile-note-format-sheet__styles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

@@ -1,0 +1,129 @@
+.mobile-note-editor-header {
+  display: none;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header {
+  grid-row: 1;
+  min-width: 0;
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px 42px;
+  gap: 6px;
+  align-items: center;
+  padding: 5px;
+  border: 1px solid color-mix(in srgb, var(--editor-accent) 22%, rgb(var(--line-rgb) / 0.12));
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--editor-accent) 11%, transparent), transparent 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.018)),
+    rgb(var(--surface-deep-rgb) / 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055), 0 14px 32px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__button {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgb(var(--line-rgb) / 0.12);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.016));
+  color: var(--text);
+  display: inline-grid;
+  place-items: center;
+  touch-action: manipulation;
+  transition: transform var(--motion-fast, 140ms) var(--motion-ease, ease), border-color var(--motion-fast, 140ms) ease;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__button:active {
+  transform: scale(0.94);
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__button.is-ai {
+  border-color: color-mix(in srgb, var(--editor-accent) 34%, rgb(var(--line-rgb) / 0.13));
+  color: color-mix(in srgb, var(--text) 80%, var(--editor-accent) 20%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--editor-accent) 18%, transparent), rgba(255, 255, 255, 0.022));
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__title {
+  min-width: 0;
+  height: 42px;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 3px 10px 4px;
+  border: 1px solid color-mix(in srgb, var(--editor-accent) 16%, rgb(var(--line-rgb) / 0.1));
+  border-radius: 16px;
+  background: rgba(5, 8, 18, 0.32);
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__title:focus-within {
+  border-color: color-mix(in srgb, var(--editor-accent) 44%, rgb(var(--line-rgb) / 0.18));
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__title input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--editor-title-font);
+  font-size: 16px;
+  font-weight: 720;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__save {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: 0.56rem;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__save i {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--editor-accent) 76%, var(--text) 24%);
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__save.is-saving i {
+  animation: mobile-note-save-pulse 1s ease-in-out infinite;
+}
+
+@keyframes mobile-note-save-pulse {
+  50% { opacity: 0.35; transform: scale(0.72); }
+}
+
+@media (max-width: 360px) {
+  .locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header {
+    grid-template-columns: 40px minmax(0, 1fr) 40px 40px;
+    gap: 4px;
+  }
+  .locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__button {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__button { transition: none; }
+  .locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-editor-header__save.is-saving i { animation: none; }
+}

@@ -1,0 +1,67 @@
+.mobile-note-accessory { display: none; }
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory {
+  position: absolute;
+  z-index: 120;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(6px, env(safe-area-inset-bottom));
+  left: max(8px, env(safe-area-inset-left));
+  height: 54px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid color-mix(in srgb, var(--editor-accent) 24%, rgb(var(--line-rgb) / 0.13));
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--editor-accent) 10%, transparent), transparent 52%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02)),
+    rgb(var(--surface-deep-rgb) / 0.94);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055), 0 18px 40px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory__button {
+  min-width: 0;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--text-dim);
+  display: grid;
+  place-items: center;
+  font: inherit;
+  touch-action: manipulation;
+  transition: transform var(--motion-fast, 140ms) var(--motion-ease, ease), color var(--motion-fast, 140ms) ease, background var(--motion-fast, 140ms) ease;
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory__button.is-emphasis {
+  border-color: color-mix(in srgb, var(--editor-accent) 28%, rgb(var(--line-rgb) / 0.11));
+  color: var(--text);
+  background: color-mix(in srgb, var(--editor-accent) 14%, rgba(255, 255, 255, 0.026));
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory__button.is-ai {
+  color: color-mix(in srgb, var(--text) 76%, var(--editor-accent) 24%);
+}
+
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory__button:active { transform: scale(0.91); }
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory__button svg { width: 22px; height: 22px; }
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory__letters { font-size: 1rem; font-weight: 850; line-height: 1; }
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory__plus { font-size: 1.7rem; font-weight: 440; line-height: .8; }
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory__sparkle { font-size: 1.25rem; line-height: 1; }
+.locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory__button.is-dismiss { display: none; }
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane[data-mobile-keyboard="open"] .mobile-note-accessory__button.is-dismiss { display: grid; }
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane[data-mobile-keyboard="open"] .mobile-note-accessory { bottom: 4px; }
+.locoris-adaptive-shell[data-mobile-shell="true"] .editor-pane[data-mobile-keyboard="closed"] .mobile-note-accessory { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+@media (max-width: 350px) {
+  .locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory { gap: 3px; padding-inline: 4px; }
+  .locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory__button { border-radius: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .locoris-adaptive-shell[data-mobile-shell="true"] .mobile-note-accessory__button { transition: none; }
+}

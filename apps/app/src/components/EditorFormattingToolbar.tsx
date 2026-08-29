@@ -29,6 +29,8 @@ import {
 } from "../lib/blocknoteSchema";
 import { EDITOR_AI_OPEN_EVENT } from "../lib/aiIntegration";
 import { EDITOR_CREATE_TASK_EVENT } from "../lib/plannerLinks";
+import { useAdaptiveLayout } from "../lib/useAdaptiveLayout";
+import MobileEditorSelectionToolbar from "./MobileEditorSelectionToolbar";
 
 const AI_TEXT_BLOCK_UNSUPPORTED_TYPES = new Set(["image", "file", "audio", "video"]);
 
@@ -221,6 +223,12 @@ function CreateTaskSelectionButton() {
 }
 
 export default function EditorFormattingToolbar() {
+  const { isMobileShell } = useAdaptiveLayout();
+
+  if (isMobileShell) {
+    return <MobileEditorSelectionToolbar />;
+  }
+
   return (
     <div className="editor-formatting-toolbar-shell">
       <FormattingToolbar>
