@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getDisplayVaultName } from "../../localization/displayNames";
+import { isTauriRuntime } from "../../lib/runtime";
+import { getCloudAccessPresentation } from "../../lib/cloudAccessPresentation";
 import { getErrorMessage } from "../../lib/errors";
 import { isHostedReauthRequiredError } from "../../lib/hostedAuthErrors";
 import { getHostedDeviceIdentity } from "../../lib/hostedDeviceIdentity";
@@ -24,7 +26,6 @@ import type {
   AppSettings,
   HostedAccountDevice,
   HostedAccountVault,
-  HostedCloudEntitlement,
   RemoteVaultImportResult,
   SyncConnection,
   SyncVaultBinding,
@@ -32,7 +33,7 @@ import type {
 } from "../../types";
 import useAutoDismissNotice from "../../lib/useAutoDismissNotice";
 import { refreshHostedSessionSingleFlight } from "../../lib/hostedSessionRefresh";
-import { resolveLocorisCloudUrl } from "../../lib/locorisCloud";
+import { buildLocorisCloudAccountUrl, resolveLocorisCloudUrl } from "../../lib/locorisCloud";
 import ActionFeedbackToast, { useActionFeedbackAnchor } from "../ActionFeedbackToast";
 import ConfirmDialog from "../ConfirmDialog";
 import MobileGlassHeader from "../MobileGlassHeader";
@@ -236,41 +237,6 @@ function getUsageTone(used: number, limit: number | null | undefined) {
   }
 
   return "success";
-}
-
-function getAccountPeriodLabel(
-  entitlement: HostedCloudEntitlement | null | undefined,
-  runtime: LocaleRuntime,
-  t: ReturnType<typeof useTranslation>["t"]
-) {
-  if (!entitlement) {
-    return "—";
-  }
-
-  const effectiveDate = formatCloudDate(entitlement.effectiveUntil ?? entitlement.trialEndsAt, runtime);
-  const trialDate = formatCloudDate(entitlement.trialEndsAt, runtime);
-  const readOnlyDate = formatCloudDate(entitlement.retention?.readOnlyUntil, runtime);
-  const archiveDate = formatCloudDate(entitlement.retention?.archiveUntil, runtime);
-
-  if (entitlement.reason === "TRIAL_EXPIRED_READ_ONLY" && readOnlyDate) {
-    return t("settings.accountCloudReadOnlyUntil", { date: readOnlyDate });
-  }
-
-  if (entitlement.reason === "TRIAL_ARCHIVED" && archiveDate) {
-    return t("settings.accountCloudArchivedUntil", { date: archiveDate });
-  }
-
-  if (entitlement.reason === "TRIAL_RETENTION_EXPIRED" && archiveDate) {
-    return t("settings.accountCloudRetentionEndedOn", { date: archiveDate });
-  }
-
-  if (entitlement.reason === "TRIAL_EXPIRED" && trialDate) {
-    return t("settings.accountCloudTrialExpiredOn", { date: trialDate });
-  }
-
-  return effectiveDate
-    ? t("settings.accountCloudPeriodUntil", { date: effectiveDate })
-    : t("settings.accountCloudPeriodNoExpiry");
 }
 
 function getAccountDisplayName(
@@ -1048,13 +1014,15 @@ export default function AccountCloudPanel({
     sortedVaults[0] ??
     null;
   const cloudServerUrl = resolveLocorisCloudUrl();
+  const billingUrl = buildLocorisCloudAccountUrl(cloudConnection?.serverUrl ?? cloudServerUrl, "billing");
   const remoteVaults = overview?.vaults ?? [];
   const cloudImportAccountLabel = cloudConnection
     ? overview?.user.email ?? (cloudConnection.userEmail || cloudConnection.label || t("settings.accountCloudReady"))
     : t("settings.accountCloudSignedOut");
   const cloudCanWrite = overview?.entitlement.capabilities.canWriteSync ?? true;
   const cloudCanDelete = overview?.entitlement.capabilities.canDeleteCloudData ?? true;
-  const accountPeriodLabel = getAccountPeriodLabel(overview?.entitlement, localeRuntime, t);
+  const cloudAccess = getCloudAccessPresentation(overview?.entitlement, (date) => formatCloudDate(date, localeRuntime), t);
+  const accountPeriodLabel = cloudAccess.periodLabel;
   const accountUsageMeters: AccountCloudUsageMeter[] = overview
     ? [
         {
@@ -1398,6 +1366,8 @@ export default function AccountCloudPanel({
           profileEditing={profileNameEditing}
           planLabel={overview?.entitlement.plan.name ?? "—"}
           periodLabel={accountPeriodLabel}
+          statusLabel={cloudAccess.statusLabel}
+          renewalLabel={cloudAccess.renewalLabel}
           usageMeters={accountUsageMeters}
           onBeginProfileEdit={beginProfileEdit}
           onProfileDraftChange={setProfileNameDraft}
@@ -1474,10 +1444,21 @@ export default function AccountCloudPanel({
             </section>
           ) : null}
 
-          {!cloudCanWrite ? (
+          {!cloudCanWrite || cloudAccess.notice ? (
             <section className="account-cloud-warning">
-              <strong>{t("settings.accountCloudReadOnlyTitle")}</strong>
-              <span>{t("settings.accountCloudReadOnlyDescription")}</span>
+              <strong>{cloudAccess.expired || !cloudCanWrite ? cloudAccess.statusLabel : t("settings.accountCloudPeriod")}</strong>
+              <span>{cloudAccess.notice ?? t("settings.accountCloudReadOnlyDescription")}</span>
+              {!cloudCanWrite && billingUrl ? (
+                <a className="account-cloud-primary-action" href={billingUrl} target="_blank" rel="noreferrer"
+                  onClick={(event) => {
+                    if (isTauriRuntime()) {
+                      event.preventDefault();
+                      void import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(billingUrl)).catch(() => showFeedback("error", t("sync.failedGeneric")));
+                    }
+                  }}>
+                  {t("settings.accountCloudRestore")}
+                </a>
+              ) : null}
             </section>
           ) : null}
 

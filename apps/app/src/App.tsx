@@ -83,7 +83,8 @@ import {
   lockVaultEncryptionSession,
   unlockVaultEncryptionSession
 } from "./lib/e2eeSession";
-import { resolveLocorisCloudUrl } from "./lib/locorisCloud";
+import { getCloudAccessPresentation } from "./lib/cloudAccessPresentation";
+import { buildLocorisCloudAccountUrl, resolveLocorisCloudUrl } from "./lib/locorisCloud";
 import {
   buildFolderPathMap,
   getDescendantFolderIds,
@@ -278,28 +279,6 @@ function useOnlineStatus() {
   return online;
 }
 
-function buildLocorisCloudAccountUrl(serverUrl: string, view?: "overview" | "vaults" | "devices" | "billing") {
-  const configuredAccountUrl = import.meta.env.VITE_LOCORIS_ACCOUNT_URL?.trim();
-
-  if (!serverUrl && !configuredAccountUrl) {
-    return null;
-  }
-
-  try {
-    const accountUrl = configuredAccountUrl
-      ? new URL(configuredAccountUrl)
-      : new URL("/account", `${serverUrl.replace(/\/+$/, "")}/`);
-
-    if (view) {
-      accountUrl.searchParams.set("view", view);
-    }
-
-    return accountUrl.toString();
-  } catch {
-    return null;
-  }
-}
-
 function formatCloudBytes(value: number | null | undefined, runtime: LocaleRuntime) {
   return formatByteValue(Number(value ?? 0), runtime);
 }
@@ -344,31 +323,6 @@ function getLimitTone(value: number, limit: number | null | undefined) {
   }
 
   return "success" as const;
-}
-
-function getEntitlementTone(entitlement: HostedAccountOverview["entitlement"] | null | undefined) {
-  const status = entitlement?.status ?? entitlement?.subscriptionStatus ?? entitlement?.accountStatus;
-
-  if (status === "blocked") {
-    return "error" as const;
-  }
-
-  if (
-    status === "read_only" ||
-    status === "past_due" ||
-    status === "expired" ||
-    status === "archived" ||
-    status === "trialing" ||
-    status === "grace"
-  ) {
-    return "warning" as const;
-  }
-
-  if (status === "active" || status === "manual_comp") {
-    return "success" as const;
-  }
-
-  return "default" as const;
 }
 
 export default function App() {
@@ -1243,7 +1197,7 @@ export default function App() {
     let cancelled = false;
     let retryTimer: number | null = null;
 
-    if (adaptiveLayout.runtimeKind !== "web") {
+    if (adaptiveLayout.runtimeKind !== "web" && !locorisCloudConnection) {
       setWebCloudInitialCheckComplete(true);
       return;
     }
@@ -1445,6 +1399,21 @@ export default function App() {
     translateSyncError,
     webCloudRetryTick
   ]);
+
+  useEffect(() => {
+    if (!locorisCloudConnection || !online) return;
+    const refresh = () => {
+      if (document.visibilityState === "visible") setWebCloudRetryTick((current) => current + 1);
+    };
+    const interval = window.setInterval(refresh, 60_000);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [locorisCloudConnection?.id, online]);
 
   const activeVaultPendingSync = useMemo(
     () => computePendingSyncSummaryFromDirtyEntries(syncDirtyEntries),
@@ -1718,34 +1687,9 @@ export default function App() {
     const usage = webCloudOverview?.usage ?? null;
     const limits = entitlement?.limits ?? null;
     const planLabel = entitlement?.plan.name ?? t("webAccess.cloudPlanFallback");
-    const entitlementTone = getEntitlementTone(entitlement);
-    const entitlementStatus = entitlement?.status ?? entitlement?.subscriptionStatus ?? entitlement?.accountStatus ?? null;
-    const effectiveUntil = entitlement?.effectiveUntil ?? entitlement?.trialEndsAt ?? null;
-    const periodDateLabel = formatCloudDate(effectiveUntil, localeRuntime);
-    const trialDateLabel = formatCloudDate(entitlement?.trialEndsAt, localeRuntime);
-    const trialReadOnlyDateLabel = formatCloudDate(entitlement?.retention?.readOnlyUntil, localeRuntime);
-    const trialArchiveDateLabel = formatCloudDate(entitlement?.retention?.archiveUntil, localeRuntime);
-    const periodLabel = (() => {
-      if (entitlement?.reason === "TRIAL_EXPIRED_READ_ONLY" && trialReadOnlyDateLabel) {
-        return t("settings.accountCloudReadOnlyUntil", { date: trialReadOnlyDateLabel });
-      }
-
-      if (entitlement?.reason === "TRIAL_ARCHIVED" && trialArchiveDateLabel) {
-        return t("settings.accountCloudArchivedUntil", { date: trialArchiveDateLabel });
-      }
-
-      if (entitlement?.reason === "TRIAL_RETENTION_EXPIRED" && trialArchiveDateLabel) {
-        return t("settings.accountCloudRetentionEndedOn", { date: trialArchiveDateLabel });
-      }
-
-      if (entitlement?.reason === "TRIAL_EXPIRED" && trialDateLabel) {
-        return t("settings.accountCloudTrialExpiredOn", { date: trialDateLabel });
-      }
-
-      return periodDateLabel
-        ? t("settings.accountCloudPeriodUntil", { date: periodDateLabel })
-        : t("settings.accountCloudPeriodNoExpiry");
-    })();
+    const access = getCloudAccessPresentation(entitlement, (date) => formatCloudDate(date, localeRuntime), t);
+    const entitlementTone = access.tone;
+    const periodLabel = access.periodLabel;
     const vaultCount = usage?.vaultCount ?? webCloudOverview?.vaults.length ?? 0;
     const deviceCount = usage?.deviceCount ?? usage?.syncTokenCount ?? 0;
     const storageBytes = usage?.storageBytes ?? 0;
@@ -1766,7 +1710,9 @@ export default function App() {
             label: t("settings.accountCloudPeriod"),
             value: periodLabel,
             tone: entitlementTone
-          }
+          },
+          { label: t("settings.accountCloudStatus"), value: access.statusLabel, tone: entitlementTone },
+          ...(access.renewalLabel ? [{ label: t("settings.accountCloudRenewal"), value: access.renewalLabel, tone: "default" as const }] : [])
         ]
       : undefined;
     const accountMeters = limits
@@ -1791,37 +1737,7 @@ export default function App() {
           }
         ]
       : undefined;
-    const accountNotice = (() => {
-      if (entitlementStatus === "trialing" && (periodDateLabel || trialDateLabel)) {
-        return t("settings.accountCloudTrialNotice", { date: periodDateLabel || trialDateLabel });
-      }
-
-      if (entitlement?.reason === "TRIAL_EXPIRED_READ_ONLY" && trialReadOnlyDateLabel) {
-        return t("settings.accountCloudTrialReadOnlyNotice", { date: trialReadOnlyDateLabel });
-      }
-
-      if (entitlement?.reason === "TRIAL_ARCHIVED" && trialArchiveDateLabel) {
-        return t("settings.accountCloudTrialArchiveNotice", { date: trialArchiveDateLabel });
-      }
-
-      if (entitlement?.reason === "TRIAL_RETENTION_EXPIRED") {
-        return t("settings.accountCloudTrialRetentionExpiredNotice");
-      }
-
-      if (entitlement?.reason === "TRIAL_EXPIRED" || entitlement?.plan.id === "local_free") {
-        return t("settings.accountCloudFreeNotice");
-      }
-
-      if (entitlementStatus === "grace" && periodDateLabel) {
-        return t("settings.accountCloudGraceNotice", { date: periodDateLabel });
-      }
-
-      if (entitlement && !entitlement.capabilities.canWriteSync && entitlement.capabilities.canReadSync) {
-        return t("settings.accountCloudReadOnlyDescription");
-      }
-
-      return undefined;
-    })();
+    const accountNotice = access.notice;
     const accountDetails = {
       metaItems: accountMetaItems,
       meters: accountMeters,
@@ -1841,8 +1757,8 @@ export default function App() {
       }
 
       return {
-        tone: entitlement ? entitlementTone : ("success" as const),
-        text: t("settings.accountCloudReady"),
+        tone: entitlementTone,
+        text: access.statusLabel,
         compactText: accountDisplayName,
         title: accountDisplayName,
         description: accountDescription,
@@ -1891,21 +1807,21 @@ export default function App() {
         secondaryActionLabel: t("webAccess.exportVault")
       },
       readOnly: {
-        tone: "warning" as const,
-        text: t("webAccess.readOnlyTitle"),
+        tone: access.tone,
+        text: access.statusLabel,
         compactText: accountDisplayName,
         title: accountDisplayName,
-        description: t("webAccess.readOnlyDescription"),
-        primaryActionLabel: t("webAccess.manageCloud"),
+        description: access.notice ?? t("webAccess.readOnlyDescription"),
+        primaryActionLabel: t(access.expired ? "settings.accountCloudRestore" : "webAccess.manageCloud"),
         secondaryActionLabel: t("webAccess.exportVault")
       },
       unavailable: {
         tone: "error" as const,
-        text: t("webAccess.unavailableTitle"),
+        text: access.expired ? access.statusLabel : t("webAccess.unavailableTitle"),
         compactText: accountDisplayName,
         title: accountDisplayName,
-        description: t("webAccess.unavailableDescription"),
-        primaryActionLabel: t("webAccess.manageCloud"),
+        description: access.notice ?? t("webAccess.unavailableDescription"),
+        primaryActionLabel: t(access.expired ? "settings.accountCloudRestore" : "webAccess.manageCloud"),
         secondaryActionLabel: t("webAccess.exportVault")
       },
       checking: {
@@ -1963,7 +1879,8 @@ export default function App() {
 
     return {
       ...status,
-      ...accountDetails
+      ...accountDetails,
+      notice: status.description === accountNotice ? undefined : accountNotice
     };
   }, [
     activeLocorisCloudBinding,
@@ -2561,6 +2478,16 @@ export default function App() {
     requestAutoSync,
     vaultBooting
   ]);
+
+  const previousCloudWriteAccessRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    const canWrite = webCloudOverview?.entitlement.capabilities.canWriteSync ?? null;
+    const previous = previousCloudWriteAccessRef.current;
+    previousCloudWriteAccessRef.current = canWrite;
+    if (previous === false && canWrite === true && activeLocorisCloudBinding) {
+      requestAutoSync({ delayMs: 700, force: true });
+    }
+  }, [webCloudOverview, activeLocorisCloudBinding, requestAutoSync]);
 
   useEffect(() => {
     const previousOnline = previousOnlineRef.current;

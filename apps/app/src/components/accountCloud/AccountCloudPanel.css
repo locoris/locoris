@@ -425,3 +425,5 @@
     animation: none;
   }
 }
+
+.account-cloud-warning .account-cloud-primary-action { width: fit-content; max-width: 100%; min-height: 44px; margin-top: 6px; text-decoration: none; text-align: center; }

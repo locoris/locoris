@@ -21,3 +21,13 @@ export function getLocorisCloudUrl() {
 export function resolveLocorisCloudUrl() {
   return getLocorisCloudUrl();
 }
+
+export function buildLocorisCloudAccountUrl(serverUrl: string, view?: "overview" | "vaults" | "devices" | "billing") {
+  const configuredAccountUrl = import.meta.env.VITE_LOCORIS_ACCOUNT_URL?.trim();
+  if (!serverUrl && !configuredAccountUrl) return null;
+  try {
+    const url = configuredAccountUrl ? new URL(configuredAccountUrl) : new URL("/account", `${serverUrl.replace(/\/+$/, "")}/`);
+    if (view) url.searchParams.set("view", view);
+    return url.toString();
+  } catch { return null; }
+}

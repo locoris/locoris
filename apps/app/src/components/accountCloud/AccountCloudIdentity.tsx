@@ -25,6 +25,8 @@ type AccountCloudIdentityProps = {
   profileEditing: boolean;
   planLabel: string;
   periodLabel: string;
+  statusLabel?: string;
+  renewalLabel?: string | null;
   usageMeters: AccountCloudUsageMeter[];
   onBeginProfileEdit: () => void;
   onProfileDraftChange: (value: string) => void;
@@ -101,6 +103,8 @@ export default function AccountCloudIdentity({
   profileEditing,
   planLabel,
   periodLabel,
+  statusLabel: accessStatusLabel,
+  renewalLabel,
   usageMeters,
   onBeginProfileEdit,
   onProfileDraftChange,
@@ -212,9 +216,10 @@ export default function AccountCloudIdentity({
               {email || profileDescription}
             </span>
             <div className="account-cloud-identity-chips">
-              <span className={`is-${statusTone}`}>{statusLabel}</span>
+              <span className={`is-${statusTone}`}>{authRequired ? statusLabel : accessStatusLabel ?? statusLabel}</span>
               {connected ? <span>{planLabel}</span> : null}
               {connected && periodLabel ? <span>{periodLabel}</span> : null}
+              {connected && renewalLabel ? <span>{renewalLabel}</span> : null}
             </div>
           </div>
         </div>
