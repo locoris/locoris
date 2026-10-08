@@ -476,7 +476,18 @@ export interface HostedCloudPlan {
 export interface HostedCloudEntitlement {
   plan: HostedCloudPlan;
   planId?: string;
-  subscription: unknown | null;
+  subscription: {
+    id: string;
+    provider: string;
+    status: string;
+    storedStatus?: string;
+    currentPeriodStart: number | null;
+    currentPeriodEnd: number | null;
+    cancelAtPeriodEnd?: boolean;
+    manualAutoRenew?: boolean;
+    autoRenew?: boolean;
+    renewalPeriodDays?: number | null;
+  } | null;
   accountStatus: string;
   status?: string;
   subscriptionStatus?: string | null;
