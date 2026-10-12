@@ -186,7 +186,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
         with:
           packages: platform-tools
       - run: sdkmanager "ndk;${ANDROID_NDK_VERSION}"
@@ -265,7 +265,7 @@ jobs:
           printf '%s  %s\n' "${SHA256}" "${APK_NAME}" > "dist/android-release/${APK_NAME}.sha256"
           printf 'Locoris Android signing certificate SHA-256\n%s\n' "${FINGERPRINT}" > "dist/android-release/${APK_NAME}.certificate.txt"
           node -e "const fs=require('fs'); const data={version:process.argv[1],tag:process.argv[2],packageName:'com.locoris.android',apk:process.argv[3],sha256:process.argv[4],certificateSha256:process.argv[5],publishedAt:new Date().toISOString()}; fs.writeFileSync('dist/android-release/android-latest.json', JSON.stringify(data,null,2)+'\n');" "${VERSION}" "${TAG}" "${APK_NAME}" "${SHA256}" "${FINGERPRINT}"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: locoris-android-release-assets
           path: dist/android-release/*
@@ -286,7 +286,7 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: locoris-android-release-assets
           path: dist/android-release
